@@ -94,10 +94,14 @@ const ReminderStatistics = ({ parent }: { parent?: string }) => {
     <div className="space-y-6 py-5">
       <div>
         <Tabs value={detailsView} onValueChange={(value) => setDetailsView(value as "7" | "30" | "history")}>
-          <TabsList>
-            <TabsTrigger value="7">{t("mood.chart.week")}</TabsTrigger>
-            <TabsTrigger value="30">{t("mood.chart.trend")}</TabsTrigger>
-            <TabsTrigger value="history">
+          <TabsList className="max-w-full overflow-x-auto">
+            <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="7">
+              {t("mood.chart.week")}
+            </TabsTrigger>
+            <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="30">
+              {t("mood.chart.trend")}
+            </TabsTrigger>
+            <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="history">
               <HistoryIcon />
               {t("reminder.stats-more-history")}
             </TabsTrigger>
@@ -106,9 +110,9 @@ const ReminderStatistics = ({ parent }: { parent?: string }) => {
         {detailsView !== "history" && (
           <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {cards.map(({ label, value, icon: Icon, tone }) => (
-              <div key={label} className="rounded-xl border bg-card p-4 shadow-sm">
-                <Icon className={`size-5 ${tone}`} />
-                <div className="mt-3 text-2xl font-semibold tabular-nums">{value}</div>
+              <div key={label} className="rounded-lg bg-muted/50 p-3">
+                <Icon className={`size-4 ${tone}`} />
+                <div className="mt-2 text-xl font-semibold tabular-nums">{value}</div>
                 <div className="mt-1 text-xs text-muted-foreground">{label}</div>
               </div>
             ))}
@@ -154,7 +158,7 @@ const ReminderStatistics = ({ parent }: { parent?: string }) => {
                         {monthOccurrences.length} {t("reminder.stats-occurrences")}
                       </div>
                       {monthOccurrences.length > 0 && (
-                        <div className="mt-1 flex gap-2 text-[11px]">
+                        <div className="mt-1 flex gap-2 text-xs">
                           <span className="text-emerald-600">{t("reminder.stats-month-completed", { count: completed })}</span>
                           <span className="text-rose-500">
                             {t("reminder.stats-month-skipped", { count: monthOccurrences.length - completed })}

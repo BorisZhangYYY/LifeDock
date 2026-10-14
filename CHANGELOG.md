@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.36.0](https://github.com/BorisZhangYYY/memos/compare/v0.35.1...v0.36.0) (2026-10-14)
+
+### Summary
+
+This release gives reminders, finance, and mood their own management pages and
+brings the homepage navigation closer to the official Memos layout.
+
+### Features and improvements
+
+* **Personal management:** open reminders, finance, and mood from a dedicated
+  sidebar section. Keep the homepage focused on the Memo editor and feed.
+* **Sidebar navigation:** use five compact destinations in the order Timeline,
+  Personal management, Calendar, Map, and Attachments. Expand the selected
+  destination and open Memo display settings from the Timeline dropdown.
+* **Reminders:** open All by default, group reminders by list, and keep empty
+  lists visible with their own inline add targets. Manage list names, colors,
+  icons, and deletion from the page's Settings tab.
+* **Finance and mood:** switch between records and statistics at the top of each
+  page. Keep wallet and category management on the finance page.
+* **Layout:** align personal pages with the centered calendar layout and use
+  consistent titles, controls, descriptions, and summary values on desktop and
+  mobile. Align list editing actions across default and custom lists.
+
+### Compatibility
+
+* Existing personal data, feature toggles, and privacy protection are preserved.
+* Existing reminder links and selected-item URLs continue to open their detail
+  view. The personal entry opens the first enabled personal module.
+* This release does not change database schemas or public APIs.
+
 ## [0.35.1](https://github.com/BorisZhangYYY/memos/compare/v0.35.0...v0.35.1) (2026-10-09)
 
 ### Summary

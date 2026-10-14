@@ -4,6 +4,8 @@ export const ROUTES = {
   ABOUT: "/about",
   ATTACHMENTS: "/attachments",
   REMINDERS: "/reminders",
+  FINANCE: "/finance",
+  MOOD: "/mood",
   INBOX: "/inbox",
   ARCHIVED: "/archived",
   CALENDAR: "/calendar",

@@ -5,14 +5,15 @@ import {
   ArrowRightIcon,
   BellIcon,
   CalendarDaysIcon,
-  ChevronDownIcon,
+  ChevronsUpDownIcon,
   EarthIcon,
   FileAudioIcon,
   FileTextIcon,
-  HouseIcon,
   ImageIcon,
   InfoIcon,
+  LayoutDashboardIcon,
   LayoutListIcon,
+  LibraryIcon,
   ListIcon,
   type LucideIcon,
   MapIcon,
@@ -25,7 +26,7 @@ import {
   Trash2Icon,
   UserRoundIcon,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, matchPath, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
@@ -36,7 +37,13 @@ import { DEFAULT_SETTING_SECTION, SETTINGS_SECTIONS } from "@/components/Setting
 import StatisticsView from "@/components/StatisticsView";
 import UserMenu from "@/components/UserMenu";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { memoViewServiceClient } from "@/connect";
@@ -53,14 +60,7 @@ import useMediaQuery from "@/hooks/useMediaQuery";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useMemoViews, useNotifications, userKeys, useUser } from "@/hooks/useUserQueries";
 import { handleError } from "@/lib/error";
-import {
-  BUILTIN_TASKS_VIEW_ID,
-  getMemoScopePath,
-  getMemoViewId,
-  isMemoCollectionRoute,
-  type PrimaryMemoScope,
-  resolveMemoScope,
-} from "@/lib/memo-views";
+import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoCollectionRoute, type PrimaryMemoScope, resolveMemoScope } from "@/lib/memo-views";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/router/routes";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -69,6 +69,7 @@ import { User_Role, UserNotification_Status, UserNotification_Type } from "@/typ
 import { useTranslate } from "@/utils/i18n";
 import MemosLogo from "../MemosLogo";
 import MoodFilterSection from "./MoodFilterSection";
+import PersonalNavigation from "./PersonalNavigation";
 import { getSidebarRouteKind, routeSupportsCollectionScope } from "./routes";
 import SidebarRow, { SIDEBAR_ROW_CLASSES, SIDEBAR_ROW_FOCUS_CLASSES, SIDEBAR_ROW_ICON_CLASSES, sidebarRowStateClasses } from "./SidebarRow";
 import SidebarSection, {
@@ -149,7 +150,6 @@ const ViewsSection = ({ manageActive = false }: { manageActive?: boolean }) => {
       action={
         !manageActive && (
           <div className="flex items-center gap-0.5">
-            <MemoDisplaySettingMenu />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -445,60 +445,52 @@ const RouteSidebarContent = () => {
   }
   if (kind === "views") return <ViewsSection manageActive />;
   if (kind === "attachments") return <AttachmentsSidebarContent />;
+  if (kind === "personal" || kind === "reminders" || kind === "finance" || kind === "mood") return <PersonalNavigation />;
   if (kind === "inbox") return <InboxSidebarContent />;
   if (kind === "settings") return <SettingsSidebarContent />;
   if (kind === "memo") return <MemoDetailSidebarContent />;
   return null;
 };
 
-interface GlobalNavItem {
-  id: string;
-  label: string;
-  path: string;
-  icon: LucideIcon;
-  active: boolean;
-  count?: number;
-  alwaysExpanded?: boolean;
-}
+const CollectionNavigationItems = () => {
+  const t = useTranslate();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { filters } = useMemoFilterContext();
+  const { setMobileOpen, setMemoScope } = useAppSidebar();
+  const destinations = [
+    { path: ROUTES.HOME, label: t("common.timeline"), icon: LibraryIcon, scope: "home" as const },
+    { path: ROUTES.EXPLORE, label: t("common.explore"), icon: EarthIcon, scope: "explore" as const },
+    { path: ROUTES.ARCHIVED, label: t("common.archived"), icon: ArchiveIcon },
+  ];
 
-/**
- * Pills keep a constant px so the icon sits exactly where it does in the collapsed 30px
- * square; all width change comes from the label column, which animates 0fr -> 1fr. That
- * keeps the expand/collapse a single smooth motion with no padding jump.
- */
-const navPillClasses = (active: boolean) =>
-  cn(
-    "relative flex h-[30px] w-full min-w-0 items-center rounded-md px-[7px] transition-colors",
-    SIDEBAR_ROW_FOCUS_CLASSES,
-    sidebarRowStateClasses(active),
+  return (
+    <>
+      {destinations.map(({ path, label, icon: Icon, scope }) => (
+        <DropdownMenuItem
+          key={path}
+          aria-current={location.pathname === path ? "page" : undefined}
+          onClick={() => {
+            if (scope) setMemoScope(scope);
+            navigate({ pathname: path, search: scope ? getFilterSearch(filters) : "" });
+            setMobileOpen(false);
+          }}
+        >
+          <Icon className="size-4" strokeWidth={1.8} />
+          {label}
+        </DropdownMenuItem>
+      ))}
+    </>
   );
-
-const NavPillLabel = ({ expanded, label, children }: { expanded: boolean; label: ReactNode; children?: ReactNode }) => (
-  <span
-    aria-hidden={!expanded || undefined}
-    className={cn(
-      // The icon-label gap is padding on this element because overflow-hidden clips
-      // content but never padding — it must animate to zero with the track, or collapsed
-      // pills keep an 8px tail.
-      "grid min-w-0 transition-[grid-template-columns,padding] duration-200 ease-out motion-reduce:transition-none",
-      expanded ? "grid-cols-[1fr] pl-2" : "grid-cols-[0fr] pl-0",
-    )}
-  >
-    {/* Content is shrink-0 so the collapsing track clips it in place — a plain
-        left-to-right reveal instead of re-truncating the label on every frame. */}
-    <span className="flex min-w-0 items-center gap-2 overflow-hidden">
-      <span className="max-w-[5.5rem] shrink-0 truncate text-[12px]">{label}</span>
-      {children}
-    </span>
-  </span>
-);
+};
 
 const GlobalNavigation = () => {
   const t = useTranslate();
   const location = useLocation();
-  const navigate = useNavigate();
   const currentUser = useCurrentUser();
   const { memoDetail, memoScope, setMemoScope, setMobileOpen } = useAppSidebar();
+  const { isUserSettingsInitialized } = useAuth();
+  const { remindersEnabled, financeEnabled, moodEnabled } = usePersonalFeatures();
   const { filters } = useMemoFilterContext();
   const routeKind = getSidebarRouteKind(location.pathname);
   const resolvedScope = resolveMemoScope(location.pathname, {
@@ -510,187 +502,116 @@ const GlobalNavigation = () => {
   const primaryScope: PrimaryMemoScope = resolvedScope === "archived" ? memoScope : resolvedScope;
   const routeOwnsPrimaryScope =
     resolvedScope !== "archived" && (routeKind === "home" || routeKind === "explore" || routeKind === "profile" || routeKind === "memo");
-  const scopeRouteActive = routeKind === "home" || routeKind === "explore";
 
   useEffect(() => {
-    if (routeOwnsPrimaryScope && primaryScope !== memoScope) {
-      setMemoScope(primaryScope);
-    }
+    if (routeOwnsPrimaryScope && primaryScope !== memoScope) setMemoScope(primaryScope);
   }, [memoScope, primaryScope, routeOwnsPrimaryScope, setMemoScope]);
 
-  const scopeItems: Array<{ id: PrimaryMemoScope; label: string; icon: LucideIcon }> = [
-    { id: "home", label: t("common.home"), icon: HouseIcon },
-    { id: "explore", label: t("common.explore"), icon: EarthIcon },
-  ];
-  const activeScopeItem = scopeItems.find((item) => item.id === primaryScope) ?? scopeItems[0];
-  const ActiveScopeIcon = activeScopeItem.icon;
-
-  const navigateToScope = (scope: PrimaryMemoScope) => {
-    setMemoScope(scope);
-    navigate({ pathname: getMemoScopePath(scope), search: getFilterSearch(filters) });
-    setMobileOpen(false);
-  };
-
-  const items: GlobalNavItem[] = currentUser
+  const timelineActive = routeKind === "home" || routeKind === "explore";
+  const timelinePath = currentUser ? ROUTES.HOME : ROUTES.EXPLORE;
+  const personalActive = routeKind === "personal" || routeKind === "reminders" || routeKind === "finance" || routeKind === "mood";
+  const personalEnabled = isUserSettingsInitialized && (remindersEnabled || financeEnabled || moodEnabled);
+  const items = currentUser
     ? [
-        {
-          id: "calendar",
-          label: t("common.calendar"),
-          path: ROUTES.CALENDAR,
-          icon: CalendarDaysIcon,
-          active: routeKind === "calendar",
-          alwaysExpanded: true,
-        },
-        {
-          id: "map",
-          label: t("common.map"),
-          path: ROUTES.MAP,
-          icon: MapIcon,
-          active: routeKind === "map",
-          alwaysExpanded: true,
-        },
-        {
-          id: "attachments",
-          label: t("common.attachments"),
-          path: ROUTES.ATTACHMENTS,
-          icon: PaperclipIcon,
-          active: routeKind === "attachments",
-          alwaysExpanded: true,
-        },
+        ...(personalEnabled
+          ? [{ path: ROUTES.PERSONAL, label: t("personal.navigation"), icon: LayoutDashboardIcon, active: personalActive }]
+          : []),
+        { path: ROUTES.CALENDAR, label: t("common.calendar"), icon: CalendarDaysIcon, active: routeKind === "calendar" },
+        { path: ROUTES.MAP, label: t("common.map"), icon: MapIcon, active: routeKind === "map" },
+        { path: ROUTES.ATTACHMENTS, label: t("common.attachments"), icon: PaperclipIcon, active: routeKind === "attachments" },
       ]
-    : [
-        {
-          id: "explore",
-          label: t("common.explore"),
-          path: ROUTES.EXPLORE,
-          icon: EarthIcon,
-          active: routeKind === "explore" || routeKind === "profile" || routeKind === "memo",
-          alwaysExpanded: true,
-        },
-        {
-          id: "about",
-          label: t("common.about"),
-          path: ROUTES.ABOUT,
-          icon: InfoIcon,
-          active: Boolean(matchPath(ROUTES.ABOUT, location.pathname)),
-          alwaysExpanded: true,
-        },
-      ];
-
-  const scopeMenuContent = (
-    <DropdownMenuContent align="start" sideOffset={4} className="flex w-36 flex-col gap-0.5">
-      {scopeItems.map((item) => {
-        const Icon = item.icon;
-        return (
-          <DropdownMenuItem
-            key={item.id}
-            aria-current={item.id === resolvedScope ? "page" : undefined}
-            className={cn(
-              "h-[30px] shrink-0 py-0 text-[13px]",
-              item.id === resolvedScope && "bg-accent font-medium text-accent-foreground",
-            )}
-            onClick={() => navigateToScope(item.id)}
-          >
-            <Icon className="size-4" strokeWidth={1.8} />
-            <span className="truncate">{item.label}</span>
-          </DropdownMenuItem>
-        );
-      })}
-    </DropdownMenuContent>
-  );
+    : [{ path: ROUTES.ABOUT, label: t("common.about"), icon: InfoIcon, active: Boolean(matchPath(ROUTES.ABOUT, location.pathname)) }];
 
   return (
     <TooltipProvider>
-      <nav className={cn("grid gap-1", SIDEBAR_HORIZONTAL_PADDING)} aria-label="Primary">
-        {currentUser && (
-          <DropdownMenu
-            onOpenChange={(open, eventDetails) => {
-              // Off the scope routes the pill is a plain navigation button: veto the
-              // menu and navigate to the scope instead.
-              if (open && !scopeRouteActive) {
-                eventDetails.cancel();
-                navigateToScope(primaryScope);
-              }
+      <nav className={cn("flex items-center gap-1", SIDEBAR_HORIZONTAL_PADDING)} aria-label="Primary">
+        <div
+          className={cn(
+            "flex h-[30px] min-w-0 items-center rounded-md",
+            timelineActive ? "flex-1" : "w-7 shrink-0",
+            sidebarRowStateClasses(timelineActive),
+          )}
+        >
+          <Link
+            to={{ pathname: timelinePath, search: getFilterSearch(filters) }}
+            onClick={() => {
+              if (currentUser) setMemoScope("home");
+              setMobileOpen(false);
             }}
+            title={t("common.timeline")}
+            aria-label={currentUser ? t("common.timeline") : t("common.explore")}
+            aria-current={timelineActive ? "page" : undefined}
+            className={cn("flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-md px-1.5 text-ui", SIDEBAR_ROW_FOCUS_CLASSES)}
           >
-            <Tooltip disabled={scopeRouteActive}>
-              {/* The tooltip anchors to a wrapper span rather than the button: a disabled
-                  tooltip stamps data-trigger-disabled on its trigger element, and Base UI's
-                  shared floating logic would read that as the MENU trigger being disabled. */}
-              <TooltipTrigger render={<span className="flex min-w-0" />}>
-                <DropdownMenuTrigger
-                  render={
-                    <button
-                      type="button"
-                      aria-label={activeScopeItem.label}
-                      aria-current={scopeRouteActive ? "page" : undefined}
-                      className={cn("group/scope", navPillClasses(scopeRouteActive))}
-                    />
-                  }
-                >
-                  <ActiveScopeIcon className="size-4 shrink-0" strokeWidth={1.8} />
-                  <NavPillLabel expanded label={activeScopeItem.label}>
-                    <ChevronDownIcon
-                      className="-mr-0.5 size-3 shrink-0 opacity-55 transition-transform duration-200 ease-out group-data-[popup-open]/scope:rotate-180 motion-reduce:transition-none"
-                      strokeWidth={1.8}
-                    />
-                  </NavPillLabel>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{activeScopeItem.label}</TooltipContent>
-            </Tooltip>
-            {scopeMenuContent}
-          </DropdownMenu>
-        )}
-        {items.map((item) => {
-          const Icon = item.icon;
-          const expanded = item.active || !!item.alwaysExpanded;
-          return (
-            <Tooltip key={item.id} disabled={expanded}>
-              <TooltipTrigger
-                render={
-                  <Link
-                    to={item.path}
-                    onClick={() => setMobileOpen(false)}
-                    aria-label={item.label}
-                    aria-current={item.active ? "page" : undefined}
-                    className={navPillClasses(item.active)}
-                  />
-                }
-              >
-                <Icon className="size-4 shrink-0" strokeWidth={1.8} />
-                <NavPillLabel expanded={expanded} label={item.label} />
-                {item.count != null && (
-                  <span
-                    className={cn(
-                      "absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-semibold leading-4 text-primary-foreground transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none",
-                      item.count > 0 ? "scale-100 opacity-100" : "scale-50 opacity-0",
-                    )}
-                  >
-                    {item.count > 0 && (item.count > 99 ? "99+" : item.count)}
-                  </span>
-                )}
-              </TooltipTrigger>
-              <TooltipContent side="bottom">{item.label}</TooltipContent>
-            </Tooltip>
-          );
-        })}
+            <LibraryIcon className="size-4 shrink-0" strokeWidth={1.8} />
+            {timelineActive && <span className="truncate">{t("common.timeline")}</span>}
+          </Link>
+          {timelineActive && <MemoDisplaySettingMenu variant="navigation" className="w-[18px]" />}
+        </div>
+        {items.map(({ path, label, icon: Icon, active }) => (
+          <Tooltip key={path} disabled={active}>
+            <TooltipTrigger
+              render={
+                <Link
+                  to={path}
+                  onClick={() => setMobileOpen(false)}
+                  aria-label={label}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex h-[30px] min-w-0 items-center justify-center rounded-md px-1.5 text-ui",
+                    active ? "flex-1 gap-1.5" : "w-7 shrink-0",
+                    SIDEBAR_ROW_FOCUS_CLASSES,
+                    sidebarRowStateClasses(active),
+                  )}
+                />
+              }
+            >
+              <Icon className="size-4 shrink-0" strokeWidth={1.8} />
+              {active && <span className="truncate">{label}</span>}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{label}</TooltipContent>
+          </Tooltip>
+        ))}
       </nav>
     </TooltipProvider>
   );
 };
 
-/** The sidebar/header brand slot: collection scope on collection routes, instance brand elsewhere. */
 const SidebarBrand = ({ className }: { className?: string }) => {
+  const t = useTranslate();
   const currentUser = useCurrentUser();
   const location = useLocation();
 
   if (currentUser && routeSupportsCollectionScope(location.pathname)) {
-    return <SpaceSwitcher className={className} />;
+    return (
+      <SpaceSwitcher className={className}>
+        <DropdownMenuSeparator />
+        <CollectionNavigationItems />
+      </SpaceSwitcher>
+    );
+  }
+  if (currentUser) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          aria-label={t("common.memos")}
+          data-memos-menu
+          className={cn("flex h-9 min-w-0 items-center rounded-md text-start", SIDEBAR_ROW_FOCUS_CLASSES, className)}
+        >
+          <span className="min-w-0 flex-1 overflow-hidden">
+            <MemosLogo compact />
+          </span>
+          <ChevronsUpDownIcon className="size-3.5 shrink-0 text-muted-foreground/70" strokeWidth={1.8} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent size="sm" align="start" className="w-52">
+          <CollectionNavigationItems />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
   }
 
   return (
-    <Link to={currentUser ? ROUTES.HOME : ROUTES.EXPLORE} className={cn("min-w-0 rounded-md focus-visible:outline-none", className)}>
+    <Link to={ROUTES.EXPLORE} className={cn("min-w-0 rounded-md focus-visible:outline-none", className)}>
       <MemosLogo compact />
     </Link>
   );

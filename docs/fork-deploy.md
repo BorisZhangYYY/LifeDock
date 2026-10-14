@@ -6,7 +6,7 @@
 
 | 产物 | 地址 |
 |------|------|
-| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.35.1` / `0.35` / `stable`） |
+| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.0` / `0.36` / `stable`） |
 | 二进制 | [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases)（linux/darwin/windows × amd64/arm64/armv7） |
 
 ## 方式一：Docker 部署（推荐）
@@ -28,7 +28,7 @@ docker run -d \
 从 [Releases](https://github.com/BorisZhangYYY/memos/releases) 下载对应平台压缩包：
 
 ```bash
-tar -xzf memos_0.35.1_linux_amd64.tar.gz
+tar -xzf memos_0.36.0_linux_amd64.tar.gz
 ./memos --data ~/memos-data --port 5230
 ```
 
@@ -75,9 +75,9 @@ GOPROXY=https://goproxy.cn,direct go build \
 
 ## 与官方版的差异
 
-- **心情模块**：编辑器 Heart 按钮记录心情（1-7）；日历每日/月度平均心情标注；首页看板和历史统计；侧栏心情多选筛选；memo 卡片心情 emoji + 彩色边框；设置页「心情设置」自定义每档 emoji 和颜色
-- **收支模块**：钱包、收入支出类型、转账和余额校准；首页展示当日数据并支持按日期查看完整历史
-- **提醒事项**：今天、计划、全部、旗标、已完成和已归档视图；支持列表、日期与时间、提前提醒、重复、优先级及关联 Memo
+- **心情模块**：编辑器 Heart 按钮记录心情（1-7）；日历每日/月度平均心情标注；独立心情页面和历史统计；侧栏心情多选筛选；memo 卡片心情 emoji + 彩色边框；设置页「心情设置」自定义每档 emoji 和颜色
+- **收支模块**：钱包、收入支出类型、转账和余额校准；独立收支页面展示当日数据和完整历史，顶部切换钱包与分类管理
+- **提醒事项**：今天、计划、全部、旗标、已完成和已归档视图；独立提醒页面默认按列表展示全部事项，支持分组新增、列表设置、日期与时间、提前提醒、重复、优先级及关联 Memo
 - **通知**：提醒事项支持站内通知；管理员可配置通用 SMTP 服务，将提醒同步发送到用户邮箱
 - **可见性策略**：设置页单选（允许所有 / 禁用 Public / 禁用 Protected 和 Public）；禁用后隐藏对应已发布 memo、隐藏探索页入口，创建/更新/评论全链路校验
 - **OAuth2 登录**：已注释（个人平台使用密码登录）

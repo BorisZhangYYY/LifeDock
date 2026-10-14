@@ -59,13 +59,32 @@ describe("router configuration", () => {
   });
 
   it("wraps authenticated-only pages in RequireAuthRoute", () => {
-    for (const path of [ROUTES.ARCHIVED, ROUTES.VIEWS, ROUTES.ATTACHMENTS, ROUTES.INBOX, ROUTES.SETTING]) {
+    for (const path of [
+      ROUTES.ARCHIVED,
+      ROUTES.VIEWS,
+      ROUTES.ATTACHMENTS,
+      ROUTES.INBOX,
+      ROUTES.SETTING,
+      ROUTES.FINANCE,
+      ROUTES.MOOD,
+      ROUTES.REMINDERS,
+      ROUTES.PERSONAL,
+    ]) {
       expect(hasAncestorOfType(routeConfig, path, RequireAuthRoute)).toBe(true);
     }
   });
 
   it("keeps non-feed pages behind their full initialization requirements", () => {
-    for (const path of [ROUTES.VIEWS, ROUTES.ATTACHMENTS, ROUTES.INBOX, ROUTES.SETTING]) {
+    for (const path of [
+      ROUTES.VIEWS,
+      ROUTES.ATTACHMENTS,
+      ROUTES.INBOX,
+      ROUTES.SETTING,
+      ROUTES.FINANCE,
+      ROUTES.MOOD,
+      ROUTES.REMINDERS,
+      ROUTES.PERSONAL,
+    ]) {
       expect(hasAncestorOfType(routeConfig, path, RequireFullInitializationRoute)).toBe(true);
     }
     expect(hasAncestorOfType(routeConfig, ROUTES.ABOUT, RequireInstanceInitializationRoute)).toBe(true);

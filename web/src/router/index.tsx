@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject, useLocation } from "react-router-dom";
 import App from "@/App";
 import { ChunkLoadErrorFallback } from "@/components/ErrorBoundary";
+import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import MainLayout from "@/layouts/MainLayout";
 import RootLayout from "@/layouts/RootLayout";
 import { lazyWithReload } from "@/utils/lazy";
@@ -22,6 +23,9 @@ const Calendar = lazyWithReload(() => import("@/pages/Calendar"));
 const MapPage = lazyWithReload(() => import("@/pages/Map"));
 const Explore = lazyWithReload(() => import("@/pages/Explore"));
 const Home = lazyWithReload(() => import("@/pages/Home"));
+const Finance = lazyWithReload(() => import("@/pages/Finance"));
+const Mood = lazyWithReload(() => import("@/pages/Mood"));
+const ReminderPage = lazyWithReload(() => import("@/pages/ReminderPage"));
 const Inboxes = lazyWithReload(() => import("@/pages/Inboxes"));
 const MemoDetail = lazyWithReload(() => import("@/pages/MemoDetail"));
 const NotFound = lazyWithReload(() => import("@/pages/NotFound"));
@@ -33,12 +37,13 @@ const SignIn = lazyWithReload(() => import("@/pages/SignIn"));
 const SignUp = lazyWithReload(() => import("@/pages/SignUp"));
 const UserProfile = lazyWithReload(() => import("@/pages/UserProfile"));
 
-const HomeRedirect = ({ openReminders = false }: { openReminders?: boolean }) => {
+const PersonalRedirect = () => {
+  const { remindersEnabled, financeEnabled, moodEnabled } = usePersonalFeatures();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   searchParams.delete("view");
-  if (openReminders && !searchParams.has("selected")) searchParams.set("reminders", "1");
-  return <Navigate to={{ pathname: ROUTES.HOME, search: searchParams.toString() }} replace />;
+  const destination = remindersEnabled ? ROUTES.REMINDERS : financeEnabled ? ROUTES.FINANCE : moodEnabled ? ROUTES.MOOD : ROUTES.HOME;
+  return <Navigate to={{ pathname: destination, search: searchParams.toString() }} replace />;
 };
 
 // Backward compatibility alias.
@@ -107,7 +112,12 @@ export const routeConfig: RouteObject[] = [
                   { path: Routes.MAP, element: <MapPage /> },
                   {
                     element: <RequireFullInitializationRoute />,
-                    children: [{ path: Routes.VIEWS, element: <MemoViews /> }],
+                    children: [
+                      { path: Routes.VIEWS, element: <MemoViews /> },
+                      { path: Routes.REMINDERS, element: <ReminderPage /> },
+                      { path: Routes.FINANCE, element: <Finance /> },
+                      { path: Routes.MOOD, element: <Mood /> },
+                    ],
                   },
                 ],
               },
@@ -122,8 +132,7 @@ export const routeConfig: RouteObject[] = [
                 element: <RequireFullInitializationRoute />,
                 children: [
                   { path: Routes.ATTACHMENTS, element: <Attachments /> },
-                  { path: Routes.REMINDERS, element: <HomeRedirect openReminders /> },
-                  { path: Routes.PERSONAL, element: <HomeRedirect /> },
+                  { path: Routes.PERSONAL, element: <PersonalRedirect /> },
                   { path: "/shortcuts", element: <Navigate to={Routes.VIEWS} replace /> },
                   { path: Routes.INBOX, element: <Inboxes /> },
                   { path: Routes.SETTING, element: <Setting /> },

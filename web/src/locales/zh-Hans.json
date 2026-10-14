@@ -64,6 +64,7 @@
     "deploy-link": "部署你的 Memos"
   },
   "common": {
+    "timeline": "时间线",
     "about": "关于",
     "actions": "操作",
     "add": "增加",
@@ -377,6 +378,7 @@
     "content-syntax": "内容语法"
   },
   "mood": {
+    "statistics": "心情统计",
     "filter": "心情",
     "monthly-average": "当月平均心情",
     "select": "选择心情",
@@ -465,6 +467,9 @@
     }
   },
   "reminder": {
+    "list-settings-description": "编辑列表名称、颜色和图标；在记录页的对应列表下新增提醒事项。",
+    "all-lists": "所有清单",
+    "manage-list": "管理清单",
     "add-date": "添加日期",
     "add-location": "添加位置",
     "advance-notice": "提前提醒",
@@ -773,21 +778,21 @@
     },
     "personal-features": {
       "label": "个人功能管理",
-      "description": "选择 Memos 中启用的个人扩展，并设置首页个人面板的隐私保护方式。",
+      "description": "选择 Memos 中启用的个人扩展，并设置个人内容的隐私保护方式。",
       "features-title": "功能开关",
       "features-description": "关闭全部扩展即可回到原版的纯 Memo 体验，已有个人数据不会被删除。",
       "reminders": "提醒事项",
-      "reminders-description": "提醒中心、首页摘要、编辑器关联和提醒通知。",
+      "reminders-description": "提醒管理、看板、清单、编辑器关联和提醒通知。",
       "finance": "收支",
-      "finance-description": "首页收支面板、交易、钱包和收支设置。",
+      "finance-description": "收支看板、交易、钱包和收支类型管理。",
       "mood": "心情",
-      "mood-description": "心情选择、日历标记、筛选和首页摘要。",
+      "mood-description": "心情统计、历史记录和编辑器心情选择。",
       "disable-all": "一键禁用全部个人功能",
       "all-disabled": "已禁用全部个人功能",
       "privacy-title": "隐私保护",
       "privacy-description": "先模糊个人摘要和敏感 Memo，手动解锁后再显示。此功能不会删除或加密相关数据。",
-      "home-privacy": "模糊隐私内容",
-      "home-privacy-description": "模糊首页个人面板及关联提醒的 Memo；面板折叠和展开状态会单独自动记住。",
+      "home-privacy": "隐藏个人内容",
+      "home-privacy-description": "默认隐藏心情、收支、提醒事项及关联 Memo 的内容。",
       "privacy-visible": "直接显示",
       "privacy-blurred": "默认模糊",
       "privacy-collapsed": "默认折叠",
@@ -1382,6 +1387,9 @@
     }
   },
   "personal": {
+    "records": "记录",
+    "navigation": "个人管理",
+    "overview": "总览",
     "title": "个人生活",
     "private": "仅自己可见 · 全局个人数据",
     "description": "回顾心情、管理收支与提醒事项",
