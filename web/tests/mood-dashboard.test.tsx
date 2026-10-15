@@ -22,4 +22,16 @@ describe("<MoodDashboard>", () => {
     expect(onMemoSelect).toHaveBeenCalledOnce();
     expect(onMemoSelect).toHaveBeenCalledWith("memos/mood-123");
   });
+
+  it("shows records and statistics separately without a statistics dialog button", () => {
+    const { rerender } = render(<MoodDashboard points={[]} view="records" />);
+    expect(screen.getByText("mood.dashboard.empty-today")).toBeInTheDocument();
+    expect(screen.queryByText("mood.insights.title")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "mood.dashboard.view-details" })).not.toBeInTheDocument();
+
+    rerender(<MoodDashboard points={[]} view="statistics" />);
+    expect(screen.getByText("mood.insights.title")).toBeInTheDocument();
+    expect(screen.queryByText("mood.dashboard.empty-today")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

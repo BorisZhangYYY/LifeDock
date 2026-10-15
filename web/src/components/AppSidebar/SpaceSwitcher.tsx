@@ -50,7 +50,7 @@ const ContextItem = ({
   </DropdownMenuItem>
 );
 
-function SpaceSwitcher({ className }: { className?: string }) {
+function SpaceSwitcher({ className, children }: { className?: string; children?: ReactNode }) {
   const t = useTranslate();
   const { spaces, duplicateSpaceTitles, selectedSpace, selectedSpaceName, isLoadingSpaces, isSpacesError, selectMemos, selectSpace } =
     useSpaceContext();
@@ -181,6 +181,7 @@ function SpaceSwitcher({ className }: { className?: string }) {
             <RowIcon icon={PlusIcon} />
             {t("space.create")}
           </DropdownMenuItem>
+          {children}
         </DropdownMenuContent>
       </DropdownMenu>
       <CreateSpaceDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={selectSpace} />

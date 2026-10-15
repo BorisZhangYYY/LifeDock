@@ -1,8 +1,8 @@
 import { ArrowLeftIcon, ChevronRightIcon, HistoryIcon, ListIcon, SmileIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import DashboardDetails from "@/components/DashboardDetails";
 import { DEFAULT_MOOD_EMOJIS } from "@/components/MemoEditor/Toolbar/MoodSelector";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInstance } from "@/contexts/InstanceContext";
 import { getMoodPalette } from "@/lib/mood";
@@ -16,6 +16,7 @@ const MOOD_LEVEL_KEYS = ["level-1", "level-2", "level-3", "level-4", "level-5", 
 interface Props {
   points: MoodPoint[];
   embedded?: boolean;
+  view?: "records" | "statistics";
   onMemoSelect?: (memoName: string) => void;
 }
 
@@ -41,14 +42,13 @@ const formatTime = (date: Date) =>
 const monthLabel = (year: number, month: number) =>
   new Intl.DateTimeFormat(undefined, { year: "numeric", month: "long" }).format(new Date(year, month, 1));
 
-const MoodDashboard = ({ points, embedded = false, onMemoSelect }: Props) => {
+const MoodDashboard = ({ points, embedded = false, view = "records", onMemoSelect }: Props) => {
   const t = useTranslate();
   const { memoRelatedSetting } = useInstance();
   const emojis = memoRelatedSetting?.moodEmojis?.length === MAX_MOOD_LEVEL ? memoRelatedSetting.moodEmojis : DEFAULT_MOOD_EMOJIS;
   const colors = getMoodPalette(memoRelatedSetting?.moodColors);
   const today = useMemo(() => new Date(), []);
   const todayPoints = useMemo(() => dayViewPoints(points, today), [points, today]);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsView, setDetailsView] = useState<"recent" | "history">("recent");
   const [selectedDate, setSelectedDate] = useState<string>();
   const historyYears = useMemo(() => [...new Set(points.map((point) => point.createTime.getFullYear()))].sort((a, b) => b - a), [points]);
@@ -125,7 +125,6 @@ const MoodDashboard = ({ points, embedded = false, onMemoSelect }: Props) => {
 
   const handleMemoSelect = (memoName?: string) => {
     if (!memoName || !onMemoSelect) return;
-    setDetailsOpen(false);
     onMemoSelect(memoName);
   };
 
@@ -142,8 +141,8 @@ const MoodDashboard = ({ points, embedded = false, onMemoSelect }: Props) => {
         {emojis[point.moodLevel - 1]}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-xs font-medium">{t(`mood.${MOOD_LEVEL_KEYS[point.moodLevel - 1]}`)}</span>
-        <span className="block font-mono text-[11px] text-muted-foreground">{formatTime(point.createTime)}</span>
+        <span className="block truncate text-sm font-medium">{t(`mood.${MOOD_LEVEL_KEYS[point.moodLevel - 1]}`)}</span>
+        <span className="block font-mono text-xs text-muted-foreground">{formatTime(point.createTime)}</span>
       </span>
       <span className="font-mono text-xs text-muted-foreground">{point.moodLevel}/7</span>
       {point.memoName && onMemoSelect && <ChevronRightIcon className="size-3.5 text-muted-foreground" />}
@@ -152,239 +151,234 @@ const MoodDashboard = ({ points, embedded = false, onMemoSelect }: Props) => {
 
   return (
     <>
-      <div
-        className={cn(
-          "flex h-full min-h-64 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
-          embedded && "rounded-none border-0",
-        )}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-base font-semibold">
-              {!embedded && (
-                <>
-                  <SmileIcon className="size-5 shrink-0 text-primary" />
-                  <span className="truncate">{t("mood.chart.title")}</span>
-                </>
-              )}
-              <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-                {t("mood.chart.today")}
-              </span>
+      {view === "records" && (
+        <div
+          className={cn(
+            "flex min-h-64 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
+            embedded && "rounded-none border-0",
+          )}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-base font-semibold">
+                {!embedded && (
+                  <>
+                    <SmileIcon className="size-5 shrink-0 text-primary" />
+                    <span className="truncate">{t("mood.chart.title")}</span>
+                  </>
+                )}
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                  {t("mood.chart.today")}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{formatDay(today)}</p>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">{formatDay(today)}</p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setDetailsOpen(true)}>
-            <ListIcon />
-            {t("mood.dashboard.view-details")}
-          </Button>
-        </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            {
-              label: t("mood.dashboard.today-average"),
-              value: todayAverage > 0 ? `${emojis[Math.round(todayAverage) - 1]} ${todayAverage.toFixed(1)}` : "—",
-            },
-            { label: t("mood.dashboard.records"), value: String(todayPoints.length) },
-            { label: t("mood.dashboard.recent-average"), value: recentAverage > 0 ? recentAverage.toFixed(1) : "—" },
-            { label: t("mood.dashboard.recent-days"), value: String(recentDays.length) },
-          ].map((item) => (
-            <div key={item.label} className="min-w-0 rounded-lg bg-muted/50 p-3">
-              <div className="truncate text-xs text-muted-foreground">{item.label}</div>
-              <div className="mt-1 truncate font-mono text-base font-semibold">{item.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {todayPoints.length === 0 ? (
-          <div className="flex min-h-28 flex-1 items-center justify-center text-sm text-muted-foreground">
-            {t("mood.dashboard.empty-today")}
-          </div>
-        ) : (
-          <div className="mt-3 min-h-0 flex-1 divide-y overflow-y-auto rounded-lg border bg-background/60">
-            {[...todayPoints].reverse().map((point, index) => (
-              <div
-                key={`${point.createTime.toISOString()}-${index}`}
-                style={{ borderLeftColor: colors[point.moodLevel - 1], borderLeftWidth: 3 }}
-              >
-                {moodRow(point, `${point.memoName}-${point.createTime.toISOString()}`)}
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              {
+                label: t("mood.dashboard.today-average"),
+                value: todayAverage > 0 ? `${emojis[Math.round(todayAverage) - 1]} ${todayAverage.toFixed(1)}` : "—",
+              },
+              { label: t("mood.dashboard.records"), value: String(todayPoints.length) },
+              { label: t("mood.dashboard.recent-average"), value: recentAverage > 0 ? recentAverage.toFixed(1) : "—" },
+              { label: t("mood.dashboard.recent-days"), value: String(recentDays.length) },
+            ].map((item) => (
+              <div key={item.label} className="min-w-0 rounded-lg bg-muted/50 p-3">
+                <div className="truncate text-xs text-muted-foreground">{item.label}</div>
+                <div className="mt-1 truncate font-mono text-lg font-semibold">{item.value}</div>
               </div>
             ))}
           </div>
-        )}
-      </div>
 
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent size="full" className="h-[min(42rem,calc(100vh-2rem))] gap-3 md:max-w-4xl">
-          <DialogHeader className="pr-8">
-            <DialogTitle className="text-base">{t("mood.insights.title")}</DialogTitle>
-            <DialogDescription className="text-xs">{t("mood.insights.description")}</DialogDescription>
-          </DialogHeader>
-
-          <Tabs value={detailsView} onValueChange={handleViewChange}>
-            <TabsList>
-              <TabsTrigger value="recent">
-                <ListIcon />
-                {t("mood.chart.trend")}
-              </TabsTrigger>
-              <TabsTrigger value="history">
-                <HistoryIcon />
-                {t("mood.insights.more-history")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {selectedDate ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedDate(undefined)}>
-                    <ArrowLeftIcon />
-                    {detailsView === "recent" ? t("mood.insights.back-to-recent") : t("mood.insights.back-to-month")}
-                  </Button>
-                  <div className="text-sm font-medium">{formatDay(selectedDate)}</div>
+          {todayPoints.length === 0 ? (
+            <div className="flex min-h-28 flex-1 items-center justify-center text-sm text-muted-foreground">
+              {t("mood.dashboard.empty-today")}
+            </div>
+          ) : (
+            <div className="mt-3 divide-y rounded-lg border bg-background/60">
+              {[...todayPoints].reverse().map((point, index) => (
+                <div
+                  key={`${point.createTime.toISOString()}-${index}`}
+                  style={{ borderLeftColor: colors[point.moodLevel - 1], borderLeftWidth: 3 }}
+                >
+                  {moodRow(point, `${point.memoName}-${point.createTime.toISOString()}`)}
                 </div>
-                {selectedDayPoints.length === 0 ? (
-                  <div className="flex min-h-40 items-center justify-center rounded-xl border text-sm text-muted-foreground">
-                    {t("mood.chart.empty")}
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === "statistics" && (
+        <DashboardDetails title={t("mood.insights.title")} description={t("mood.insights.description")}>
+          <>
+            <Tabs value={detailsView} onValueChange={handleViewChange}>
+              <TabsList className="max-w-full overflow-x-auto pb-1 [scrollbar-width:none]">
+                <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="recent">
+                  <ListIcon />
+                  {t("mood.chart.trend")}
+                </TabsTrigger>
+                <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="history">
+                  <HistoryIcon />
+                  {t("mood.insights.more-history")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {selectedDate ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedDate(undefined)}>
+                      <ArrowLeftIcon />
+                      {detailsView === "recent" ? t("mood.insights.back-to-recent") : t("mood.insights.back-to-month")}
+                    </Button>
+                    <div className="text-sm font-medium">{formatDay(selectedDate)}</div>
                   </div>
-                ) : (
-                  <div className="divide-y rounded-xl border bg-background">
-                    {selectedDayPoints.map((point, index) =>
-                      moodRow(point, `${point.memoName}-${point.createTime.toISOString()}-${index}`),
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : detailsView === "recent" ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  {[
-                    { label: t("mood.insights.average"), value: recentAverage > 0 ? recentAverage.toFixed(1) : "—" },
-                    { label: t("mood.insights.recorded-days"), value: String(recentDays.length) },
-                    { label: t("mood.dashboard.records"), value: String(recentRecordCount) },
-                  ].map((item) => (
-                    <div key={item.label} className="rounded-lg bg-muted/60 p-2.5">
-                      <div className="truncate text-[11px] text-muted-foreground">{item.label}</div>
-                      <div className="mt-0.5 text-lg font-semibold">{item.value}</div>
+                  {selectedDayPoints.length === 0 ? (
+                    <div className="flex min-h-40 items-center justify-center rounded-xl border text-sm text-muted-foreground">
+                      {t("mood.chart.empty")}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="divide-y rounded-xl border bg-background">
+                      {selectedDayPoints.map((point, index) =>
+                        moodRow(point, `${point.memoName}-${point.createTime.toISOString()}-${index}`),
+                      )}
+                    </div>
+                  )}
                 </div>
-                {recentGroups.length === 0 ? (
-                  <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
-                    {t("mood.chart.empty")}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {recentGroups.map((group) => (
-                      <section key={group.date} className="overflow-hidden rounded-xl border bg-background">
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between bg-muted/40 px-3 py-2 text-left hover:bg-muted"
-                          onClick={() => setSelectedDate(group.date)}
-                        >
-                          <span className="text-xs font-medium">{formatDay(group.date)}</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {group.points.length} {t("mood.insights.entries")}
-                          </span>
-                        </button>
-                        <div className="divide-y">
-                          {group.points.map((point, index) =>
-                            moodRow(point, `${point.memoName}-${point.createTime.toISOString()}-${index}`),
-                          )}
-                        </div>
-                      </section>
+              ) : detailsView === "recent" ? (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {[
+                      { label: t("mood.insights.average"), value: recentAverage > 0 ? recentAverage.toFixed(1) : "—" },
+                      { label: t("mood.insights.recorded-days"), value: String(recentDays.length) },
+                      { label: t("mood.dashboard.records"), value: String(recentRecordCount) },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-lg bg-muted/60 p-2.5">
+                        <div className="truncate text-xs text-muted-foreground">{item.label}</div>
+                        <div className="mt-0.5 text-lg font-semibold">{item.value}</div>
+                      </div>
                     ))}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {(historyYears.length > 0 ? historyYears : [today.getFullYear()]).map((year) => (
-                    <Button
-                      key={year}
-                      size="sm"
-                      variant={selectedYear === year ? "secondary" : "outline"}
-                      onClick={() => {
-                        setSelectedYear(year);
-                        setSelectedMonth(undefined);
-                      }}
-                    >
-                      {year}
-                    </Button>
-                  ))}
-                </div>
-
-                {selectedMonth === undefined ? (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                    {yearMonths.map((month) => {
-                      const roundedAverage = Math.max(1, Math.min(MAX_MOOD_LEVEL, Math.round(month.avg)));
-                      return (
-                        <button
-                          type="button"
-                          key={month.month}
-                          disabled={month.count === 0}
-                          onClick={() => setSelectedMonth(month.month)}
-                          className="rounded-lg border bg-background p-3 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:opacity-45"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-medium">{monthLabel(selectedYear, month.month)}</span>
-                            {month.count > 0 && <span className="text-lg">{emojis[roundedAverage - 1]}</span>}
-                          </div>
-                          <div className="mt-2 text-[11px] text-muted-foreground">
-                            {month.count > 0
-                              ? `${month.count} ${t("mood.insights.entries")} · ${month.avg.toFixed(1)}`
-                              : t("mood.chart.empty")}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedMonth(undefined)}>
-                        <ArrowLeftIcon />
-                        {t("mood.insights.all-months")}
-                      </Button>
-                      <span className="text-sm font-medium">{monthLabel(selectedYear, selectedMonth)}</span>
+                  {recentGroups.length === 0 ? (
+                    <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
+                      {t("mood.chart.empty")}
                     </div>
-                    {monthDays.length === 0 ? (
-                      <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
-                        {t("mood.chart.empty")}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                        {monthDays.map((day) => {
-                          const roundedAverage = Math.max(1, Math.min(MAX_MOOD_LEVEL, Math.round(day.avg)));
-                          return (
-                            <button
-                              type="button"
-                              key={day.date}
-                              onClick={() => setSelectedDate(day.date)}
-                              className="flex items-center gap-2.5 rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-accent"
-                            >
-                              <span className="text-lg">{emojis[roundedAverage - 1]}</span>
-                              <span className="min-w-0 flex-1">
-                                <span className="block text-sm font-medium">{formatDay(day.date)}</span>
-                                <span className="block text-[11px] text-muted-foreground">
-                                  {day.count} {t("mood.insights.entries")} · {day.min}–{day.max}
-                                </span>
-                              </span>
-                              <span className="font-mono text-sm font-semibold">{day.avg.toFixed(1)}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
+                  ) : (
+                    <div className="space-y-2">
+                      {recentGroups.map((group) => (
+                        <section key={group.date} className="overflow-hidden rounded-xl border bg-background">
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between bg-muted/40 px-3 py-2 text-left hover:bg-muted"
+                            onClick={() => setSelectedDate(group.date)}
+                          >
+                            <span className="text-xs font-medium">{formatDay(group.date)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {group.points.length} {t("mood.insights.entries")}
+                            </span>
+                          </button>
+                          <div className="divide-y">
+                            {group.points.map((point, index) =>
+                              moodRow(point, `${point.memoName}-${point.createTime.toISOString()}-${index}`),
+                            )}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {(historyYears.length > 0 ? historyYears : [today.getFullYear()]).map((year) => (
+                      <Button
+                        key={year}
+                        size="sm"
+                        variant={selectedYear === year ? "secondary" : "outline"}
+                        onClick={() => {
+                          setSelectedYear(year);
+                          setSelectedMonth(undefined);
+                        }}
+                      >
+                        {year}
+                      </Button>
+                    ))}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+
+                  {selectedMonth === undefined ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                      {yearMonths.map((month) => {
+                        const roundedAverage = Math.max(1, Math.min(MAX_MOOD_LEVEL, Math.round(month.avg)));
+                        return (
+                          <button
+                            type="button"
+                            key={month.month}
+                            disabled={month.count === 0}
+                            onClick={() => setSelectedMonth(month.month)}
+                            className="rounded-lg border bg-background p-3 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:opacity-45"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-sm font-medium">{monthLabel(selectedYear, month.month)}</span>
+                              {month.count > 0 && <span className="text-lg">{emojis[roundedAverage - 1]}</span>}
+                            </div>
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {month.count > 0
+                                ? `${month.count} ${t("mood.insights.entries")} · ${month.avg.toFixed(1)}`
+                                : t("mood.chart.empty")}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedMonth(undefined)}>
+                          <ArrowLeftIcon />
+                          {t("mood.insights.all-months")}
+                        </Button>
+                        <span className="text-sm font-medium">{monthLabel(selectedYear, selectedMonth)}</span>
+                      </div>
+                      {monthDays.length === 0 ? (
+                        <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
+                          {t("mood.chart.empty")}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                          {monthDays.map((day) => {
+                            const roundedAverage = Math.max(1, Math.min(MAX_MOOD_LEVEL, Math.round(day.avg)));
+                            return (
+                              <button
+                                type="button"
+                                key={day.date}
+                                onClick={() => setSelectedDate(day.date)}
+                                className="flex items-center gap-2.5 rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-accent"
+                              >
+                                <span className="text-lg">{emojis[roundedAverage - 1]}</span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block text-sm font-medium">{formatDay(day.date)}</span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    {day.count} {t("mood.insights.entries")} · {day.min}–{day.max}
+                                  </span>
+                                </span>
+                                <span className="font-mono text-sm font-semibold">{day.avg.toFixed(1)}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        </DashboardDetails>
+      )}
     </>
   );
 };

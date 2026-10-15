@@ -1,18 +1,11 @@
-import { timestampDate } from "@bufbuild/protobuf/wkt";
-import { ChartLineIcon, LinkIcon, ListTodoIcon, WalletCardsIcon, XIcon } from "lucide-react";
+import { LinkIcon, XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { useSearchParams } from "react-router-dom";
-import FinanceDashboard from "@/components/Finance/FinanceDashboard";
-import FinanceTransactionDialog from "@/components/Finance/FinanceTransactionDialog";
+import { Navigate, useSearchParams } from "react-router-dom";
 import MemoEditor from "@/components/MemoEditor";
 import { deriveDefaultCreateTimeFromFilters } from "@/components/MemoEditor/utils/deriveDefaultCreateTime";
 import MemoView from "@/components/MemoView";
-import MoodDashboard from "@/components/MoodDashboard";
 import PagedMemoList, { getMemoKey } from "@/components/PagedMemoList";
-import PersonalDashboardWidget from "@/components/PersonalDashboardWidget";
-import ReminderCenterDialog from "@/components/Reminder/ReminderCenterDialog";
-import ReminderDashboard from "@/components/Reminder/ReminderDashboard";
 import ReminderDetailDialog from "@/components/Reminder/ReminderDetailDialog";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,11 +14,8 @@ import { NewMemoProvider } from "@/contexts/NewMemoContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
 import useCurrentUser from "@/hooks/useCurrentUser";
-import useNavigateTo from "@/hooks/useNavigateTo";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useReminderLists, useReminders, useUpdateReminder } from "@/hooks/useReminderQueries";
-import { useUserStats } from "@/hooks/useUserQueries";
-import type { MoodPoint } from "@/lib/mood-stats";
 import { spaceScopedCacheKey } from "@/lib/resource-names";
 import { ROUTES } from "@/router/routes";
 import { State } from "@/types/proto/api/v1/common_pb";
@@ -37,8 +27,7 @@ const Home = () => {
   const user = useCurrentUser();
   const t = useTranslate();
   const { isUserSettingsInitialized } = useAuth();
-  const { remindersEnabled, financeEnabled, moodEnabled } = usePersonalFeatures();
-  const navigateTo = useNavigateTo();
+  const { remindersEnabled } = usePersonalFeatures();
   const [searchParams, setSearchParams] = useSearchParams();
   const { filters } = useMemoFilterContext();
   const { memoFilter: contextFilter, selectedSpaceName } = useSpaceContext();
@@ -47,9 +36,6 @@ const Home = () => {
   // has to be rebuilt for the new Space rather than just re-pointed at another cache.
   const editorCacheKey = spaceScopedCacheKey("home-memo-editor", selectedSpaceName);
 
-  const { data: userStats } = useUserStats(user?.name, { enabled: isUserSettingsInitialized && moodEnabled });
-  const [financeDialogOpen, setFinanceDialogOpen] = useState(false);
-  const [reminderCenterOpen, setReminderCenterOpen] = useState(false);
   const [selectedReminderName, setSelectedReminderName] = useState<string>();
   const linkingReminderUID = searchParams.get("linkReminder") ?? "";
   const { data: pendingReminders = [] } = useReminders(user?.name, {
@@ -74,24 +60,8 @@ const Home = () => {
     [linkingReminderUID, reminders],
   );
   const updateReminder = useUpdateReminder();
-  const moodPoints = useMemo(() => {
-    const timestamps = userStats?.moodCreatedTimestamps?.length
-      ? userStats.moodCreatedTimestamps
-      : (userStats?.memoCreatedTimestamps ?? []);
-    const levels = userStats?.moodLevels ?? [];
-    const memoNames = userStats?.moodMemoNames ?? [];
-    const points: MoodPoint[] = [];
-    timestamps.forEach((timestamp, index) => {
-      const level = levels[index];
-      if (!timestamp || level <= 0 || level > 7) return;
-      points.push({ createTime: timestampDate(timestamp), moodLevel: level, memoName: memoNames[index] });
-    });
-    return points;
-  }, [userStats]);
-
   useEffect(() => {
     if (!remindersEnabled) {
-      setReminderCenterOpen(false);
       setSelectedReminderName(undefined);
       if (searchParams.has("reminders") || searchParams.has("selected") || searchParams.has("linkReminder")) {
         setSearchParams(
@@ -106,44 +76,14 @@ const Home = () => {
       }
       return;
     }
-    const selected = searchParams.get("selected");
-    if (selected) {
-      setReminderCenterOpen(false);
-      setSelectedReminderName(selected);
-      return;
-    }
-    setSelectedReminderName(undefined);
-    setReminderCenterOpen(searchParams.get("reminders") === "1");
+    setSelectedReminderName(searchParams.get("selected") ?? undefined);
   }, [remindersEnabled, searchParams, setSearchParams]);
-
-  const openReminderCenter = () => {
-    setSearchParams((params) => {
-      params.set("reminders", "1");
-      params.delete("selected");
-      return params;
-    });
-  };
 
   const openReminderDetail = (name: string) => {
     setSearchParams((params) => {
       params.set("selected", name);
       return params;
     });
-  };
-
-  const handleReminderCenterOpenChange = (open: boolean) => {
-    if (open) {
-      openReminderCenter();
-      return;
-    }
-    setSearchParams(
-      (params) => {
-        params.delete("reminders");
-        params.delete("selected");
-        return params;
-      },
-      { replace: true },
-    );
   };
 
   const handleReminderDetailOpenChange = (open: boolean) => {
@@ -195,35 +135,14 @@ const Home = () => {
     state: State.NORMAL,
   });
 
+  if (remindersEnabled && searchParams.get("reminders") === "1") {
+    const reminderParams = new URLSearchParams(searchParams);
+    reminderParams.delete("reminders");
+    return <Navigate to={{ pathname: ROUTES.REMINDERS, search: reminderParams.toString() }} replace />;
+  }
+
   return (
     <div className="w-full min-h-full bg-background text-foreground">
-      {isUserSettingsInitialized && user && (moodEnabled || financeEnabled || remindersEnabled) && (
-        <PersonalDashboardWidget
-          className="mb-3"
-          labels={[
-            ...(moodEnabled ? [t("mood.chart.title")] : []),
-            ...(financeEnabled ? [t("finance.dashboard.title")] : []),
-            ...(remindersEnabled ? [t("reminder.dashboard-title")] : []),
-          ]}
-          icons={[
-            ...(moodEnabled ? [ChartLineIcon] : []),
-            ...(financeEnabled ? [WalletCardsIcon] : []),
-            ...(remindersEnabled ? [ListTodoIcon] : []),
-          ]}
-        >
-          {moodEnabled && (
-            <MoodDashboard
-              points={moodPoints}
-              embedded
-              onMemoSelect={(memoName) => navigateTo(`/${memoName}`, { state: { from: ROUTES.HOME } })}
-            />
-          )}
-          {financeEnabled && <FinanceDashboard parent={user.name} onAdd={() => setFinanceDialogOpen(true)} embedded />}
-          {remindersEnabled && (
-            <ReminderDashboard parent={user.name} onOpenCenter={openReminderCenter} onOpenReminder={openReminderDetail} />
-          )}
-        </PersonalDashboardWidget>
-      )}
       <NewMemoProvider>
         <PagedMemoList
           renderer={(memo: Memo, { compact }) => (
@@ -275,12 +194,6 @@ const Home = () => {
           }}
         />
       </NewMemoProvider>
-      {user && financeEnabled && (
-        <FinanceTransactionDialog open={financeDialogOpen} onOpenChange={setFinanceDialogOpen} parent={user.name} />
-      )}
-      {remindersEnabled && (
-        <ReminderCenterDialog open={reminderCenterOpen} onOpenChange={handleReminderCenterOpenChange} onOpenReminder={openReminderDetail} />
-      )}
       {user && remindersEnabled && (
         <ReminderDetailDialog
           reminder={selectedReminder}

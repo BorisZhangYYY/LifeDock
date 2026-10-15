@@ -1,5 +1,5 @@
 import { useDirection } from "@base-ui/react/direction-provider";
-import { Columns2Icon, Columns3Icon, InfinityIcon, type LucideIcon, Rows3Icon, SlidersHorizontalIcon } from "lucide-react";
+import { ChevronDownIcon, Columns2Icon, Columns3Icon, InfinityIcon, type LucideIcon, Rows3Icon, SlidersHorizontalIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { SIDEBAR_SECTION_ACTION_BUTTON_CLASSES, SIDEBAR_SECTION_ACTION_ICON_CLASSES } from "@/components/AppSidebar/SidebarSection";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface Props {
   className?: string;
+  variant?: "settings" | "navigation";
 }
 
 interface SettingRowProps {
@@ -71,7 +72,6 @@ function MemoDisplaySettingsContent() {
   return (
     <div>
       <section className="px-3 py-2.5">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/65">{t("memo.layout")}</p>
         <div
           role="radiogroup"
           aria-label={t("memo.layout")}
@@ -117,11 +117,11 @@ function MemoDisplaySettingsContent() {
                 data-value={value}
                 onClick={() => setMaxColumns(value)}
                 className={cn(
-                  "flex h-8 min-w-0 items-center justify-center gap-1 rounded-md px-1 text-[11px] transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "flex h-8 min-w-0 items-center justify-center gap-1 rounded-md px-1 text-ui transition-[background-color,color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                   active ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
                 )}
               >
-                <Icon className="size-3.5 shrink-0" strokeWidth={1.8} />
+                <Icon className="size-4 shrink-0" strokeWidth={1.8} />
                 <span className="truncate">{shortLabel}</span>
               </button>
             );
@@ -130,7 +130,6 @@ function MemoDisplaySettingsContent() {
       </section>
 
       <section className="space-y-2 border-t border-border/60 px-3 py-2.5">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground/65">{t("memo.order")}</p>
         <SettingRow label={t("memo.order-by")}>
           <Select
             value={timeBasis}
@@ -186,7 +185,7 @@ function MemoDisplaySettingsContent() {
   );
 }
 
-function MemoDisplaySettingMenu({ className }: Props) {
+function MemoDisplaySettingMenu({ className, variant = "settings" }: Props) {
   const t = useTranslate();
 
   return (
@@ -197,20 +196,28 @@ function MemoDisplaySettingMenu({ className }: Props) {
             aria-label={t("memo.view-options")}
             className={cn(
               "flex items-center justify-center",
-              SIDEBAR_SECTION_ACTION_BUTTON_CLASSES,
+              variant === "navigation"
+                ? "h-[30px] w-6 shrink-0 rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                : SIDEBAR_SECTION_ACTION_BUTTON_CLASSES,
               "data-popup-open:bg-sidebar-accent data-popup-open:text-foreground",
               className,
             )}
           >
-            <SlidersHorizontalIcon className={SIDEBAR_SECTION_ACTION_ICON_CLASSES} strokeWidth={1.8} />
+            {variant === "navigation" ? (
+              <ChevronDownIcon className="size-3.5" strokeWidth={1.8} />
+            ) : (
+              <SlidersHorizontalIcon className={SIDEBAR_SECTION_ACTION_ICON_CLASSES} strokeWidth={1.8} />
+            )}
           </PopoverTrigger>
         </TooltipTrigger>
         <TooltipContent side="top">{t("memo.view-options")}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" sideOffset={6} className="w-64 p-0">
-        <div className="border-b border-border/60 px-3 py-2.5">
-          <p className="text-[13px] font-medium text-foreground">{t("memo.view-options")}</p>
-        </div>
+        {variant === "settings" && (
+          <div className="border-b border-border/60 px-3 py-2.5">
+            <p className="text-ui font-medium text-foreground">{t("memo.view-options")}</p>
+          </div>
+        )}
         <MemoDisplaySettingsContent />
       </PopoverContent>
     </Popover>

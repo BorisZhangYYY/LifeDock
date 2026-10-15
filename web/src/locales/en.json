@@ -149,6 +149,7 @@
     "select-location": "Location"
   },
   "common": {
+    "timeline": "Timeline",
     "remember-me": "Remember me",
     "role": "Role",
     "author": "Author",
@@ -260,6 +261,7 @@
     "visibility": "Visibility"
   },
   "mood": {
+    "statistics": "Mood statistics",
     "filter": "Mood",
     "monthly-average": "Monthly average mood",
     "select": "Select mood",
@@ -335,21 +337,21 @@
     },
     "personal-features": {
       "label": "Personal features",
-      "description": "Choose which personal extensions appear in Memos and how their Home panels are protected.",
+      "description": "Choose which personal extensions appear in Memos and how their content is protected.",
       "features-title": "Feature switches",
       "features-description": "Turn off every extension to return to the original memo-only experience. Existing personal data is kept.",
       "reminders": "Reminders",
-      "reminders-description": "Reminder center, Home summary, editor linking, and reminder notifications.",
+      "reminders-description": "Reminder dashboard, lists, editor linking, and reminder notifications.",
       "finance": "Finances",
-      "finance-description": "Income and expense panel, transactions, wallets, and finance settings.",
+      "finance-description": "Finance dashboard, transactions, wallets, and category management.",
       "mood": "Mood",
-      "mood-description": "Mood selector, calendar markers, filters, and Home summary.",
+      "mood-description": "Mood statistics, history, and mood selection in the editor.",
       "disable-all": "Disable all personal features",
       "all-disabled": "All personal features are disabled",
       "privacy-title": "Privacy",
       "privacy-description": "Blur personal summaries and sensitive memos until you reveal them. This does not delete or encrypt their data.",
-      "home-privacy": "Blur private content",
-      "home-privacy-description": "Blur Home panels and reminder-linked memos. Panel collapse and expand state is remembered separately.",
+      "home-privacy": "Hide personal content",
+      "home-privacy-description": "Hide mood statistics, finances, reminders, and reminder-linked memos until revealed.",
       "privacy-visible": "Visible",
       "privacy-blurred": "Blurred",
       "privacy-collapsed": "Collapsed",
@@ -1099,6 +1101,9 @@
     "reset-link": "Reset Link"
   },
   "reminder": {
+    "list-settings-description": "Edit list names, colors, and icons. Add reminders beneath each list on the Records page.",
+    "all-lists": "All lists",
+    "manage-list": "Manage list",
     "add-date": "Add date",
     "add-location": "Add location",
     "advance-notice": "Early reminder",
@@ -1534,6 +1539,9 @@
     "switch": "Switch space"
   },
   "personal": {
+    "records": "Records",
+    "navigation": "Personal",
+    "overview": "Overview",
     "title": "Personal life",
     "private": "Only you · Across all spaces",
     "description": "Reflect on your moods, finances, and reminders",

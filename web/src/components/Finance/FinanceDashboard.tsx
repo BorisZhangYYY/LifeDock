@@ -6,9 +6,7 @@ import {
   ArrowRightLeftIcon,
   ArrowUpIcon,
   HistoryIcon,
-  ListIcon,
   LoaderCircleIcon,
-  PlusIcon,
   SettingsIcon,
   Trash2Icon,
   WalletCardsIcon,
@@ -16,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
-import FinanceSettings from "@/components/Settings/FinanceSettings";
+import DashboardDetails from "@/components/DashboardDetails";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,8 +33,9 @@ import { useTranslate } from "@/utils/i18n";
 
 interface Props {
   parent: string;
-  onAdd: () => void;
   embedded?: boolean;
+  view?: "records" | "statistics";
+  onManage?: () => void;
 }
 
 interface HistoryTotal {
@@ -64,12 +63,10 @@ const localDateKey = (date: Date) =>
 const monthLabel = (year: number, month: number) =>
   new Intl.DateTimeFormat(undefined, { year: "numeric", month: "long" }).format(new Date(year, month, 1));
 
-const FinanceDashboard = ({ parent, onAdd, embedded = false }: Props) => {
+const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage }: Props) => {
   const t = useTranslate();
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
   const todayRange = useMemo(() => financeRange("today"), []);
-  const [managementOpen, setManagementOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [detailsView, setDetailsView] = useState<"7" | "30" | "history">("7");
   const detailsWindow = detailsView === "7" ? 7 : 30;
   const detailsRange = useMemo(() => financeRange(detailsWindow), [detailsWindow]);
@@ -86,7 +83,7 @@ const FinanceDashboard = ({ parent, onAdd, embedded = false }: Props) => {
   const { data: detailsSummary } = useFinanceSummary(parent, detailsRange.start, detailsRange.end, timeZone);
   const { data: historyTransactions = [], isLoading: historyLoading } = useFinanceTransactionHistory(
     parent,
-    detailsOpen && detailsView === "history",
+    view === "statistics" && detailsView === "history",
   );
 
   const walletNames = useMemo(() => new Map(wallets.map((wallet) => [wallet.name, wallet.displayName])), [wallets]);
@@ -194,426 +191,399 @@ const FinanceDashboard = ({ parent, onAdd, embedded = false }: Props) => {
 
   return (
     <>
-      <div
-        className={cn(
-          "flex h-full min-h-64 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
-          embedded && "rounded-none border-0",
-        )}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-base font-semibold">
-              {!embedded && (
-                <>
-                  <WalletCardsIcon className="size-5 shrink-0 text-primary" />
-                  <span className="truncate">{t("finance.dashboard.title")}</span>
-                </>
-              )}
-              <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground">
-                {t("mood.chart.today")}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(todayRange.start)}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={() => setManagementOpen(true)}
-              title={t("setting.finance.label")}
-              aria-label={t("setting.finance.label")}
-            >
-              <SettingsIcon />
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={onAdd}
-              title={t("finance.dashboard.add")}
-              aria-label={t("finance.dashboard.add")}
-            >
-              <PlusIcon />
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setDetailsOpen(true)}>
-              <ListIcon />
-              {t("finance.dashboard.view-details")}
-            </Button>
-          </div>
-        </div>
-
-        {wallets.length === 0 ? (
-          <div className="mt-4 flex min-h-36 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-sm text-muted-foreground">
-            <WalletCardsIcon className="size-6" />
-            <Button variant="outline" size="sm" onClick={() => setManagementOpen(true)}>
-              <SettingsIcon />
-              {t("finance.dashboard.setup")}
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[
-                { label: t("finance.dashboard.total-balance"), value: todaySummary?.totalBalanceMinor ?? 0n, className: "text-foreground" },
-                {
-                  label: t("finance.dashboard.income"),
-                  value: todaySummary?.incomeMinor ?? 0n,
-                  className: "text-emerald-600 dark:text-emerald-400",
-                },
-                {
-                  label: t("finance.dashboard.expense"),
-                  value: todaySummary?.expenseMinor ?? 0n,
-                  className: "text-rose-600 dark:text-rose-400",
-                },
-                { label: t("finance.dashboard.net"), value: todaySummary?.netMinor ?? 0n, className: "text-primary" },
-              ].map((item) => (
-                <div key={item.label} className="min-w-0 rounded-lg bg-muted/50 p-3">
-                  <div className="truncate text-xs text-muted-foreground">{item.label}</div>
-                  <div className={cn("mt-1 truncate font-mono text-base font-semibold", item.className)}>{formatCNY(item.value)}</div>
-                </div>
-              ))}
-            </div>
-
-            {activeTodayTransactions.length === 0 ? (
-              <div className="flex min-h-24 flex-1 items-center justify-center text-sm text-muted-foreground">
-                {t("finance.dashboard.empty-today")}
+      {view === "records" && (
+        <div
+          className={cn(
+            "flex min-h-64 flex-col rounded-xl border border-border bg-card p-4 text-card-foreground",
+            embedded && "rounded-none border-0",
+          )}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-base font-semibold">
+                {!embedded && (
+                  <>
+                    <WalletCardsIcon className="size-5 shrink-0 text-primary" />
+                    <span className="truncate">{t("finance.dashboard.title")}</span>
+                  </>
+                )}
+                <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
+                  {t("mood.chart.today")}
+                </span>
               </div>
-            ) : (
-              <div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-                {activeTodayTransactions.map((transaction) => {
-                  const presentation = transactionPresentation(transaction);
-                  const category = categoriesByName.get(transaction.category);
-                  const destinationName = walletNames.get(transaction.destinationWallet);
-                  const title = transaction.note || category?.displayName || presentation.label;
-                  return (
-                    <div key={transaction.name} className="flex items-center gap-3 rounded-lg border bg-background/60 px-3 py-2.5">
-                      <span className={cn("flex size-8 items-center justify-center rounded-full bg-muted", presentation.color)}>
-                        {category?.emoji ? (
-                          <span className="text-base leading-none">{category.emoji}</span>
-                        ) : (
-                          <presentation.icon className="size-4" />
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm font-medium">{title}</div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
-                          {destinationName ? ` → ${destinationName}` : ""} ·{" "}
-                          {transaction.occurTime
-                            ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(
-                                timestampDate(transaction.occurTime),
-                              )
-                            : ""}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className={cn("font-mono text-sm font-semibold", presentation.color)}>{presentation.amount}</div>
-                        <div className="text-[11px] text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(todayRange.start)}
+              </p>
+            </div>
+          </div>
 
-      <Dialog open={managementOpen} onOpenChange={setManagementOpen}>
-        <DialogContent size="full" className="h-[min(44rem,calc(100vh-2rem))] md:max-w-4xl">
-          <DialogHeader className="pr-8">
-            <DialogTitle className="text-base">{t("setting.finance.label")}</DialogTitle>
-            <DialogDescription className="text-xs">{t("setting.finance.description")}</DialogDescription>
-          </DialogHeader>
-          <FinanceSettings />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent size="full" className="h-[min(42rem,calc(100vh-2rem))] gap-3 md:max-w-4xl">
-          <DialogHeader className="pr-8">
-            <DialogTitle className="text-base">{t("finance.insights.title")}</DialogTitle>
-            <DialogDescription className="text-xs">{t("finance.insights.description")}</DialogDescription>
-          </DialogHeader>
-
-          <Tabs
-            value={detailsView}
-            onValueChange={(value) => {
-              setDetailsView(value as "7" | "30" | "history");
-              setHistoryMonth(undefined);
-              setHistoryDate(undefined);
-            }}
-          >
-            <TabsList>
-              <TabsTrigger value="7">{t("mood.chart.week")}</TabsTrigger>
-              <TabsTrigger value="30">{t("mood.chart.trend")}</TabsTrigger>
-              <TabsTrigger value="history">
-                <HistoryIcon />
-                {t("finance.insights.more-history")}
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {detailsView === "history" ? (
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
-              {historyLoading ? (
-                <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <LoaderCircleIcon className="size-4 animate-spin" />
-                  {t("finance.insights.loading")}
-                </div>
-              ) : historyDate ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Button variant="ghost" size="sm" onClick={() => setHistoryDate(undefined)}>
-                      <ArrowLeftIcon />
-                      {t("finance.insights.back-to-month")}
-                    </Button>
-                    <span className="text-sm font-medium">
-                      {new Intl.DateTimeFormat(undefined, { year: "numeric", month: "long", day: "numeric", weekday: "short" }).format(
-                        new Date(`${historyDate}T00:00:00`),
-                      )}
-                    </span>
-                  </div>
-                  {historyDateTransactions.length === 0 ? (
-                    <div className="flex min-h-40 items-center justify-center rounded-xl border text-sm text-muted-foreground">
-                      {t("finance.insights.empty-history")}
-                    </div>
-                  ) : (
-                    <div className="divide-y rounded-xl border bg-background">
-                      {historyDateTransactions.map((transaction) => {
-                        const presentation = transactionPresentation(transaction);
-                        const category = categoriesByName.get(transaction.category);
-                        const destinationName = walletNames.get(transaction.destinationWallet);
-                        const title = transaction.note || category?.displayName || presentation.label;
-                        return (
-                          <div
-                            key={transaction.name}
-                            className={cn("flex items-center gap-3 px-3 py-2.5", transaction.voidTime && "opacity-65")}
-                          >
-                            <span className={cn("flex size-8 items-center justify-center rounded-full bg-muted", presentation.color)}>
-                              {category?.emoji ? (
-                                <span className="text-base leading-none">{category.emoji}</span>
-                              ) : (
-                                <presentation.icon className="size-4" />
-                              )}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
-                                <span className={cn("truncate", transaction.voidTime && "line-through")}>{title}</span>
-                                {transaction.voidTime && (
-                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{t("finance.transaction.voided")}</span>
-                                )}
-                              </div>
-                              <div className="truncate text-xs text-muted-foreground">
-                                {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
-                                {category ? ` · ${category.displayName}` : ""}
-                                {destinationName ? ` → ${destinationName}` : ""} ·{" "}
-                                {transaction.occurTime
-                                  ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(
-                                      timestampDate(transaction.occurTime),
-                                    )
-                                  : ""}
-                              </div>
-                              {transaction.voidTime && (
-                                <div className="text-[11px] text-muted-foreground">
-                                  {t("finance.transaction.voided-at")}{" "}
-                                  {new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(
-                                    timestampDate(transaction.voidTime),
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <div
-                                className={cn(
-                                  "font-mono text-sm font-semibold",
-                                  presentation.color,
-                                  transaction.voidTime && "line-through",
-                                )}
-                              >
-                                {presentation.amount}
-                              </div>
-                              <div className="text-[11px] text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
-                            </div>
-                            {!transaction.voidTime && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={t("finance.transaction.void")}
-                                onClick={() => setVoidTarget(transaction)}
-                              >
-                                <Trash2Icon className="size-4" />
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {(historyYears.length > 0 ? historyYears : [todayRange.start.getFullYear()]).map((year) => (
-                      <Button
-                        key={year}
-                        size="sm"
-                        variant={historyYear === year ? "secondary" : "outline"}
-                        onClick={() => {
-                          setHistoryYear(year);
-                          setHistoryMonth(undefined);
-                        }}
-                      >
-                        {year}
-                      </Button>
-                    ))}
-                  </div>
-
-                  {historyMonth === undefined ? (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                      {historyMonths.map((total, month) => (
-                        <button
-                          type="button"
-                          key={month}
-                          disabled={total.count + total.auditCount === 0}
-                          onClick={() => setHistoryMonth(month)}
-                          className="rounded-lg border bg-background p-3 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:opacity-45"
-                        >
-                          <div className="text-sm font-medium">{monthLabel(historyYear, month)}</div>
-                          <div className="mt-2 text-[11px] text-muted-foreground">
-                            {total.count + total.auditCount > 0
-                              ? `${total.count} ${t("finance.insights.entries")}${total.auditCount ? ` · ${total.auditCount} ${t("finance.transaction.voided")}` : ""}`
-                              : t("finance.insights.empty-history")}
-                          </div>
-                          {total.count > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-x-2 font-mono text-[11px]">
-                              <span className="text-emerald-600 dark:text-emerald-400">+{formatCNY(total.income)}</span>
-                              <span className="text-rose-600 dark:text-rose-400">-{formatCNY(total.expense)}</span>
-                            </div>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setHistoryMonth(undefined)}>
-                          <ArrowLeftIcon />
-                          {t("finance.insights.all-months")}
-                        </Button>
-                        <span className="text-sm font-medium">{monthLabel(historyYear, historyMonth)}</span>
-                      </div>
-                      {historyDays.length === 0 ? (
-                        <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
-                          {t("finance.insights.empty-history")}
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                          {historyDays.map((day) => (
-                            <button
-                              type="button"
-                              key={day.date}
-                              onClick={() => setHistoryDate(day.date)}
-                              className="rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-accent"
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="text-sm font-medium">
-                                  {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(
-                                    new Date(`${day.date}T00:00:00`),
-                                  )}
-                                </span>
-                                <span className="text-[11px] text-muted-foreground">
-                                  {day.count} {t("finance.insights.entries")}
-                                  {day.auditCount ? ` · ${day.auditCount} ${t("finance.transaction.voided")}` : ""}
-                                </span>
-                              </div>
-                              <div className="mt-2 grid grid-cols-3 gap-2 text-right font-mono text-[11px]">
-                                <span className="text-emerald-600 dark:text-emerald-400">+{formatCNY(day.income)}</span>
-                                <span className="text-rose-600 dark:text-rose-400">-{formatCNY(day.expense)}</span>
-                                <span className="font-semibold">{formatCNY(day.income - day.expense)}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
+          {wallets.length === 0 ? (
+            <div className="mt-4 flex min-h-36 flex-1 flex-col items-center justify-center gap-3 rounded-lg border border-dashed text-sm text-muted-foreground">
+              <WalletCardsIcon className="size-6" />
+              <Button variant="outline" size="sm" onClick={onManage}>
+                <SettingsIcon />
+                {t("finance.dashboard.setup")}
+              </Button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
                   {
                     label: t("finance.dashboard.total-balance"),
-                    value: detailsSummary?.totalBalanceMinor ?? 0n,
+                    value: todaySummary?.totalBalanceMinor ?? 0n,
                     className: "text-foreground",
                   },
                   {
                     label: t("finance.dashboard.income"),
-                    value: detailsSummary?.incomeMinor ?? 0n,
+                    value: todaySummary?.incomeMinor ?? 0n,
                     className: "text-emerald-600 dark:text-emerald-400",
                   },
                   {
                     label: t("finance.dashboard.expense"),
-                    value: detailsSummary?.expenseMinor ?? 0n,
+                    value: todaySummary?.expenseMinor ?? 0n,
                     className: "text-rose-600 dark:text-rose-400",
                   },
-                  { label: t("finance.dashboard.net"), value: detailsSummary?.netMinor ?? 0n, className: "text-primary" },
+                  { label: t("finance.dashboard.net"), value: todaySummary?.netMinor ?? 0n, className: "text-primary" },
                 ].map((item) => (
-                  <div key={item.label} className="min-w-0 rounded-lg bg-muted/60 p-2.5">
-                    <div className="truncate text-[11px] text-muted-foreground">{item.label}</div>
-                    <div className={cn("mt-0.5 truncate font-mono text-base font-semibold", item.className)}>{formatCNY(item.value)}</div>
+                  <div key={item.label} className="min-w-0 rounded-lg bg-muted/50 p-3">
+                    <div className="truncate text-xs text-muted-foreground">{item.label}</div>
+                    <div className={cn("mt-1 truncate font-mono text-lg font-semibold", item.className)}>{formatCNY(item.value)}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {wallets.map((wallet) => (
-                  <div key={wallet.name} className="min-w-40 shrink-0 rounded-lg border bg-background px-3 py-2">
-                    <div className="truncate text-xs text-muted-foreground">{wallet.displayName}</div>
-                    <div className="mt-0.5 truncate font-mono text-sm font-semibold">{formatCNY(wallet.balanceMinor)}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-y-auto rounded-xl border">
-                <div className="divide-y">
-                  {detailsRows.map((row) => {
-                    const net = row.income - row.expense;
+              {activeTodayTransactions.length === 0 ? (
+                <div className="flex min-h-24 flex-1 items-center justify-center text-sm text-muted-foreground">
+                  {t("finance.dashboard.empty-today")}
+                </div>
+              ) : (
+                <div className="mt-3 space-y-2">
+                  {activeTodayTransactions.map((transaction) => {
+                    const presentation = transactionPresentation(transaction);
+                    const category = categoriesByName.get(transaction.category);
+                    const destinationName = walletNames.get(transaction.destinationWallet);
+                    const title = transaction.note || category?.displayName || presentation.label;
                     return (
-                      <div
-                        key={row.date}
-                        className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(5rem,auto))] items-center gap-3 p-2.5 sm:gap-5 sm:px-3"
-                      >
-                        <div className="text-sm font-medium">
-                          {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(
-                            new Date(`${row.date}T00:00:00`),
+                      <div key={transaction.name} className="flex items-center gap-3 rounded-lg border bg-background/60 px-3 py-2.5">
+                        <span className={cn("flex size-8 items-center justify-center rounded-full bg-muted", presentation.color)}>
+                          {category?.emoji ? (
+                            <span className="text-base leading-none">{category.emoji}</span>
+                          ) : (
+                            <presentation.icon className="size-4" />
                           )}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{title}</div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
+                            {destinationName ? ` → ${destinationName}` : ""} ·{" "}
+                            {transaction.occurTime
+                              ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(
+                                  timestampDate(transaction.occurTime),
+                                )
+                              : ""}
+                          </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-[11px] text-muted-foreground">{t("finance.dashboard.income")}</div>
-                          <div className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{formatCNY(row.income)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[11px] text-muted-foreground">{t("finance.dashboard.expense")}</div>
-                          <div className="font-mono text-xs text-rose-600 dark:text-rose-400">{formatCNY(row.expense)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[11px] text-muted-foreground">{t("finance.dashboard.net")}</div>
-                          <div className="font-mono text-xs font-semibold">{formatCNY(net)}</div>
+                          <div className={cn("font-mono text-sm font-semibold", presentation.color)}>{presentation.amount}</div>
+                          <div className="text-xs text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              )}
             </>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      {view === "statistics" && (
+        <DashboardDetails title={t("finance.insights.title")} description={t("finance.insights.description")}>
+          <>
+            <Tabs
+              value={detailsView}
+              onValueChange={(value) => {
+                setDetailsView(value as "7" | "30" | "history");
+                setHistoryMonth(undefined);
+                setHistoryDate(undefined);
+              }}
+            >
+              <TabsList className="max-w-full overflow-x-auto pb-1 [scrollbar-width:none]">
+                <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="7">
+                  {t("mood.chart.week")}
+                </TabsTrigger>
+                <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="30">
+                  {t("mood.chart.trend")}
+                </TabsTrigger>
+                <TabsTrigger className="h-7 py-1 text-ui [&_svg]:size-4" value="history">
+                  <HistoryIcon />
+                  {t("finance.insights.more-history")}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {detailsView === "history" ? (
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+                {historyLoading ? (
+                  <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground">
+                    <LoaderCircleIcon className="size-4 animate-spin" />
+                    {t("finance.insights.loading")}
+                  </div>
+                ) : historyDate ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <Button variant="ghost" size="sm" onClick={() => setHistoryDate(undefined)}>
+                        <ArrowLeftIcon />
+                        {t("finance.insights.back-to-month")}
+                      </Button>
+                      <span className="text-sm font-medium">
+                        {new Intl.DateTimeFormat(undefined, { year: "numeric", month: "long", day: "numeric", weekday: "short" }).format(
+                          new Date(`${historyDate}T00:00:00`),
+                        )}
+                      </span>
+                    </div>
+                    {historyDateTransactions.length === 0 ? (
+                      <div className="flex min-h-40 items-center justify-center rounded-xl border text-sm text-muted-foreground">
+                        {t("finance.insights.empty-history")}
+                      </div>
+                    ) : (
+                      <div className="divide-y rounded-xl border bg-background">
+                        {historyDateTransactions.map((transaction) => {
+                          const presentation = transactionPresentation(transaction);
+                          const category = categoriesByName.get(transaction.category);
+                          const destinationName = walletNames.get(transaction.destinationWallet);
+                          const title = transaction.note || category?.displayName || presentation.label;
+                          return (
+                            <div
+                              key={transaction.name}
+                              className={cn("flex items-center gap-3 px-3 py-2.5", transaction.voidTime && "opacity-65")}
+                            >
+                              <span className={cn("flex size-8 items-center justify-center rounded-full bg-muted", presentation.color)}>
+                                {category?.emoji ? (
+                                  <span className="text-base leading-none">{category.emoji}</span>
+                                ) : (
+                                  <presentation.icon className="size-4" />
+                                )}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+                                  <span className={cn("truncate", transaction.voidTime && "line-through")}>{title}</span>
+                                  {transaction.voidTime && (
+                                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{t("finance.transaction.voided")}</span>
+                                  )}
+                                </div>
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
+                                  {category ? ` · ${category.displayName}` : ""}
+                                  {destinationName ? ` → ${destinationName}` : ""} ·{" "}
+                                  {transaction.occurTime
+                                    ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(
+                                        timestampDate(transaction.occurTime),
+                                      )
+                                    : ""}
+                                </div>
+                                {transaction.voidTime && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {t("finance.transaction.voided-at")}{" "}
+                                    {new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(
+                                      timestampDate(transaction.voidTime),
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <div
+                                  className={cn(
+                                    "font-mono text-sm font-semibold",
+                                    presentation.color,
+                                    transaction.voidTime && "line-through",
+                                  )}
+                                >
+                                  {presentation.amount}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
+                              </div>
+                              {!transaction.voidTime && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={t("finance.transaction.void")}
+                                  onClick={() => setVoidTarget(transaction)}
+                                >
+                                  <Trash2Icon className="size-4" />
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {(historyYears.length > 0 ? historyYears : [todayRange.start.getFullYear()]).map((year) => (
+                        <Button
+                          key={year}
+                          size="sm"
+                          variant={historyYear === year ? "secondary" : "outline"}
+                          onClick={() => {
+                            setHistoryYear(year);
+                            setHistoryMonth(undefined);
+                          }}
+                        >
+                          {year}
+                        </Button>
+                      ))}
+                    </div>
+
+                    {historyMonth === undefined ? (
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                        {historyMonths.map((total, month) => (
+                          <button
+                            type="button"
+                            key={month}
+                            disabled={total.count + total.auditCount === 0}
+                            onClick={() => setHistoryMonth(month)}
+                            className="rounded-lg border bg-background p-3 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:opacity-45"
+                          >
+                            <div className="text-sm font-medium">{monthLabel(historyYear, month)}</div>
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {total.count + total.auditCount > 0
+                                ? `${total.count} ${t("finance.insights.entries")}${total.auditCount ? ` · ${total.auditCount} ${t("finance.transaction.voided")}` : ""}`
+                                : t("finance.insights.empty-history")}
+                            </div>
+                            {total.count > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-x-2 font-mono text-xs">
+                                <span className="text-emerald-600 dark:text-emerald-400">+{formatCNY(total.income)}</span>
+                                <span className="text-rose-600 dark:text-rose-400">-{formatCNY(total.expense)}</span>
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setHistoryMonth(undefined)}>
+                            <ArrowLeftIcon />
+                            {t("finance.insights.all-months")}
+                          </Button>
+                          <span className="text-sm font-medium">{monthLabel(historyYear, historyMonth)}</span>
+                        </div>
+                        {historyDays.length === 0 ? (
+                          <div className="flex min-h-48 items-center justify-center rounded-xl border text-sm text-muted-foreground">
+                            {t("finance.insights.empty-history")}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {historyDays.map((day) => (
+                              <button
+                                type="button"
+                                key={day.date}
+                                onClick={() => setHistoryDate(day.date)}
+                                className="rounded-lg border bg-background p-2.5 text-left transition-colors hover:bg-accent"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-medium">
+                                    {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(
+                                      new Date(`${day.date}T00:00:00`),
+                                    )}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {day.count} {t("finance.insights.entries")}
+                                    {day.auditCount ? ` · ${day.auditCount} ${t("finance.transaction.voided")}` : ""}
+                                  </span>
+                                </div>
+                                <div className="mt-2 grid grid-cols-3 gap-2 text-right font-mono text-xs">
+                                  <span className="text-emerald-600 dark:text-emerald-400">+{formatCNY(day.income)}</span>
+                                  <span className="text-rose-600 dark:text-rose-400">-{formatCNY(day.expense)}</span>
+                                  <span className="font-semibold">{formatCNY(day.income - day.expense)}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+                  {[
+                    {
+                      label: t("finance.dashboard.total-balance"),
+                      value: detailsSummary?.totalBalanceMinor ?? 0n,
+                      className: "text-foreground",
+                    },
+                    {
+                      label: t("finance.dashboard.income"),
+                      value: detailsSummary?.incomeMinor ?? 0n,
+                      className: "text-emerald-600 dark:text-emerald-400",
+                    },
+                    {
+                      label: t("finance.dashboard.expense"),
+                      value: detailsSummary?.expenseMinor ?? 0n,
+                      className: "text-rose-600 dark:text-rose-400",
+                    },
+                    { label: t("finance.dashboard.net"), value: detailsSummary?.netMinor ?? 0n, className: "text-primary" },
+                  ].map((item) => (
+                    <div key={item.label} className="min-w-0 rounded-lg bg-muted/60 p-2.5">
+                      <div className="truncate text-xs text-muted-foreground">{item.label}</div>
+                      <div className={cn("mt-0.5 truncate font-mono text-lg font-semibold", item.className)}>{formatCNY(item.value)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {wallets.map((wallet) => (
+                    <div key={wallet.name} className="min-w-40 shrink-0 rounded-lg border bg-background px-3 py-2">
+                      <div className="truncate text-xs text-muted-foreground">{wallet.displayName}</div>
+                      <div className="mt-0.5 truncate font-mono text-sm font-semibold">{formatCNY(wallet.balanceMinor)}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="overflow-hidden rounded-xl border">
+                  <div className="divide-y">
+                    {detailsRows.map((row) => {
+                      const net = row.income - row.expense;
+                      return (
+                        <div
+                          key={row.date}
+                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,minmax(0,auto))] items-center gap-3 p-2.5 sm:gap-5 sm:px-3"
+                        >
+                          <div className="text-sm font-medium">
+                            {new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", weekday: "short" }).format(
+                              new Date(`${row.date}T00:00:00`),
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">{t("finance.dashboard.income")}</div>
+                            <div className="font-mono text-xs text-emerald-600 dark:text-emerald-400">{formatCNY(row.income)}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">{t("finance.dashboard.expense")}</div>
+                            <div className="font-mono text-xs text-rose-600 dark:text-rose-400">{formatCNY(row.expense)}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-muted-foreground">{t("finance.dashboard.net")}</div>
+                            <div className="font-mono text-xs font-semibold">{formatCNY(net)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        </DashboardDetails>
+      )}
       <Dialog open={!!voidTarget} onOpenChange={(open) => !open && setVoidTarget(undefined)}>
         <DialogContent>
           <DialogHeader>

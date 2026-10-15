@@ -1,16 +1,15 @@
 import {
   AlarmClockIcon,
   ArchiveIcon,
-  BarChart3Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
   CheckIcon,
+  ChevronLeftIcon,
   CircleIcon,
   FileTextIcon,
   FlagIcon,
   InboxIcon,
   InfoIcon,
-  MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
@@ -28,8 +27,8 @@ import ReminderListIcon, { isDefaultReminderList } from "@/components/Reminder/R
 import ReminderMetadata from "@/components/Reminder/ReminderMetadata";
 import ReminderStatistics from "@/components/Reminder/ReminderStatistics";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import {
   useArchiveCompletedReminders,
@@ -57,7 +56,10 @@ import { useTranslate } from "@/utils/i18n";
 import { readRememberedReminderList, rememberReminderList, resolveReminderListSelection } from "@/utils/reminder-list-selection";
 import { isReminderOverdue } from "@/utils/reminder-overdue";
 
-type SmartView = "today" | "scheduled" | "all" | "flagged" | "statistics" | "completed" | "archived";
+type SmartView = "today" | "scheduled" | "all" | "flagged" | "statistics" | "settings" | "completed" | "archived";
+
+const isSmartView = (value: string | null): value is SmartView =>
+  value !== null && ["today", "scheduled", "all", "flagged", "statistics", "settings", "completed", "archived"].includes(value);
 
 const VIEW_BY_ID: Record<SmartView, ListRemindersRequest_View> = {
   today: ListRemindersRequest_View.TODAY,
@@ -65,6 +67,7 @@ const VIEW_BY_ID: Record<SmartView, ListRemindersRequest_View> = {
   all: ListRemindersRequest_View.ALL,
   flagged: ListRemindersRequest_View.FLAGGED,
   statistics: ListRemindersRequest_View.ALL,
+  settings: ListRemindersRequest_View.ALL,
   completed: ListRemindersRequest_View.COMPLETED,
   archived: ListRemindersRequest_View.ALL,
 };
@@ -129,26 +132,22 @@ const ReminderRow = ({
         {completed && <CheckIcon className="size-3" />}
       </button>
       <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
-        <span className={cn("block break-words text-[15px] leading-5", completed && "text-muted-foreground line-through")}>
+        <span className={cn("block break-words text-sm leading-5", completed && "text-muted-foreground line-through")}>
           {reminder.title}
         </span>
         <ReminderMetadata reminder={reminder} list={list} className="mt-1" />
       </button>
-      <div className="mt-0.5 grid w-[9.75rem] shrink-0 grid-cols-5 gap-1">
+      <div className="mt-0.5 flex shrink-0 items-center gap-1">
         {reminder.priority !== Reminder_Priority.PRIORITY_UNSPECIFIED ? (
           <span className="inline-flex size-7 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold leading-none text-primary">
             {"!".repeat(reminder.priority)}
           </span>
-        ) : (
-          <span aria-hidden="true" />
-        )}
+        ) : null}
         {reminder.flagged ? (
           <span className="inline-flex size-7 items-center justify-center rounded-md bg-orange-400/10 text-orange-500">
             <FlagIcon className="size-3.5 fill-current" />
           </span>
-        ) : (
-          <span aria-hidden="true" />
-        )}
+        ) : null}
         {reminder.memo ? (
           <Button
             nativeButton={false}
@@ -161,9 +160,7 @@ const ReminderRow = ({
           >
             <FileTextIcon className="size-4" />
           </Button>
-        ) : (
-          <span aria-hidden="true" />
-        )}
+        ) : null}
         {canChooseCompletionDate ? (
           <button
             type="button"
@@ -203,9 +200,7 @@ const ReminderRow = ({
           >
             <Trash2Icon className="size-4" />
           </button>
-        ) : (
-          <span aria-hidden="true" />
-        )}
+        ) : null}
         <button
           type="button"
           className="flex size-7 shrink-0 items-center justify-center rounded-full text-primary opacity-60 transition-opacity hover:bg-primary/10 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -231,8 +226,10 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const parent = user?.name;
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const [activeView, setActiveView] = useState<SmartView>(searchParams.get("view") === "statistics" ? "statistics" : "all");
-  const [activeList, setActiveList] = useState("");
+  const requestedView = searchParams.get("view");
+  const requestedList = searchParams.get("list");
+  const [activeView, setActiveView] = useState<SmartView>(isSmartView(requestedView) ? requestedView : "all");
+  const [activeList, setActiveList] = useState(requestedList ?? "");
   const [query, setQuery] = useState("");
   const [draftVisible, setDraftVisible] = useState(false);
   const [draftListName, setDraftListName] = useState("");
@@ -252,7 +249,6 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   const draftCreateAreaRef = useRef<HTMLDivElement>(null);
   const draftCommitInProgressRef = useRef(false);
   const suppressBlankClickRef = useRef(false);
-  const selectionOwnerRef = useRef("");
   const returnLocation = `${location.pathname}${location.search}${location.hash}`;
 
   const { data: lists = [] } = useReminderLists(parent);
@@ -274,7 +270,8 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
     );
     if (selected) setSelectedReminder(selected);
   }, [selectedFromURL, allReminders, completedForSelection, archivedForSelection]);
-  const selectedView = activeList ? ListRemindersRequest_View.ALL : VIEW_BY_ID[activeView];
+  const recordsView = activeView !== "statistics" && activeView !== "settings";
+  const selectedView = VIEW_BY_ID[activeView];
   const selectedState = activeView === "archived" ? State.ARCHIVED : State.NORMAL;
   const { data: reminders = [], isLoading } = useReminders(parent, {
     view: selectedView,
@@ -282,7 +279,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
     reminderList: activeList,
     query,
     timeZone,
-    enabled: activeView !== "statistics",
+    enabled: recordsView,
   });
   const createReminder = useCreateReminder();
   const completeReminder = useCompleteReminder();
@@ -294,15 +291,15 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   const updateList = useUpdateReminderList();
 
   const today = localDate();
-  const counts = useMemo(
-    () => ({
-      today: allReminders.filter((reminder) => reminder.dueDate && reminder.dueDate <= today).length,
-      scheduled: allReminders.filter((reminder) => !!reminder.dueDate || !!reminder.remindTime).length,
-      all: allReminders.length,
-      flagged: allReminders.filter((reminder) => reminder.flagged).length,
-    }),
-    [allReminders, today],
-  );
+  const counts = useMemo(() => {
+    const scopedReminders = activeList ? allReminders.filter((reminder) => reminder.reminderList === activeList) : allReminders;
+    return {
+      today: scopedReminders.filter((reminder) => reminder.dueDate && reminder.dueDate <= today).length,
+      scheduled: scopedReminders.filter((reminder) => !!reminder.dueDate || !!reminder.remindTime).length,
+      all: scopedReminders.length,
+      flagged: scopedReminders.filter((reminder) => reminder.flagged).length,
+    };
+  }, [activeList, allReminders, today]);
 
   useEffect(() => {
     if (!draftVisible) return;
@@ -318,43 +315,51 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   }, [draftListName, draftVisible]);
 
   useEffect(() => {
-    if (!parent || lists.length === 0) return;
+    setActiveView(isSmartView(requestedView) ? requestedView : "all");
+    setActiveList(requestedList ?? "");
+    setDraftListName("");
+    setDraftVisible(false);
+  }, [requestedList, requestedView]);
 
-    if (selectionOwnerRef.current !== parent) {
-      selectionOwnerRef.current = parent;
-      if (embedded) {
-        setActiveList("");
-        setActiveView("all");
-        return;
-      }
-      const selectedList = resolveReminderListSelection(lists, readRememberedReminderList(parent));
-      setActiveList(selectedList);
-      setActiveView("all");
-      rememberReminderList(parent, selectedList);
-      return;
-    }
-
-    if (activeList && !lists.some((list) => list.name === activeList)) {
-      const selectedList = resolveReminderListSelection(lists);
-      setActiveList(selectedList);
-      setActiveView("all");
-      rememberReminderList(parent, selectedList);
-    }
-  }, [activeList, embedded, lists, parent]);
+  useEffect(() => {
+    if (!activeList || lists.length === 0 || lists.some((list) => list.name === activeList)) return;
+    setActiveList("");
+    setSearchParams(
+      (params) => {
+        params.delete("list");
+        return params;
+      },
+      { replace: true },
+    );
+  }, [activeList, lists, setSearchParams]);
 
   const selectView = (view: SmartView) => {
     setActiveView(view);
-    setActiveList("");
+    const clearList = view === "all" || view === "statistics" || view === "settings";
+    if (clearList) setActiveList("");
     setDraftListName("");
     setDraftVisible(false);
+    setSearchParams((params) => {
+      params.set("view", view);
+      if (clearList) params.delete("list");
+      else if (activeList) params.set("list", activeList);
+      return params;
+    });
   };
 
   const selectList = (name: string) => {
+    const view = recordsView ? activeView : "all";
     setActiveList(name);
-    setActiveView("all");
+    setActiveView(view);
     setDraftListName("");
     setDraftVisible(false);
     if (parent) rememberReminderList(parent, name);
+    setSearchParams((params) => {
+      params.set("view", view);
+      if (name) params.set("list", name);
+      else params.delete("list");
+      return params;
+    });
   };
 
   const defaultList = activeList || resolveReminderListSelection(lists);
@@ -443,7 +448,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
         state: State.NORMAL,
       },
     });
-    selectList(list.name);
+    if (activeView !== "settings") selectList(list.name);
     toast.success(t("reminder.list-saved"));
   };
 
@@ -451,42 +456,30 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
     id: "today" | "scheduled" | "all" | "flagged";
     label: string;
     icon: typeof CalendarDaysIcon;
-    color: string;
   }> = [
-    { id: "today", label: t("common.today"), icon: CalendarDaysIcon, color: "bg-blue-500" },
-    { id: "scheduled", label: t("reminder.scheduled"), icon: AlarmClockIcon, color: "bg-red-400" },
-    { id: "all", label: t("common.all"), icon: InboxIcon, color: "bg-zinc-600" },
-    { id: "flagged", label: t("reminder.flagged"), icon: FlagIcon, color: "bg-orange-300" },
+    { id: "today", label: t("common.today"), icon: CalendarDaysIcon },
+    { id: "scheduled", label: t("reminder.scheduled"), icon: AlarmClockIcon },
+    { id: "all", label: t("common.all"), icon: InboxIcon },
+    { id: "flagged", label: t("reminder.flagged"), icon: FlagIcon },
   ];
 
-  const pageTitle = activeList
-    ? (() => {
-        const list = lists.find((item) => item.name === activeList);
-        return list ? listDisplayName(list, t("common.reminders")) : t("common.all");
-      })()
-    : activeView === "today"
-      ? t("common.today")
-      : activeView === "scheduled"
-        ? t("reminder.scheduled")
-        : activeView === "flagged"
-          ? t("reminder.flagged")
-          : activeView === "completed"
-            ? t("reminder.completed")
-            : activeView === "statistics"
-              ? t("reminder.statistics")
-              : activeView === "archived"
-                ? t("common.archived")
-                : t("common.all");
-
   const grouped = useMemo(() => {
-    if (activeList) return [{ list: lists.find((item) => item.name === activeList), reminders }];
+    if (activeList) return reminders.length > 0 ? [{ list: lists.find((item) => item.name === activeList), reminders }] : [];
     const map = new Map<string, Reminder[]>();
     for (const reminder of reminders) map.set(reminder.reminderList, [...(map.get(reminder.reminderList) ?? []), reminder]);
-    return Array.from(map.entries()).map(([name, items]) => ({ list: lists.find((list) => list.name === name), reminders: items }));
-  }, [activeList, lists, reminders]);
+    // All keeps every list visible, including empty lists, with its own add target.
+    const includeEmptyLists = activeView === "all" && !query.trim();
+    const groups = lists
+      .filter((list) => includeEmptyLists || map.has(list.name))
+      .map((list) => ({ list, reminders: map.get(list.name) ?? [] }));
+    const unknownGroups = Array.from(map.entries())
+      .filter(([name]) => !lists.some((list) => list.name === name))
+      .map(([, items]) => ({ list: undefined, reminders: items }));
+    return [...groups, ...unknownGroups];
+  }, [activeList, activeView, lists, query, reminders]);
 
   const draftGroupName = draftTargetList;
-  const showPerListCreateTargets = !activeList && activeView === "all" && grouped.length > 1;
+  const showPerListCreateTargets = !activeList && activeView === "all";
   const groupsWithDraft = useMemo(() => {
     if (!draftVisible || !draftGroupName || grouped.some((group) => group.list?.name === draftGroupName)) return grouped;
     const targetList = lists.find((list) => list.name === draftGroupName);
@@ -520,7 +513,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                 resetDraft();
               }
             }}
-            className="h-8 border-0 px-0 text-[15px] shadow-none focus-visible:ring-0"
+            className="h-8 border-0 px-0 text-sm shadow-none focus-visible:ring-0"
             placeholder={t("reminder.new-reminder")}
           />
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -554,126 +547,29 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   return (
     <div
       className={cn(
-        "flex overflow-hidden bg-background text-foreground",
+        "flex flex-col bg-background text-foreground",
         embedded
           ? "m-3 h-[calc(100%-1.5rem)] min-h-0 w-[calc(100%-1.5rem)] rounded-xl border"
-          : "min-h-[calc(100vh-3rem)] w-full rounded-xl border md:min-h-[calc(100vh-5rem)]",
+          : !recordsView
+            ? "w-full"
+            : "min-h-[calc(100dvh-6rem)] w-full",
       )}
     >
-      <aside className="hidden min-h-0 w-64 shrink-0 flex-col overflow-y-auto border-r bg-muted/30 p-3 sm:flex">
-        <div className="grid grid-cols-2 gap-2">
-          {smartViews.map(({ id, label, icon: Icon, color }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => selectView(id)}
-              className={cn(
-                "rounded-xl border p-3 text-left transition-all",
-                activeView === id && !activeList
-                  ? "border-primary/40 bg-background shadow-sm"
-                  : "border-transparent hover:bg-background/70",
-              )}
-            >
-              <div className="flex items-center justify-between">
-                <span className={cn("flex size-7 items-center justify-center rounded-full text-white", color)}>
-                  <Icon className="size-4" />
-                </span>
-                <span className="text-xl font-semibold tabular-nums">{counts[id]}</span>
-              </div>
-              <div className="mt-2 text-sm font-semibold">{label}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center justify-between px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <span>{t("reminder.my-lists")}</span>
-          <button type="button" onClick={() => openListDialog()} aria-label={t("reminder.new-list")}>
-            <PlusIcon className="size-4" />
-          </button>
-        </div>
-        <div className="mt-2 space-y-1">
-          {lists.map((list) => (
-            <div key={list.name} className="group/list grid grid-cols-[minmax(0,1fr)_1.75rem] items-center gap-1">
-              <button
-                type="button"
-                onClick={() => selectList(list.name)}
-                className={cn(
-                  "flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-sm",
-                  activeList === list.name ? "bg-background shadow-sm" : "hover:bg-background/70",
-                )}
-              >
-                <span
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full text-white"
-                  style={{ backgroundColor: list.color || "#0A84FF" }}
-                >
-                  <ReminderListIcon icon={list.icon} className="size-3.5" />
-                </span>
-                <span className="min-w-0 flex-1 whitespace-normal break-words text-left">
-                  {listDisplayName(list, t("common.reminders"))}
-                </span>
-                <span className="text-xs tabular-nums text-muted-foreground">{list.pendingCount}</span>
-              </button>
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-60 transition-opacity hover:bg-background hover:text-foreground sm:opacity-0 sm:group-hover/list:opacity-100 sm:focus-visible:opacity-100 data-popup-open:opacity-100"
-                  aria-label={`${t("common.actions")}: ${listDisplayName(list, t("common.reminders"))}`}
-                >
-                  <MoreHorizontalIcon className="size-3.5" />
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => openListDialog(list)}>
-                    <PencilIcon />
-                    {t("common.edit")}
-                  </DropdownMenuItem>
-                  {!isDefaultReminderList(list.name) && (
-                    <DropdownMenuItem variant="destructive" onClick={() => setDeleteListCandidate(list)}>
-                      <Trash2Icon />
-                      {t("reminder.delete-list")}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="shrink-0 space-y-4 pb-4">
+          <div className="flex min-h-9 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight">{t("common.reminders")}</h1>
             </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={() => selectView("statistics")}
-          className={cn(
-            "mt-auto flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-background/70",
-            activeView === "statistics" && !activeList && "bg-background text-foreground",
-          )}
-        >
-          <BarChart3Icon className="size-4" /> {t("reminder.statistics")}
-        </button>
-        <button
-          type="button"
-          onClick={() => selectView("completed")}
-          className={cn(
-            "mt-1 flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-background/70",
-            activeView === "completed" && !activeList && "bg-background text-foreground",
-          )}
-        >
-          <CheckIcon className="size-4" /> {t("reminder.completed")}
-        </button>
-        <button
-          type="button"
-          onClick={() => selectView("archived")}
-          className={cn(
-            "mt-1 flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground hover:bg-background/70",
-            activeView === "archived" && !activeList && "bg-background text-foreground",
-          )}
-        >
-          <ArchiveIcon className="size-4" /> {t("common.archived")}
-        </button>
-      </aside>
-
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="shrink-0 border-b px-4 py-4 sm:px-6">
-          <div className="flex items-center justify-between gap-3">
-            <h1 className="whitespace-normal break-words text-3xl font-bold tracking-tight">{pageTitle}</h1>
+            {activeView !== "completed" && activeView !== "archived" && recordsView && (
+              <Button size="sm" variant="outline" onClick={() => showDraftForList()} aria-label={t("reminder.new-reminder")}>
+                <PlusIcon className="size-3.5" />
+                {t("common.create")}
+              </Button>
+            )}
             {activeView === "completed" && !activeList && reminders.length > 0 && (
               <Button
+                size="sm"
                 variant="ghost"
                 onClick={async () => {
                   if (!parent) return;
@@ -681,43 +577,97 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                   toast.success(t("reminder.archived-count", { count: response.clearedCount }));
                 }}
               >
-                <ArchiveIcon className="size-4" />
+                <ArchiveIcon className="size-3.5" />
                 {t("common.archive")}
               </Button>
             )}
           </div>
-          {activeView !== "statistics" && (
-            <div className="relative mt-4">
-              <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="rounded-full bg-muted/50 pl-9"
-                placeholder={t("reminder.search")}
-              />
-            </div>
+          <Tabs
+            value={recordsView ? "records" : activeView}
+            onValueChange={(value) => selectView(value === "records" ? "all" : (value as SmartView))}
+          >
+            <TabsList className="w-fit rounded-lg bg-muted/60 p-1">
+              <TabsTrigger value="records" className="h-7 py-1 text-ui">
+                {t("personal.records")}
+              </TabsTrigger>
+              <TabsTrigger value="statistics" className="h-7 py-1 text-ui">
+                {t("common.statistics")}
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="h-7 py-1 text-ui">
+                {t("common.settings")}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {recordsView && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative min-w-40 max-w-sm flex-1">
+                  <SearchIcon className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    className="h-8 pl-8 text-sm"
+                    placeholder={t("reminder.search")}
+                  />
+                </div>
+                {activeList && (
+                  <div className="flex min-w-0 items-center gap-2 text-ui">
+                    <Button size="sm" variant="ghost" className="text-ui" onClick={() => selectList("")}>
+                      <ChevronLeftIcon className="size-3.5" />
+                      {t("reminder.all-lists")}
+                    </Button>
+                    <span className="truncate text-muted-foreground">
+                      {listDisplayName(
+                        lists.find((list) => list.name === activeList) ?? { name: activeList, displayName: "" },
+                        t("common.reminders"),
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {smartViews.map(({ id, label, icon: Icon }) => (
+                  <Button
+                    key={id}
+                    size="sm"
+                    variant={activeView === id ? "secondary" : "ghost"}
+                    onClick={() => selectView(id)}
+                    aria-pressed={activeView === id}
+                    className="h-7 py-1 text-ui"
+                  >
+                    <Icon className="size-3.5" />
+                    {label}
+                    <span className="text-xs tabular-nums text-muted-foreground">{counts[id]}</span>
+                  </Button>
+                ))}
+                <Button
+                  size="sm"
+                  variant={activeView === "completed" ? "secondary" : "ghost"}
+                  onClick={() => selectView("completed")}
+                  aria-pressed={activeView === "completed"}
+                  className="h-7 py-1 text-ui"
+                >
+                  <CheckIcon className="size-3.5" />
+                  {t("reminder.completed")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant={activeView === "archived" ? "secondary" : "ghost"}
+                  onClick={() => selectView("archived")}
+                  aria-pressed={activeView === "archived"}
+                  className="h-7 py-1 text-ui"
+                >
+                  <ArchiveIcon className="size-3.5" />
+                  {t("common.archived")}
+                </Button>
+              </div>
+            </>
           )}
-          <div className="mt-3 flex gap-2 overflow-x-auto sm:hidden">
-            {smartViews.map(({ id, label }) => (
-              <Button key={id} size="sm" variant={activeView === id && !activeList ? "default" : "outline"} onClick={() => selectView(id)}>
-                {label} {counts[id]}
-              </Button>
-            ))}
-            <Button size="sm" variant={activeView === "completed" ? "default" : "outline"} onClick={() => selectView("completed")}>
-              {t("reminder.completed")}
-            </Button>
-            <Button size="sm" variant={activeView === "statistics" ? "default" : "outline"} onClick={() => selectView("statistics")}>
-              {t("reminder.statistics")}
-            </Button>
-            <Button size="sm" variant={activeView === "archived" ? "default" : "outline"} onClick={() => selectView("archived")}>
-              {t("common.archived")}
-            </Button>
-          </div>
         </header>
 
         <div
           ref={draftCreateAreaRef}
-          className="min-h-0 flex-1 cursor-text overflow-y-auto overscroll-contain px-4 sm:px-6"
+          className={cn("flex min-h-0 flex-1 flex-col rounded-xl border bg-card px-4 sm:px-5", recordsView && "cursor-text")}
           onClick={(event) => {
             if (suppressBlankClickRef.current) {
               suppressBlankClickRef.current = false;
@@ -726,16 +676,68 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
             const target = event.target as HTMLElement;
             if (target.closest("button, input, [data-reminder-row], [data-reminder-draft], h2")) return;
             if (showPerListCreateTargets) return;
-            if (activeView !== "completed" && activeView !== "archived" && activeView !== "statistics") {
+            if (activeView !== "completed" && activeView !== "archived" && recordsView) {
               if (draftVisible) void commitDraft();
               else showDraftForList();
             }
           }}
         >
-          {activeView === "statistics" && !activeList ? (
+          {activeView === "statistics" ? (
             <ReminderStatistics parent={parent} />
+          ) : activeView === "settings" ? (
+            <div className="space-y-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold">{t("reminder.my-lists")}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{t("reminder.list-settings-description")}</p>
+                </div>
+                <Button size="sm" variant="outline" className="shrink-0 text-ui" onClick={() => openListDialog()}>
+                  <PlusIcon className="size-3.5" />
+                  {t("reminder.new-list")}
+                </Button>
+              </div>
+              <div className="divide-y rounded-lg border">
+                {lists.map((list) => {
+                  const title = listDisplayName(list, t("common.reminders"));
+                  return (
+                    <div key={list.name} className="flex items-center gap-3 px-3 py-3">
+                      <span
+                        className="flex size-7 shrink-0 items-center justify-center rounded-full text-white"
+                        style={{ backgroundColor: list.color || "#0A84FF" }}
+                      >
+                        <ReminderListIcon icon={list.icon} className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{title}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="shrink-0 text-ui"
+                        onClick={() => openListDialog(list)}
+                        aria-label={t("common.edit") + " " + title}
+                      >
+                        <PencilIcon className="size-3.5" />
+                        {t("common.edit")}
+                      </Button>
+                      {!isDefaultReminderList(list.name) ? (
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          className="shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteListCandidate(list)}
+                          aria-label={t("common.delete") + " " + title}
+                        >
+                          <Trash2Icon className="size-3.5" />
+                        </Button>
+                      ) : (
+                        <span className="size-6 shrink-0" aria-hidden="true" />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            <div className="flex min-h-full flex-col">
+            <div className="flex min-h-0 flex-1 flex-col">
               {isLoading ? (
                 <p className="py-12 text-center text-sm text-muted-foreground">{t("reminder.loading")}</p>
               ) : grouped.length === 0 && !draftVisible ? (
@@ -754,8 +756,17 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                 groupsWithDraft.map((group) => (
                   <section key={group.list?.name ?? "unknown"}>
                     {!activeList && group.list && (
-                      <h2 className="border-b pb-2 pt-3 text-lg font-bold" style={{ color: group.list.color || "#0A84FF" }}>
-                        {listDisplayName(group.list, t("common.reminders"))}
+                      <h2 className="border-b py-3 text-sm font-semibold" style={{ color: group.list.color || "#0A84FF" }}>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                          onClick={() => group.list && selectList(group.list.name)}
+                          aria-label={listDisplayName(group.list, t("common.reminders")) + " " + group.reminders.length}
+                        >
+                          <ReminderListIcon icon={group.list.icon} className="size-4" />
+                          <span className="min-w-0 flex-1 truncate">{listDisplayName(group.list, t("common.reminders"))}</span>
+                          <span className="text-xs font-normal tabular-nums text-muted-foreground">{group.reminders.length}</span>
+                        </button>
                       </h2>
                     )}
                     {group.reminders.map((reminder) => (
@@ -783,7 +794,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                       <button
                         type="button"
                         data-reminder-list-create
-                        className="flex min-h-14 w-full items-center border-b border-border/70 px-1 py-3 text-muted-foreground/45 transition-colors hover:text-muted-foreground"
+                        className="flex min-h-14 w-full items-center gap-3 px-1 py-3 text-sm text-muted-foreground/60 transition-colors hover:text-foreground"
                         onClick={(event) => {
                           event.stopPropagation();
                           showDraftForList(group.list?.name);
@@ -791,6 +802,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                         aria-label={`${t("reminder.click-empty-to-create")}: ${listDisplayName(group.list, t("common.reminders"))}`}
                       >
                         <span className="size-5 rounded-full border-2 border-dotted border-current" />
+                        <span>{t("reminder.new-reminder")}</span>
                       </button>
                     )}
                   </section>
@@ -815,7 +827,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
             </div>
           )}
         </div>
-      </main>
+      </section>
 
       {parent && (
         <ReminderDetailDialog
@@ -887,7 +899,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
           if (parent && readRememberedReminderList(parent) === deleteListCandidate.name) {
             rememberReminderList(parent, defaultListName);
           }
-          if (activeList === deleteListCandidate.name) defaultListName ? selectList(defaultListName) : selectView("all");
+          if (activeList === deleteListCandidate.name) selectList("");
           toast.success(t("reminder.list-deleted"));
           setDeleteListCandidate(undefined);
         }}

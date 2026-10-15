@@ -121,6 +121,9 @@ describe("<Home>", () => {
 
     expect(screen.getByTestId("memo-editor")).toBeInTheDocument();
     expect(screen.getByTestId("memo-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("mood-dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("finance-dashboard")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("reminder-dashboard")).not.toBeInTheDocument();
     expect(state.listProps).toMatchObject({ contextFilter: undefined });
     expect(state.editorProps).toMatchObject({ cacheKey: "home-memo-editor", defaultSpace: undefined });
   });

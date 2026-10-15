@@ -9,6 +9,10 @@ export type SidebarRouteKind =
   | "calendar"
   | "map"
   | "attachments"
+  | "personal"
+  | "finance"
+  | "mood"
+  | "reminders"
   | "inbox"
   | "settings"
   | "memo"
@@ -32,6 +36,10 @@ export const getSidebarRouteKind = (path: string): SidebarRouteKind => {
   if (isCalendarRoute(normalizedPath)) return "calendar";
   if (matchPath(ROUTES.MAP, normalizedPath)) return "map";
   if (matchPath(ROUTES.ATTACHMENTS, normalizedPath)) return "attachments";
+  if (matchPath(ROUTES.PERSONAL, normalizedPath)) return "personal";
+  if (matchPath(ROUTES.FINANCE, normalizedPath)) return "finance";
+  if (matchPath(ROUTES.MOOD, normalizedPath)) return "mood";
+  if (matchPath(ROUTES.REMINDERS, normalizedPath)) return "reminders";
   if (matchPath(ROUTES.INBOX, normalizedPath)) return "inbox";
   if (matchPath(ROUTES.SETTING, normalizedPath)) return "settings";
   if (matchPath("/memos/:uid", normalizedPath) || matchPath(`${ROUTES.SHARED_MEMO}/:token`, normalizedPath)) return "memo";
