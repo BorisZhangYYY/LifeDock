@@ -8,11 +8,101 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	v1pb "github.com/usememos/memos/proto/gen/api/v1"
 	"github.com/usememos/memos/store"
 )
+
+func TestReminderListDeletionKeepsCompletedStatistics(t *testing.T) {
+	ctx := context.Background()
+	service := newIntegrationService(t)
+	user, err := service.Store.CreateUser(ctx, &store.User{Username: "delete-list-owner", Role: store.RoleUser})
+	require.NoError(t, err)
+	actor := userCtx(ctx, user.ID)
+	parent := "users/delete-list-owner"
+	list, err := service.CreateReminderList(actor, &v1pb.CreateReminderListRequest{
+		Parent: parent, ReminderList: &v1pb.ReminderList{DisplayName: "Original list"},
+	})
+	require.NoError(t, err)
+	completed, err := service.CreateReminder(actor, &v1pb.CreateReminderRequest{
+		Parent: parent, Reminder: &v1pb.Reminder{Title: "Finished work", ReminderList: list.Name},
+	})
+	require.NoError(t, err)
+	_, err = service.CompleteReminder(actor, &v1pb.CompleteReminderRequest{Name: completed.Name})
+	require.NoError(t, err)
+	pending, err := service.CreateReminder(actor, &v1pb.CreateReminderRequest{
+		Parent: parent, Reminder: &v1pb.Reminder{Title: "Unfinished work", ReminderList: list.Name,
+			DueDate: time.Now().UTC().AddDate(0, 0, -3).Format(time.DateOnly), TimeZone: "UTC",
+			Recurrence: &v1pb.ReminderRecurrence{Frequency: v1pb.ReminderRecurrence_DAILY, Interval: 1}},
+	})
+	require.NoError(t, err)
+	before, err := service.ListReminderOccurrences(actor, &v1pb.ListReminderOccurrencesRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Greater(t, len(before.ReminderOccurrences), 1, "overdue pending reminder has skipped periods")
+	_, err = service.DeleteReminderList(actor, &v1pb.DeleteReminderListRequest{Name: list.Name})
+	require.NoError(t, err)
+	items, err := service.Store.ListReminders(ctx, &store.FindReminder{CreatorID: &user.ID})
+	require.NoError(t, err)
+	require.Empty(t, items, "nothing is moved to the default list")
+	lists, err := service.Store.ListReminderLists(ctx, &store.FindReminderList{CreatorID: &user.ID})
+	require.NoError(t, err)
+	for _, value := range lists {
+		require.NotEqual(t, "Original list", value.Name)
+	}
+	after, err := service.ListReminderOccurrences(actor, &v1pb.ListReminderOccurrencesRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Len(t, after.ReminderOccurrences, 1)
+	require.Equal(t, "Finished work", after.ReminderOccurrences[0].Title)
+	require.Equal(t, "Original list", after.ReminderOccurrences[0].ReminderListDisplayName)
+	require.NotEqual(t, pending.Name, after.ReminderOccurrences[0].Reminder)
+	stats, err := service.GetReminderStats(actor, &v1pb.GetReminderStatsRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Equal(t, int32(1), stats.TotalCount)
+	require.Equal(t, float64(1), stats.FinalCompletionRate)
+}
+
+func TestClearCompletedRemindersRetainsHistory(t *testing.T) {
+	ctx := context.Background()
+	service := newIntegrationService(t)
+	user, err := service.Store.CreateUser(ctx, &store.User{Username: "clear-reminders", Role: store.RoleUser})
+	require.NoError(t, err)
+	actor := userCtx(ctx, user.ID)
+	parent := "users/clear-reminders"
+	for _, title := range []string{"First completion", "Second completion"} {
+		item, err := service.CreateReminder(actor, &v1pb.CreateReminderRequest{Parent: parent, Reminder: &v1pb.Reminder{Title: title}})
+		require.NoError(t, err)
+		_, err = service.CompleteReminder(actor, &v1pb.CompleteReminderRequest{Name: item.Name})
+		require.NoError(t, err)
+	}
+	pending, err := service.CreateReminder(actor, &v1pb.CreateReminderRequest{Parent: parent, Reminder: &v1pb.Reminder{Title: "Keep pending"}})
+	require.NoError(t, err)
+	_, err = service.UpdateReminder(actor, &v1pb.UpdateReminderRequest{
+		Reminder: &v1pb.Reminder{Name: pending.Name, State: v1pb.State_ARCHIVED}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"state"}},
+	})
+	require.Equal(t, codes.InvalidArgument, status.Code(err))
+	before, err := service.ListReminderOccurrences(actor, &v1pb.ListReminderOccurrencesRequest{Parent: parent})
+	require.NoError(t, err)
+	statsBefore, err := service.GetReminderStats(actor, &v1pb.GetReminderStatsRequest{Parent: parent})
+	require.NoError(t, err)
+	cleared, err := service.ClearCompletedReminders(actor, &v1pb.ClearCompletedRemindersRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Equal(t, int32(2), cleared.ClearedCount)
+	items, err := service.Store.ListReminders(ctx, &store.FindReminder{CreatorID: &user.ID})
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	require.Equal(t, "Keep pending", items[0].Title)
+	after, err := service.ListReminderOccurrences(actor, &v1pb.ListReminderOccurrencesRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Equal(t, before, after)
+	statsAfter, err := service.GetReminderStats(actor, &v1pb.GetReminderStatsRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Equal(t, statsBefore, statsAfter)
+	cleared, err = service.ClearCompletedReminders(actor, &v1pb.ClearCompletedRemindersRequest{Parent: parent})
+	require.NoError(t, err)
+	require.Zero(t, cleared.ClearedCount)
+}
 
 func TestReminderServiceLifecycleAndIsolation(t *testing.T) {
 	ctx := context.Background()
@@ -83,20 +173,10 @@ func TestReminderServiceLifecycleAndIsolation(t *testing.T) {
 	uid := oneTime.Name[len("users/reminder-alice/reminders/"):]
 	stored, err := service.Store.ListReminders(ctx, &store.FindReminder{UID: &uid, CreatorID: &alice.ID})
 	require.NoError(t, err)
-	require.Len(t, stored, 1)
-	require.Equal(t, store.Archived, stored[0].RowStatus)
-
+	require.Empty(t, stored)
 	archived, err := service.ListReminders(aliceCtx, &v1pb.ListRemindersRequest{Parent: "users/reminder-alice", State: v1pb.State_ARCHIVED})
 	require.NoError(t, err)
-	require.Len(t, archived.Reminders, 1)
-	require.Equal(t, oneTime.Name, archived.Reminders[0].Name)
-
-	_, err = service.DeleteReminder(aliceCtx, &v1pb.DeleteReminderRequest{Name: oneTime.Name})
-	require.NoError(t, err)
-	stored, err = service.Store.ListReminders(ctx, &store.FindReminder{UID: &uid, CreatorID: &alice.ID})
-	require.NoError(t, err)
-	require.Empty(t, stored)
-
+	require.Empty(t, archived.Reminders)
 	// Permanent deletion removes the reminder while its immutable completion fact
 	// remains available for future daily and weekly report aggregation.
 	occurrences, err := service.Store.ListReminderOccurrences(ctx, &store.FindReminderOccurrence{CreatorID: &alice.ID, ReminderUID: &uid})

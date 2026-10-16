@@ -84,18 +84,15 @@ func TestFinanceLedgerMaintainsWalletBalances(t *testing.T) {
 	require.Equal(t, int64(13_000), transfer.BalanceAfterMinor)
 
 	require.NoError(t, ts.DeleteFinanceTransaction(ctx, &store.DeleteFinanceTransaction{ID: expense.ID, CreatorID: user.ID}))
-	voidedExpense := financeTransactionByUID(ctx, t, ts, expense.UID, user.ID)
-	require.NotNil(t, voidedExpense.VoidedTs)
-	require.Equal(t, int64(500), voidedExpense.AmountMinor)
-	require.Equal(t, expenseCategory.ID, *voidedExpense.CategoryID)
-	require.Equal(t, nowSec, voidedExpense.OccurredTs)
-	require.Equal(t, map[int32]int64{}, store.FinanceTransactionEffects(voidedExpense))
-	require.ErrorIs(t, ts.DeleteFinanceTransaction(ctx, &store.DeleteFinanceTransaction{ID: expense.ID, CreatorID: user.ID}), store.ErrFinanceTransactionVoided)
+	deleted, err := ts.ListFinanceTransactions(ctx, &store.FindFinanceTransaction{UID: &expense.UID, CreatorID: &user.ID})
+	require.NoError(t, err)
+	require.Empty(t, deleted)
+	require.ErrorIs(t, ts.DeleteFinanceTransaction(ctx, &store.DeleteFinanceTransaction{ID: expense.ID, CreatorID: user.ID}), store.ErrFinanceTransactionNotFound)
 	_, err = ts.UpdateFinanceTransaction(ctx, &store.UpdateFinanceTransaction{
 		ID: expense.ID, CreatorID: user.ID, UpdatedTs: nowSec + 2, OccurredTs: nowSec,
 		Type: store.FinanceTransactionExpense, AmountMinor: 500, WalletID: wallet.ID, CategoryID: &expenseCategory.ID,
 	})
-	require.ErrorIs(t, err, store.ErrFinanceTransactionVoided)
+	require.ErrorIs(t, err, store.ErrFinanceTransactionNotFound)
 	require.Equal(t, int64(4_000), financeWalletBalance(ctx, t, ts, wallet.ID, user.ID))
 	income = financeTransactionByUID(ctx, t, ts, income.UID, user.ID)
 	transfer = financeTransactionByUID(ctx, t, ts, transfer.UID, user.ID)
@@ -172,6 +169,53 @@ func TestFinanceSupportsConcurrentWrites(t *testing.T) {
 	transactions, err := ts.ListFinanceTransactions(ctx, &store.FindFinanceTransaction{CreatorID: &user.ID})
 	require.NoError(t, err)
 	require.Len(t, transactions, transactionCount)
+}
+
+func TestFinanceDeletedWalletKeepsLedger(t *testing.T) {
+	ctx := context.Background()
+	ts := NewTestingStore(ctx, t)
+	defer ts.Close()
+	user, err := createTestingHostUser(ctx, ts)
+	require.NoError(t, err)
+	wallet, err := ts.CreateFinanceWallet(ctx, &store.FinanceWallet{UID: "deleted-wallet", CreatorID: user.ID, Name: "Old wallet", InitialBalanceMinor: 1_000})
+	require.NoError(t, err)
+	category, err := ts.CreateFinanceCategory(ctx, &store.FinanceCategory{UID: "history-expense", CreatorID: user.ID, Name: "Food", Type: store.FinanceCategoryExpense})
+	require.NoError(t, err)
+	transaction, err := ts.CreateFinanceTransaction(ctx, &store.FinanceTransaction{UID: "old-expense", CreatorID: user.ID,
+		OccurredTs: time.Now().Unix(), Type: store.FinanceTransactionExpense, AmountMinor: 100, WalletID: wallet.ID, CategoryID: &category.ID})
+	require.NoError(t, err)
+	currentWallet, err := ts.CreateFinanceWallet(ctx, &store.FinanceWallet{UID: "current-wallet", CreatorID: user.ID, Name: "Current wallet"})
+	require.NoError(t, err)
+	transfer, err := ts.CreateFinanceTransaction(ctx, &store.FinanceTransaction{UID: "historical-transfer", CreatorID: user.ID,
+		OccurredTs: transaction.OccurredTs + 1, Type: store.FinanceTransactionTransfer, AmountMinor: 200,
+		WalletID: wallet.ID, DestinationWalletID: &currentWallet.ID})
+	require.NoError(t, err)
+	require.ErrorIs(t, ts.DeleteFinanceWallet(ctx, &store.DeleteFinanceWallet{ID: wallet.ID, CreatorID: user.ID}), store.ErrFinanceWalletActive)
+	archived := store.Archived
+	_, err = ts.UpdateFinanceWallet(ctx, &store.UpdateFinanceWallet{ID: wallet.ID, CreatorID: user.ID, RowStatus: &archived})
+	require.NoError(t, err)
+	require.NoError(t, ts.DeleteFinanceWallet(ctx, &store.DeleteFinanceWallet{ID: wallet.ID, CreatorID: user.ID}))
+	wallets, err := ts.ListFinanceWallets(ctx, &store.FindFinanceWallet{CreatorID: &user.ID})
+	require.NoError(t, err)
+	require.Len(t, wallets, 1)
+	require.Equal(t, currentWallet.ID, wallets[0].ID)
+	require.Equal(t, int64(200), wallets[0].BalanceMinor)
+	wallets, err = ts.ListFinanceWallets(ctx, &store.FindFinanceWallet{ID: &wallet.ID, CreatorID: &user.ID, IncludeDeleted: true})
+	require.NoError(t, err)
+	require.Len(t, wallets, 1)
+	require.NotNil(t, wallets[0].DeletedTs)
+	require.Equal(t, int64(700), wallets[0].BalanceMinor)
+	require.Equal(t, "Old wallet", wallets[0].Name)
+	stored := financeTransactionByUID(ctx, t, ts, transaction.UID, user.ID)
+	require.Equal(t, int64(100), stored.AmountMinor)
+	require.NoError(t, ts.DeleteFinanceTransaction(ctx, &store.DeleteFinanceTransaction{ID: transaction.ID, CreatorID: user.ID}))
+	transactions, err := ts.ListFinanceTransactions(ctx, &store.FindFinanceTransaction{CreatorID: &user.ID})
+	require.NoError(t, err)
+	require.Len(t, transactions, 1)
+	require.Equal(t, transfer.UID, transactions[0].UID)
+	require.Equal(t, int64(200), financeWalletBalance(ctx, t, ts, currentWallet.ID, user.ID))
+	require.NoError(t, ts.DeleteFinanceTransaction(ctx, &store.DeleteFinanceTransaction{ID: transfer.ID, CreatorID: user.ID}))
+	require.Zero(t, financeWalletBalance(ctx, t, ts, currentWallet.ID, user.ID))
 }
 
 func TestFinanceRejectsInsufficientBalance(t *testing.T) {

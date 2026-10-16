@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampDate, timestampFromDate } from "@bufbuild/protobuf/wkt";
-import { ArchiveIcon, FileTextIcon, Trash2Icon } from "lucide-react";
+import { FileTextIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { Link, useLocation } from "react-router-dom";
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useCreateReminder, useDeleteReminder, useUpdateReminder } from "@/hooks/useReminderQueries";
-import { State } from "@/types/proto/api/v1/common_pb";
 import {
   type Reminder,
   Reminder_Priority,
@@ -89,7 +88,6 @@ const ReminderDetailDialog = ({ reminder, draft, lists, parent, open, onOpenChan
             : t("reminder.none");
   const priorityLabel = priority === "1" ? "!" : priority === "2" ? "!!" : priority === "3" ? "!!!" : t("reminder.none");
   const selectedList = lists.find((list) => list.name === listName);
-  const archived = reminder?.state === State.ARCHIVED;
   const returnLocation = `${location.pathname}${location.search}${location.hash}`;
 
   useEffect(() => {
@@ -155,16 +153,6 @@ const ReminderDetailDialog = ({ reminder, draft, lists, parent, open, onOpenChan
     if (!reminder) return;
     await deleteReminder.mutateAsync(reminder.name);
     toast.success(t("reminder.deleted"));
-    onOpenChange(false);
-  };
-
-  const handleArchive = async () => {
-    if (!reminder || archived) return;
-    await updateReminder.mutateAsync({
-      reminder: { name: reminder.name, state: State.ARCHIVED },
-      updateMask: ["state"],
-    });
-    toast.success(t("reminder.archived"));
     onOpenChange(false);
   };
 
@@ -276,12 +264,6 @@ const ReminderDetailDialog = ({ reminder, draft, lists, parent, open, onOpenChan
           <DialogFooter className="border-t px-5 py-4">
             {reminder && (
               <div className="flex gap-2 sm:mr-auto">
-                {!archived && (
-                  <Button type="button" variant="outline" onClick={handleArchive}>
-                    <ArchiveIcon className="size-4" />
-                    {t("common.archive")}
-                  </Button>
-                )}
                 <Button type="button" variant="destructive" onClick={() => setDeleteConfirmOpen(true)}>
                   <Trash2Icon className="size-4" />
                   {t("common.delete")}

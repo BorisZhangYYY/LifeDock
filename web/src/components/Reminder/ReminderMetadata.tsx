@@ -1,5 +1,6 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { AlarmClockIcon, BellRingIcon, CalendarDaysIcon, CheckCheckIcon, FileTextIcon, Repeat2Icon } from "lucide-react";
+import { Link } from "react-router-dom";
 import ReminderListIcon from "@/components/Reminder/ReminderListIcon";
 import { cn } from "@/lib/utils";
 import { type Reminder, type ReminderList, ReminderRecurrence_Frequency } from "@/types/proto/api/v1/reminder_service_pb";
@@ -9,6 +10,7 @@ import { isReminderOverdue } from "@/utils/reminder-overdue";
 interface Props {
   reminder: Reminder;
   list?: ReminderList;
+  returnLocation: string;
   className?: string;
 }
 
@@ -19,7 +21,7 @@ const formatAdvanceNotice = (seconds: bigint, t: ReturnType<typeof useTranslate>
   return t("reminder.minutes-before", { count: Math.max(1, Math.round(value / 60)) });
 };
 
-const ReminderMetadata = ({ reminder, list, className }: Props) => {
+const ReminderMetadata = ({ reminder, list, returnLocation, className }: Props) => {
   const t = useTranslate();
   const remindTime = reminder.remindTime ? timestampDate(reminder.remindTime) : undefined;
   const completionTime = reminder.completionTime ? timestampDate(reminder.completionTime) : undefined;
@@ -70,9 +72,15 @@ const ReminderMetadata = ({ reminder, list, className }: Props) => {
         </span>
       )}
       {reminder.memo && (
-        <span className="inline-flex items-center gap-1 text-primary">
+        <Link
+          to={`/${reminder.memo}`}
+          state={{ from: returnLocation }}
+          className="inline-flex items-center gap-1 rounded-sm text-primary underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={t("reminder.open-linked-memo")}
+          title={t("reminder.open-linked-memo")}
+        >
           <FileTextIcon className="size-3" /> Memo
-        </span>
+        </Link>
       )}
       {completionTime && (
         <span className="inline-flex items-center gap-1">

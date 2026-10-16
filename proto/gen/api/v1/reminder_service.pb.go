@@ -1833,7 +1833,7 @@ func (x *ClearCompletedRemindersRequest) GetParent() string {
 
 type ClearCompletedRemindersResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Number of completed reminders moved to the archived state.
+	// Number of completed reminders deleted. Their independent history remains available.
 	ClearedCount  int32 `protobuf:"varint,1,opt,name=cleared_count,json=clearedCount,proto3" json:"cleared_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -43,6 +43,9 @@ const (
 	// FinanceServiceUpdateFinanceWalletProcedure is the fully-qualified name of the FinanceService's
 	// UpdateFinanceWallet RPC.
 	FinanceServiceUpdateFinanceWalletProcedure = "/memos.api.v1.FinanceService/UpdateFinanceWallet"
+	// FinanceServiceDeleteFinanceWalletProcedure is the fully-qualified name of the FinanceService's
+	// DeleteFinanceWallet RPC.
+	FinanceServiceDeleteFinanceWalletProcedure = "/memos.api.v1.FinanceService/DeleteFinanceWallet"
 	// FinanceServiceListFinanceCategoriesProcedure is the fully-qualified name of the FinanceService's
 	// ListFinanceCategories RPC.
 	FinanceServiceListFinanceCategoriesProcedure = "/memos.api.v1.FinanceService/ListFinanceCategories"
@@ -80,19 +83,21 @@ type FinanceServiceClient interface {
 	CreateFinanceWallet(context.Context, *connect.Request[v1.CreateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error)
 	// Updates a finance wallet's display name, negative-balance policy, or archive state.
 	UpdateFinanceWallet(context.Context, *connect.Request[v1.UpdateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error)
+	// Deletes a disabled wallet from management, retaining its identity and transactions for history.
+	DeleteFinanceWallet(context.Context, *connect.Request[v1.DeleteFinanceWalletRequest]) (*connect.Response[emptypb.Empty], error)
 	// Lists the authenticated user's income and expense categories, including their display emojis.
 	ListFinanceCategories(context.Context, *connect.Request[v1.ListFinanceCategoriesRequest]) (*connect.Response[v1.ListFinanceCategoriesResponse], error)
 	// Creates an income or expense category with an optional display emoji.
 	CreateFinanceCategory(context.Context, *connect.Request[v1.CreateFinanceCategoryRequest]) (*connect.Response[v1.FinanceCategory], error)
 	// Updates a finance category's display name, emoji, or archive state. The category type is immutable.
 	UpdateFinanceCategory(context.Context, *connect.Request[v1.UpdateFinanceCategoryRequest]) (*connect.Response[v1.FinanceCategory], error)
-	// Lists private ledger transactions, optionally filtered by wallet and time range.
+	// Lists private ledger transactions, including voided audit records, optionally filtered by wallet and time range.
 	ListFinanceTransactions(context.Context, *connect.Request[v1.ListFinanceTransactionsRequest]) (*connect.Response[v1.ListFinanceTransactionsResponse], error)
 	// Records income, expense, or a wallet transfer. occur_time is required.
 	CreateFinanceTransaction(context.Context, *connect.Request[v1.CreateFinanceTransactionRequest]) (*connect.Response[v1.FinanceTransaction], error)
 	// Corrects a ledger transaction and rebuilds affected chronological balance snapshots.
 	UpdateFinanceTransaction(context.Context, *connect.Request[v1.UpdateFinanceTransactionRequest]) (*connect.Response[v1.FinanceTransaction], error)
-	// Deletes a ledger transaction and rebuilds affected chronological balance snapshots.
+	// Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
 	DeleteFinanceTransaction(context.Context, *connect.Request[v1.DeleteFinanceTransactionRequest]) (*connect.Response[emptypb.Empty], error)
 	// Reconciles a wallet to an observed balance by creating an adjustment transaction.
 	AdjustFinanceWalletBalance(context.Context, *connect.Request[v1.AdjustFinanceWalletBalanceRequest]) (*connect.Response[v1.FinanceTransaction], error)
@@ -127,6 +132,12 @@ func NewFinanceServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			httpClient,
 			baseURL+FinanceServiceUpdateFinanceWalletProcedure,
 			connect.WithSchema(financeServiceMethods.ByName("UpdateFinanceWallet")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteFinanceWallet: connect.NewClient[v1.DeleteFinanceWalletRequest, emptypb.Empty](
+			httpClient,
+			baseURL+FinanceServiceDeleteFinanceWalletProcedure,
+			connect.WithSchema(financeServiceMethods.ByName("DeleteFinanceWallet")),
 			connect.WithClientOptions(opts...),
 		),
 		listFinanceCategories: connect.NewClient[v1.ListFinanceCategoriesRequest, v1.ListFinanceCategoriesResponse](
@@ -191,6 +202,7 @@ type financeServiceClient struct {
 	listFinanceWallets         *connect.Client[v1.ListFinanceWalletsRequest, v1.ListFinanceWalletsResponse]
 	createFinanceWallet        *connect.Client[v1.CreateFinanceWalletRequest, v1.FinanceWallet]
 	updateFinanceWallet        *connect.Client[v1.UpdateFinanceWalletRequest, v1.FinanceWallet]
+	deleteFinanceWallet        *connect.Client[v1.DeleteFinanceWalletRequest, emptypb.Empty]
 	listFinanceCategories      *connect.Client[v1.ListFinanceCategoriesRequest, v1.ListFinanceCategoriesResponse]
 	createFinanceCategory      *connect.Client[v1.CreateFinanceCategoryRequest, v1.FinanceCategory]
 	updateFinanceCategory      *connect.Client[v1.UpdateFinanceCategoryRequest, v1.FinanceCategory]
@@ -215,6 +227,11 @@ func (c *financeServiceClient) CreateFinanceWallet(ctx context.Context, req *con
 // UpdateFinanceWallet calls memos.api.v1.FinanceService.UpdateFinanceWallet.
 func (c *financeServiceClient) UpdateFinanceWallet(ctx context.Context, req *connect.Request[v1.UpdateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error) {
 	return c.updateFinanceWallet.CallUnary(ctx, req)
+}
+
+// DeleteFinanceWallet calls memos.api.v1.FinanceService.DeleteFinanceWallet.
+func (c *financeServiceClient) DeleteFinanceWallet(ctx context.Context, req *connect.Request[v1.DeleteFinanceWalletRequest]) (*connect.Response[emptypb.Empty], error) {
+	return c.deleteFinanceWallet.CallUnary(ctx, req)
 }
 
 // ListFinanceCategories calls memos.api.v1.FinanceService.ListFinanceCategories.
@@ -270,19 +287,21 @@ type FinanceServiceHandler interface {
 	CreateFinanceWallet(context.Context, *connect.Request[v1.CreateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error)
 	// Updates a finance wallet's display name, negative-balance policy, or archive state.
 	UpdateFinanceWallet(context.Context, *connect.Request[v1.UpdateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error)
+	// Deletes a disabled wallet from management, retaining its identity and transactions for history.
+	DeleteFinanceWallet(context.Context, *connect.Request[v1.DeleteFinanceWalletRequest]) (*connect.Response[emptypb.Empty], error)
 	// Lists the authenticated user's income and expense categories, including their display emojis.
 	ListFinanceCategories(context.Context, *connect.Request[v1.ListFinanceCategoriesRequest]) (*connect.Response[v1.ListFinanceCategoriesResponse], error)
 	// Creates an income or expense category with an optional display emoji.
 	CreateFinanceCategory(context.Context, *connect.Request[v1.CreateFinanceCategoryRequest]) (*connect.Response[v1.FinanceCategory], error)
 	// Updates a finance category's display name, emoji, or archive state. The category type is immutable.
 	UpdateFinanceCategory(context.Context, *connect.Request[v1.UpdateFinanceCategoryRequest]) (*connect.Response[v1.FinanceCategory], error)
-	// Lists private ledger transactions, optionally filtered by wallet and time range.
+	// Lists private ledger transactions, including voided audit records, optionally filtered by wallet and time range.
 	ListFinanceTransactions(context.Context, *connect.Request[v1.ListFinanceTransactionsRequest]) (*connect.Response[v1.ListFinanceTransactionsResponse], error)
 	// Records income, expense, or a wallet transfer. occur_time is required.
 	CreateFinanceTransaction(context.Context, *connect.Request[v1.CreateFinanceTransactionRequest]) (*connect.Response[v1.FinanceTransaction], error)
 	// Corrects a ledger transaction and rebuilds affected chronological balance snapshots.
 	UpdateFinanceTransaction(context.Context, *connect.Request[v1.UpdateFinanceTransactionRequest]) (*connect.Response[v1.FinanceTransaction], error)
-	// Deletes a ledger transaction and rebuilds affected chronological balance snapshots.
+	// Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
 	DeleteFinanceTransaction(context.Context, *connect.Request[v1.DeleteFinanceTransactionRequest]) (*connect.Response[emptypb.Empty], error)
 	// Reconciles a wallet to an observed balance by creating an adjustment transaction.
 	AdjustFinanceWalletBalance(context.Context, *connect.Request[v1.AdjustFinanceWalletBalanceRequest]) (*connect.Response[v1.FinanceTransaction], error)
@@ -313,6 +332,12 @@ func NewFinanceServiceHandler(svc FinanceServiceHandler, opts ...connect.Handler
 		FinanceServiceUpdateFinanceWalletProcedure,
 		svc.UpdateFinanceWallet,
 		connect.WithSchema(financeServiceMethods.ByName("UpdateFinanceWallet")),
+		connect.WithHandlerOptions(opts...),
+	)
+	financeServiceDeleteFinanceWalletHandler := connect.NewUnaryHandler(
+		FinanceServiceDeleteFinanceWalletProcedure,
+		svc.DeleteFinanceWallet,
+		connect.WithSchema(financeServiceMethods.ByName("DeleteFinanceWallet")),
 		connect.WithHandlerOptions(opts...),
 	)
 	financeServiceListFinanceCategoriesHandler := connect.NewUnaryHandler(
@@ -377,6 +402,8 @@ func NewFinanceServiceHandler(svc FinanceServiceHandler, opts ...connect.Handler
 			financeServiceCreateFinanceWalletHandler.ServeHTTP(w, r)
 		case FinanceServiceUpdateFinanceWalletProcedure:
 			financeServiceUpdateFinanceWalletHandler.ServeHTTP(w, r)
+		case FinanceServiceDeleteFinanceWalletProcedure:
+			financeServiceDeleteFinanceWalletHandler.ServeHTTP(w, r)
 		case FinanceServiceListFinanceCategoriesProcedure:
 			financeServiceListFinanceCategoriesHandler.ServeHTTP(w, r)
 		case FinanceServiceCreateFinanceCategoryProcedure:
@@ -414,6 +441,10 @@ func (UnimplementedFinanceServiceHandler) CreateFinanceWallet(context.Context, *
 
 func (UnimplementedFinanceServiceHandler) UpdateFinanceWallet(context.Context, *connect.Request[v1.UpdateFinanceWalletRequest]) (*connect.Response[v1.FinanceWallet], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.FinanceService.UpdateFinanceWallet is not implemented"))
+}
+
+func (UnimplementedFinanceServiceHandler) DeleteFinanceWallet(context.Context, *connect.Request[v1.DeleteFinanceWalletRequest]) (*connect.Response[emptypb.Empty], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("memos.api.v1.FinanceService.DeleteFinanceWallet is not implemented"))
 }
 
 func (UnimplementedFinanceServiceHandler) ListFinanceCategories(context.Context, *connect.Request[v1.ListFinanceCategoriesRequest]) (*connect.Response[v1.ListFinanceCategoriesResponse], error) {

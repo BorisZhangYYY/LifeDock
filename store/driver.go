@@ -32,6 +32,7 @@ type Driver interface {
 	CreateFinanceWallet(ctx context.Context, create *FinanceWallet) (*FinanceWallet, error)
 	ListFinanceWallets(ctx context.Context, find *FindFinanceWallet) ([]*FinanceWallet, error)
 	UpdateFinanceWallet(ctx context.Context, update *UpdateFinanceWallet) (*FinanceWallet, error)
+	DeleteFinanceWallet(ctx context.Context, delete *DeleteFinanceWallet) error
 	CreateFinanceCategory(ctx context.Context, create *FinanceCategory) (*FinanceCategory, error)
 	ListFinanceCategories(ctx context.Context, find *FindFinanceCategory) ([]*FinanceCategory, error)
 	UpdateFinanceCategory(ctx context.Context, update *UpdateFinanceCategory) (*FinanceCategory, error)
@@ -44,6 +45,7 @@ type Driver interface {
 	CreateReminderList(ctx context.Context, create *ReminderList) (*ReminderList, error)
 	ListReminderLists(ctx context.Context, find *FindReminderList) ([]*ReminderList, error)
 	UpdateReminderList(ctx context.Context, update *UpdateReminderList) (*ReminderList, error)
+	DeleteReminderList(ctx context.Context, delete *DeleteReminderList) error
 	CreateReminder(ctx context.Context, create *Reminder) (*Reminder, error)
 	ListReminders(ctx context.Context, find *FindReminder) ([]*Reminder, error)
 	UpdateReminder(ctx context.Context, update *UpdateReminder) (*Reminder, error)

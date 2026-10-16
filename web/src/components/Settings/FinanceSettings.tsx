@@ -1,6 +1,7 @@
-import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, PlusIcon, RefreshCcwIcon, ScaleIcon, WalletCardsIcon } from "lucide-react";
+import { ArchiveIcon, ArrowDownIcon, ArrowUpIcon, PlusIcon, RefreshCcwIcon, ScaleIcon, Trash2Icon, WalletCardsIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import FinanceCategoryEmojiInput from "@/components/Finance/FinanceCategoryEmojiInput";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,6 +14,7 @@ import {
   useAdjustFinanceWalletBalance,
   useCreateFinanceCategory,
   useCreateFinanceWallet,
+  useDeleteFinanceWallet,
   useFinanceCategories,
   useFinanceWallets,
   useUpdateFinanceCategory,
@@ -29,7 +31,10 @@ const FinanceSettings = () => {
   const t = useTranslate();
   const user = useCurrentUser();
   const parent = user?.name ?? "";
-  const { data: wallets = [] } = useFinanceWallets(parent);
+  const { data: allWallets = [] } = useFinanceWallets(parent);
+  const wallets = allWallets.filter((wallet) => !wallet.deleteTime);
+  const { mutateAsync: deleteWallet } = useDeleteFinanceWallet();
+  const [deleteWalletTarget, setDeleteWalletTarget] = useState<FinanceWallet>();
   const { data: categories = [] } = useFinanceCategories(parent);
   const { mutateAsync: createWallet, isPending: creatingWallet } = useCreateFinanceWallet();
   const { mutateAsync: updateWallet } = useUpdateFinanceWallet();
@@ -112,6 +117,22 @@ const FinanceSettings = () => {
   };
   return (
     <div className="flex min-w-0 flex-col gap-5 py-1">
+      <ConfirmDialog
+        open={!!deleteWalletTarget}
+        onOpenChange={(open) => !open && setDeleteWalletTarget(undefined)}
+        title={t("finance.wallet.delete-confirm")}
+        description={t("finance.wallet.delete-description")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        confirmVariant="destructive"
+        onConfirm={async () => {
+          if (!deleteWalletTarget) return;
+          await deleteWallet(deleteWalletTarget.name);
+          setDeleteWalletTarget(undefined);
+          toast.success(t("finance.wallet.deleted"));
+        }}
+      />
+
       <SettingGroup title={t("finance.wallet.management")} description={t("finance.wallet.management-description")}>
         <div className="rounded-lg border border-border bg-background p-3">
           <div className="grid gap-3 lg:grid-cols-[minmax(10rem,1fr)_10rem_auto_auto] lg:items-end">
@@ -185,8 +206,14 @@ const FinanceSettings = () => {
                     ) : (
                       <RefreshCcwIcon className="mr-1.5 size-4" />
                     )}
-                    {wallet.state === State.NORMAL ? t("common.archive") : t("common.restore")}
+                    {wallet.state === State.NORMAL ? t("finance.wallet.disable") : t("finance.wallet.restore")}
                   </Button>
+                  {wallet.state === State.ARCHIVED && (
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeleteWalletTarget(wallet)}>
+                      <Trash2Icon className="mr-1.5 size-4" />
+                      {t("common.delete")}
+                    </Button>
+                  )}
                 </div>
               </div>
             ))

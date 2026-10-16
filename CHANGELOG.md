@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.36.1](https://github.com/BorisZhangYYY/memos/compare/v0.36.0...v0.36.1) (2026-10-16)
+
+### Summary
+
+This release clarifies deletion and statistics in LifeDock's reminders and
+finance features, and simplifies their everyday controls.
+
+### Fixes and improvements
+
+* **Reminder cleanup:** completed reminders can be deleted individually or
+  cleared together while their completion history and statistics remain.
+  Deleting a reminder that has never been completed also removes its statistics.
+* **Reminder lists:** deleting a list deletes its reminders instead of moving
+  them to the default list. Existing completion history remains available.
+* **Wallet lifecycle:** disable and restore wallets, then delete disabled
+  wallets from management. Historical transactions retain the original wallet
+  name with a strikethrough and continue to count toward income and expenses.
+* **Transaction deletion:** permanently delete incorrect transactions and
+  recalculate affected wallet balances and statistics without changing other
+  transactions.
+* **Reminder navigation:** open a linked Memo directly from its metadata link;
+  the reminder title continues to open reminder details. Place Create and Clear
+  completed beside the record filters on the right.
+* **Interface wording:** shorten confirmation messages and settings descriptions,
+  improve dialog wrapping, and describe personal features as optional life
+  management tools.
+
+### Upgrade notes
+
+* Adds a wallet deletion timestamp through SQLite, MySQL, and PostgreSQL
+  migrations. Existing wallet and transaction data are preserved during upgrade.
+* Transaction DELETE requests now permanently remove the transaction instead of
+  voiding it. Reminder list deletion and completed-reminder cleanup also perform
+  permanent deletion with the history rules described above.
+* Existing archived reminders remain available through the legacy archive view;
+  new reminder archives are no longer supported.
+* Adds wallet deletion and historical-wallet lookup to the API and MCP tools.
+
 ## [0.36.0](https://github.com/BorisZhangYYY/memos/compare/v0.35.1...v0.36.0) (2026-10-14)
 
 ### Summary

@@ -329,22 +329,22 @@ func (s *APIV1Service) DeleteReminderList(ctx context.Context, request *v1pb.Del
 	if value.UID == defaultReminderListUID {
 		return nil, status.Errorf(codes.FailedPrecondition, "default reminder list cannot be deleted")
 	}
-	defaultList, err := s.ensureDefaultReminderList(ctx, user)
-	if err != nil {
-		return nil, err
+	if err := s.materializeSkippedReminderOccurrences(ctx, user); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to resolve reminder history")
 	}
 	reminders, err := s.Store.ListReminders(ctx, &store.FindReminder{CreatorID: &user.ID, ListID: &value.ID})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to move reminders")
+		return nil, status.Errorf(codes.Internal, "failed to list reminders for deletion")
 	}
+	if err := s.Store.DeleteReminderList(ctx, &store.DeleteReminderList{ID: value.ID, CreatorID: user.ID}); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete reminder list")
+	}
+	uids := make(map[string]struct{}, len(reminders))
 	for _, reminder := range reminders {
-		if _, err := s.Store.UpdateReminder(ctx, &store.UpdateReminder{ID: reminder.ID, CreatorID: user.ID, ListID: &defaultList.ID}); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to move reminders")
-		}
+		uids[reminder.UID] = struct{}{}
 	}
-	archived := store.Archived
-	if _, err := s.Store.UpdateReminderList(ctx, &store.UpdateReminderList{ID: value.ID, CreatorID: user.ID, RowStatus: &archived}); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to archive reminder list")
+	if err := s.deleteReminderInboxes(ctx, user.ID, uids); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete reminder notifications")
 	}
 	return &emptypb.Empty{}, nil
 }
@@ -367,6 +367,9 @@ func (s *APIV1Service) ListReminders(ctx context.Context, request *v1pb.ListRemi
 		switch request.View {
 		case v1pb.ListRemindersRequest_COMPLETED:
 			find.Status = &completed
+			// Completed reminders from the former archive still belong in the
+			// completed collection and can be cleared without losing statistics.
+			find.RowStatus = nil
 		default:
 			find.Status = &pending
 		}
@@ -727,7 +730,10 @@ func (s *APIV1Service) UpdateReminder(ctx context.Context, request *v1pb.UpdateR
 		case "memo":
 			candidate.MemoID, err = s.resolveReminderMemoID(ctx, user, message.Memo)
 		case "state":
-			candidate.RowStatus = convertStateToStore(message.State)
+			if message.State != v1pb.State_NORMAL {
+				return nil, status.Errorf(codes.InvalidArgument, "reminders cannot be archived; complete or delete the reminder instead")
+			}
+			candidate.RowStatus = store.Normal
 		case "due_date":
 			candidate.DueDate = message.DueDate
 		case "remind_time":
@@ -808,22 +814,6 @@ func (s *APIV1Service) DeleteReminder(ctx context.Context, request *v1pb.DeleteR
 	}
 	if err := s.materializeSkippedReminderOccurrences(ctx, user); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to resolve reminder history")
-	}
-	occurrences, err := s.Store.ListReminderOccurrences(ctx, &store.FindReminderOccurrence{CreatorID: &user.ID, ReminderUID: &value.UID})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to load reminder history")
-	}
-	hasCompletion := false
-	for _, occurrence := range occurrences {
-		if occurrence.Status == store.ReminderOccurrenceCompletedOnTime || occurrence.Status == store.ReminderOccurrenceCompletedLate {
-			hasCompletion = true
-			break
-		}
-	}
-	if !hasCompletion {
-		if err := s.Store.DeleteReminderOccurrences(ctx, &store.DeleteReminderOccurrences{CreatorID: user.ID, ReminderUID: value.UID}); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to discard unfinished reminder history")
-		}
 	}
 	if err := s.Store.DeleteReminder(ctx, &store.DeleteReminder{ID: value.ID, CreatorID: user.ID}); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete reminder")
@@ -1228,23 +1218,22 @@ func (s *APIV1Service) ClearCompletedReminders(ctx context.Context, request *v1p
 	if err != nil {
 		return nil, err
 	}
-	completed, normal := store.ReminderCompleted, store.Normal
-	values, err := s.Store.ListReminders(ctx, &store.FindReminder{CreatorID: &user.ID, RowStatus: &normal, Status: &completed})
+	completed := store.ReminderCompleted
+	values, err := s.Store.ListReminders(ctx, &store.FindReminder{CreatorID: &user.ID, Status: &completed})
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to list completed reminders")
 	}
 	var count int32
-	archivedUIDs := map[string]struct{}{}
+	deletedUIDs := map[string]struct{}{}
 	for _, value := range values {
-		archived := store.Archived
-		if _, err := s.Store.UpdateReminder(ctx, &store.UpdateReminder{ID: value.ID, CreatorID: user.ID, RowStatus: &archived}); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to archive completed reminders")
+		if err := s.Store.DeleteReminder(ctx, &store.DeleteReminder{ID: value.ID, CreatorID: user.ID}); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to delete completed reminders")
 		}
-		archivedUIDs[value.UID] = struct{}{}
+		deletedUIDs[value.UID] = struct{}{}
 		count++
 	}
-	if err := s.archiveReminderInboxes(ctx, user.ID, archivedUIDs); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to archive reminder notifications")
+	if err := s.deleteReminderInboxes(ctx, user.ID, deletedUIDs); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete reminder notifications")
 	}
 	return &v1pb.ClearCompletedRemindersResponse{ClearedCount: count}, nil
 }

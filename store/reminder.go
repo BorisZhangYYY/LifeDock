@@ -63,6 +63,12 @@ type UpdateReminderList struct {
 	RowStatus *RowStatus
 }
 
+// DeleteReminderList permanently deletes a list and its reminders, retaining completed history.
+type DeleteReminderList struct {
+	ID        int32
+	CreatorID int32
+}
+
 // Reminder is a user-owned structured task. Its creation timestamp is independent
 // from its due date, notification time, and any linked memo timestamps.
 type Reminder struct {
@@ -221,6 +227,11 @@ func (s *Store) ListReminderLists(ctx context.Context, find *FindReminderList) (
 
 func (s *Store) UpdateReminderList(ctx context.Context, value *UpdateReminderList) (*ReminderList, error) {
 	return s.driver.UpdateReminderList(ctx, value)
+}
+
+// DeleteReminderList deletes a list and its reminders while keeping completed history.
+func (s *Store) DeleteReminderList(ctx context.Context, value *DeleteReminderList) error {
+	return s.driver.DeleteReminderList(ctx, value)
 }
 
 func (s *Store) CreateReminder(ctx context.Context, value *Reminder) (*Reminder, error) {

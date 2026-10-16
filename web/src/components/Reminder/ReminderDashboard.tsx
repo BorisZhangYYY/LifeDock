@@ -1,5 +1,6 @@
 import { CheckIcon, FlagIcon, ListIcon, PencilIcon } from "lucide-react";
 import { useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import ReminderMetadata from "@/components/Reminder/ReminderMetadata";
 import { Button } from "@/components/ui/button";
 import { useCompleteReminder, useReminderLists, useReminders } from "@/hooks/useReminderQueries";
@@ -20,6 +21,8 @@ interface Props {
 
 const ReminderDashboard = ({ parent, onOpenCenter, onOpenReminder }: Props) => {
   const t = useTranslate();
+  const location = useLocation();
+  const returnLocation = `${location.pathname}${location.search}${location.hash}`;
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
   const { data: reminders = [] } = useReminders(parent, { view: ListRemindersRequest_View.ALL, timeZone });
   const { data: lists = [] } = useReminderLists(parent);
@@ -81,6 +84,25 @@ const ReminderDashboard = ({ parent, onOpenCenter, onOpenReminder }: Props) => {
         <div className="mt-2 min-h-0 flex-1 divide-y overflow-y-auto rounded-lg border bg-background/60">
           {preview.map((reminder) => {
             const list = listByName.get(reminder.reminderList);
+            const content = (
+              <>
+                <span className="flex items-start gap-1.5">
+                  <span className="min-w-0 flex-1 truncate text-sm">{reminder.title}</span>
+                  <span className="flex h-6 shrink-0 items-center gap-1">
+                    {reminder.priority !== Reminder_Priority.PRIORITY_UNSPECIFIED && (
+                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-primary/10 px-1 text-xs font-semibold leading-none text-primary">
+                        {"!".repeat(reminder.priority)}
+                      </span>
+                    )}
+                    {reminder.flagged && (
+                      <span className="inline-flex size-6 items-center justify-center rounded-md bg-orange-400/10 text-orange-500">
+                        <FlagIcon className="size-3.5 fill-current" />
+                      </span>
+                    )}
+                  </span>
+                </span>
+              </>
+            );
             return (
               <div key={reminder.name} className="group flex items-start gap-2 px-3 py-1.5">
                 <button
@@ -91,24 +113,17 @@ const ReminderDashboard = ({ parent, onOpenCenter, onOpenReminder }: Props) => {
                 >
                   <CheckIcon className="size-3 opacity-0 group-hover:opacity-30" />
                 </button>
-                <button type="button" className="min-w-0 flex-1 text-left" onClick={() => onOpenReminder(reminder.name)}>
-                  <span className="flex items-start gap-1.5">
-                    <span className="min-w-0 flex-1 truncate text-sm">{reminder.title}</span>
-                    <span className="flex h-6 shrink-0 items-center gap-1">
-                      {reminder.priority !== Reminder_Priority.PRIORITY_UNSPECIFIED && (
-                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-primary/10 px-1 text-xs font-semibold leading-none text-primary">
-                          {"!".repeat(reminder.priority)}
-                        </span>
-                      )}
-                      {reminder.flagged && (
-                        <span className="inline-flex size-6 items-center justify-center rounded-md bg-orange-400/10 text-orange-500">
-                          <FlagIcon className="size-3.5 fill-current" />
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                  <ReminderMetadata reminder={reminder} list={list} className="mt-0.5 gap-y-0.5 text-[11px]" />
-                </button>
+                <div className="min-w-0 flex-1">
+                  <button type="button" className="block w-full text-left" onClick={() => onOpenReminder(reminder.name)}>
+                    {content}
+                  </button>
+                  <ReminderMetadata
+                    reminder={reminder}
+                    list={list}
+                    returnLocation={returnLocation}
+                    className="mt-0.5 gap-y-0.5 text-[11px]"
+                  />
+                </div>
                 <button
                   type="button"
                   className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"

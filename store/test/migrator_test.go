@@ -1088,6 +1088,8 @@ func addLegacyFinanceTable(ctx context.Context, t *testing.T, db *sql.DB) {
 	t.Helper()
 	_, err := db.ExecContext(ctx, "CREATE TABLE finance_transaction (id INTEGER PRIMARY KEY)")
 	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "CREATE TABLE finance_wallet (id INTEGER PRIMARY KEY)")
+	require.NoError(t, err)
 }
 
 // Tests that replay an older migration from LATEST must also remove schema
@@ -1097,6 +1099,8 @@ func rewindFinanceAndMoodSchema(ctx context.Context, t *testing.T, db *sql.DB) {
 	_, err := db.ExecContext(ctx, "DROP TABLE memo_mood_history")
 	require.NoError(t, err)
 	_, err = db.ExecContext(ctx, "ALTER TABLE finance_transaction DROP COLUMN voided_ts")
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, "ALTER TABLE finance_wallet DROP COLUMN deleted_ts")
 	require.NoError(t, err)
 }
 

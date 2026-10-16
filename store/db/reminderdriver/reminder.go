@@ -326,7 +326,76 @@ func (a Adapter) UpdateReminder(ctx context.Context, update *store.UpdateReminde
 }
 
 func (a Adapter) DeleteReminder(ctx context.Context, value *store.DeleteReminder) error {
-	_, err := a.DB.ExecContext(ctx, a.bind("DELETE FROM reminder WHERE id = ? AND creator_id = ?"), value.ID, value.CreatorID)
+	tx, err := a.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := a.deleteReminderInTx(ctx, tx, value.ID, value.CreatorID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// DeleteList deletes its reminders without moving them to another list.
+func (a Adapter) DeleteList(ctx context.Context, value *store.DeleteReminderList) error {
+	tx, err := a.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, a.bind("SELECT id FROM reminder WHERE list_id = ? AND creator_id = ?"), value.ID, value.CreatorID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var ids []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			return err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := a.deleteReminderInTx(ctx, tx, id, value.CreatorID); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, a.bind("DELETE FROM reminder_list WHERE id = ? AND creator_id = ?"), value.ID, value.CreatorID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (a Adapter) deleteReminderInTx(ctx context.Context, tx *sql.Tx, id, creatorID int32) error {
+	var uid string
+	query := "SELECT uid FROM reminder WHERE id = ? AND creator_id = ?"
+	if a.Dialect != "sqlite" {
+		query += " FOR UPDATE"
+	}
+	if err := tx.QueryRowContext(ctx, a.bind(query), id, creatorID).Scan(&uid); err != nil {
+		return err
+	}
+	var completedCount int
+	if err := tx.QueryRowContext(ctx, a.bind("SELECT COUNT(*) FROM reminder_occurrence WHERE creator_id = ? AND reminder_uid = ? AND status IN (?, ?)"),
+		creatorID, uid, store.ReminderOccurrenceCompletedOnTime, store.ReminderOccurrenceCompletedLate).Scan(&completedCount); err != nil {
+		return err
+	}
+	// Past completions of a recurring reminder remain historical facts even when
+	// its next occurrence is pending. Never-completed reminders leave no statistics.
+	if completedCount == 0 {
+		if _, err := tx.ExecContext(ctx, a.bind("DELETE FROM reminder_occurrence WHERE creator_id = ? AND reminder_uid = ?"), creatorID, uid); err != nil {
+			return err
+		}
+	}
+	_, err := tx.ExecContext(ctx, a.bind("DELETE FROM reminder WHERE id = ? AND creator_id = ?"), id, creatorID)
 	return err
 }
 

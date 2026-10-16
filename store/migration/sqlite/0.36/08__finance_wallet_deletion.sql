@@ -1,0 +1,1 @@
+ALTER TABLE finance_wallet ADD COLUMN deleted_ts BIGINT DEFAULT NULL;

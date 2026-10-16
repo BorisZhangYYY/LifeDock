@@ -32,6 +32,10 @@ service FinanceService {
       body: "wallet"
     };
   }
+  // Deletes a disabled wallet from management, retaining its identity and transactions for history.
+  rpc DeleteFinanceWallet(DeleteFinanceWalletRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {delete: "/api/v1/{name=users/*/wallets/*}"};
+  }
 
   // Lists the authenticated user's income and expense categories, including their display emojis.
   rpc ListFinanceCategories(ListFinanceCategoriesRequest) returns (ListFinanceCategoriesResponse) {
@@ -70,7 +74,7 @@ service FinanceService {
       body: "transaction"
     };
   }
-  // Voids a ledger transaction, retains its audit record, and rebuilds active balance snapshots.
+  // Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
   rpc DeleteFinanceTransaction(DeleteFinanceTransactionRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/api/v1/{name=users/*/financeTransactions/*}"};
   }
@@ -104,6 +108,8 @@ message FinanceWallet {
   State state = 6 [(google.api.field_behavior) = OPTIONAL];
   google.protobuf.Timestamp create_time = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
   google.protobuf.Timestamp update_time = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // Deleted wallets remain available only as read-only historical references.
+  google.protobuf.Timestamp delete_time = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 message FinanceCategory {
@@ -182,6 +188,8 @@ message FinanceSummary {
 message ListFinanceWalletsRequest {
   string parent = 1 [(google.api.field_behavior) = REQUIRED];
   State state = 2 [(google.api.field_behavior) = OPTIONAL];
+  // Include deleted wallets to label historical transactions. They cannot be restored or used for new entries.
+  bool show_deleted = 3 [(google.api.field_behavior) = OPTIONAL];
 }
 
 message ListFinanceWalletsResponse {
@@ -197,6 +205,10 @@ message CreateFinanceWalletRequest {
 message UpdateFinanceWalletRequest {
   FinanceWallet wallet = 1 [(google.api.field_behavior) = REQUIRED];
   google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DeleteFinanceWalletRequest {
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 message ListFinanceCategoriesRequest {

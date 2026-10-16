@@ -46,6 +46,7 @@ var curatedOperationIDs = []string{
 	"FinanceService_ListFinanceWallets",
 	"FinanceService_CreateFinanceWallet",
 	"FinanceService_UpdateFinanceWallet",
+	"FinanceService_DeleteFinanceWallet",
 	"FinanceService_ListFinanceCategories",
 	"FinanceService_CreateFinanceCategory",
 	"FinanceService_UpdateFinanceCategory",
@@ -138,7 +139,7 @@ var requestBodySchemaOverrides = map[string]requestBodySchemaOverride{
 	},
 	"ReminderService_UpdateReminderList": {
 		clearRequired:     true,
-		omittedProperties: []string{"name"},
+		omittedProperties: []string{"name", "state"},
 		minProperties:     1,
 		requiredArguments: []string{"updateMask"},
 	},
@@ -147,7 +148,7 @@ var requestBodySchemaOverrides = map[string]requestBodySchemaOverride{
 	},
 	"ReminderService_UpdateReminder": {
 		clearRequired:     true,
-		omittedProperties: []string{"name"},
+		omittedProperties: []string{"name", "state"},
 		minProperties:     1,
 		requiredArguments: []string{"updateMask"},
 	},
@@ -224,12 +225,12 @@ var argumentSchemaOverrides = map[string]map[string]argumentSchemaOverride{
 	},
 	"ReminderService_UpdateReminderList": {
 		"updateMask": {
-			description: "Comma-separated proto field names in snake_case. Allowed fields include display_name, color, icon, sort_order, and state.",
+			description: "Comma-separated proto field names in snake_case. Allowed fields are display_name, color, icon, and sort_order.",
 		},
 	},
 	"ReminderService_UpdateReminder": {
 		"updateMask": {
-			description: "Comma-separated proto field names in snake_case identifying reminder fields to update, such as title, due_date, remind_time, priority, tags, location, or state.",
+			description: "Comma-separated proto field names in snake_case identifying reminder fields to update, such as title, due_date, remind_time, priority, tags, or location. Complete or delete reminders instead of archiving them.",
 		},
 	},
 	"UserService_GetUserSetting": {
@@ -259,6 +260,7 @@ var operationDescriptionOverrides = map[string]string{
 	"FinanceService_CreateFinanceWallet":      "Create a private wallet. Set its opening balance with body.initialBalanceMinor; the current balance is output-only.",
 	"FinanceService_CreateFinanceTransaction": "Record an income, expense, or transfer. body.occurTime is required and must be an RFC 3339 timestamp.",
 	"FinanceService_UpdateFinanceCategory":    "Update an income or expense category's display name, emoji, or archive state. Use body.emoji with updateMask=\"emoji\" to change the icon shown for the category; its type is immutable.",
+	"FinanceService_DeleteFinanceWallet":      "Delete a disabled wallet from management. Its transactions and cash-flow history remain available; the wallet cannot be restored.",
 	"FinanceService_UpdateFinanceTransaction": "Correct a ledger transaction and rebuild affected running-balance snapshots in chronological order.",
 	"InstanceService_GetMemoMoodDisplay":      "Read the effective instance-wide emoji and #RRGGBB color for all seven memo mood levels. This is display configuration; it does not read or change the moodLevel recorded on any individual memo.",
 	"InstanceService_UpdateMemoMoodDisplay":   "Administrator-only display configuration. Partially update instance-wide emoji and/or color for selected memo mood levels with body.updates; omitted levels and fields stay unchanged, and an empty emoji or color restores that level's default. Never use this to set the mood recorded on one memo; use memo_set_memo_mood for that.",

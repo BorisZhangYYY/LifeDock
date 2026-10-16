@@ -26,7 +26,7 @@ export const financeKeys = {
 export const useFinanceWallets = (parent?: string) =>
   useQuery({
     queryKey: financeKeys.wallets(parent ?? ""),
-    queryFn: () => financeServiceClient.listFinanceWallets({ parent }),
+    queryFn: () => financeServiceClient.listFinanceWallets({ parent, showDeleted: true }),
     enabled: !!parent,
     select: (response) => response.wallets,
   });
@@ -149,7 +149,7 @@ export const useCreateFinanceTransaction = () => {
   });
 };
 
-export const useVoidFinanceTransaction = () => {
+export const useDeleteFinanceTransaction = () => {
   const invalidate = useInvalidateFinance();
   return useMutation({
     mutationFn: (name: string) => financeServiceClient.deleteFinanceTransaction({ name }),
@@ -168,6 +168,14 @@ export const useAdjustFinanceWalletBalance = () => {
         occurTime: timestampFromDate(new Date()),
         requestId: generateUUID(),
       }),
+    onSuccess: invalidate,
+  });
+};
+
+export const useDeleteFinanceWallet = () => {
+  const invalidate = useInvalidateFinance();
+  return useMutation({
+    mutationFn: (name: string) => financeServiceClient.deleteFinanceWallet({ name }),
     onSuccess: invalidate,
   });
 };

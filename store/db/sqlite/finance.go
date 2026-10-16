@@ -20,6 +20,11 @@ func (d *DB) ListFinanceWallets(ctx context.Context, value *store.FindFinanceWal
 func (d *DB) UpdateFinanceWallet(ctx context.Context, value *store.UpdateFinanceWallet) (*store.FinanceWallet, error) {
 	return d.finance().UpdateWallet(ctx, value)
 }
+
+// DeleteFinanceWallet removes a disabled wallet from management while retaining its history.
+func (d *DB) DeleteFinanceWallet(ctx context.Context, value *store.DeleteFinanceWallet) error {
+	return d.finance().DeleteWallet(ctx, value)
+}
 func (d *DB) CreateFinanceCategory(ctx context.Context, value *store.FinanceCategory) (*store.FinanceCategory, error) {
 	return d.finance().CreateCategory(ctx, value)
 }
