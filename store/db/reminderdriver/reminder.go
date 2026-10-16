@@ -331,7 +331,7 @@ func (a Adapter) DeleteReminder(ctx context.Context, value *store.DeleteReminder
 		return err
 	}
 	defer tx.Rollback()
-	if err := a.deleteReminder(ctx, tx, value.ID, value.CreatorID); err != nil {
+	if err := a.deleteReminderInTx(ctx, tx, value.ID, value.CreatorID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -348,24 +348,23 @@ func (a Adapter) DeleteList(ctx context.Context, value *store.DeleteReminderList
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	var ids []int32
 	for rows.Next() {
 		var id int32
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
 			return err
 		}
 		ids = append(ids, id)
 	}
 	if err := rows.Err(); err != nil {
-		rows.Close()
 		return err
 	}
 	if err := rows.Close(); err != nil {
 		return err
 	}
 	for _, id := range ids {
-		if err := a.deleteReminder(ctx, tx, id, value.CreatorID); err != nil {
+		if err := a.deleteReminderInTx(ctx, tx, id, value.CreatorID); err != nil {
 			return err
 		}
 	}
@@ -375,7 +374,7 @@ func (a Adapter) DeleteList(ctx context.Context, value *store.DeleteReminderList
 	return tx.Commit()
 }
 
-func (a Adapter) deleteReminder(ctx context.Context, tx *sql.Tx, id, creatorID int32) error {
+func (a Adapter) deleteReminderInTx(ctx context.Context, tx *sql.Tx, id, creatorID int32) error {
 	var uid string
 	query := "SELECT uid FROM reminder WHERE id = ? AND creator_id = ?"
 	if a.Dialect != "sqlite" {
