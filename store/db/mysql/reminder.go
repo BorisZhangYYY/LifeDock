@@ -19,6 +19,11 @@ func (d *DB) ListReminderLists(ctx context.Context, v *store.FindReminderList) (
 func (d *DB) UpdateReminderList(ctx context.Context, v *store.UpdateReminderList) (*store.ReminderList, error) {
 	return d.reminder().UpdateList(ctx, v)
 }
+
+// DeleteReminderList deletes a list and its reminders while retaining completed history.
+func (d *DB) DeleteReminderList(ctx context.Context, value *store.DeleteReminderList) error {
+	return d.reminder().DeleteList(ctx, value)
+}
 func (d *DB) CreateReminder(ctx context.Context, v *store.Reminder) (*store.Reminder, error) {
 	return d.reminder().CreateReminder(ctx, v)
 }

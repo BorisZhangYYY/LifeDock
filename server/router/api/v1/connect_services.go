@@ -783,6 +783,15 @@ func (s *ConnectServiceHandler) UpdateFinanceWallet(ctx context.Context, req *co
 	return connect.NewResponse(resp), nil
 }
 
+// DeleteFinanceWallet adapts wallet deletion to the Connect protocol.
+func (s *ConnectServiceHandler) DeleteFinanceWallet(ctx context.Context, req *connect.Request[v1pb.DeleteFinanceWalletRequest]) (*connect.Response[emptypb.Empty], error) {
+	resp, err := s.APIV1Service.DeleteFinanceWallet(ctx, req.Msg)
+	if err != nil {
+		return nil, convertGRPCError(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (s *ConnectServiceHandler) ListFinanceCategories(ctx context.Context, req *connect.Request[v1pb.ListFinanceCategoriesRequest]) (*connect.Response[v1pb.ListFinanceCategoriesResponse], error) {
 	resp, err := s.APIV1Service.ListFinanceCategories(ctx, req.Msg)
 	if err != nil {

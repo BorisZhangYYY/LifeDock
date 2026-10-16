@@ -935,7 +935,7 @@ export const ClearCompletedRemindersRequestSchema: GenMessage<ClearCompletedRemi
  */
 export type ClearCompletedRemindersResponse = Message<"memos.api.v1.ClearCompletedRemindersResponse"> & {
   /**
-   * Number of completed reminders moved to the archived state.
+   * Number of completed reminders deleted. Their independent history remains available.
    *
    * @generated from field: int32 cleared_count = 1;
    */
@@ -976,7 +976,7 @@ export const ReminderService: GenService<{
     output: typeof ReminderListSchema;
   },
   /**
-   * Updates a reminder list's name, color, icon, order, or archive state.
+   * Updates a reminder list's name, color, icon, or order.
    *
    * @generated from rpc memos.api.v1.ReminderService.UpdateReminderList
    */
@@ -986,7 +986,7 @@ export const ReminderService: GenService<{
     output: typeof ReminderListSchema;
   },
   /**
-   * Deletes a reminder list.
+   * Permanently deletes a list and its reminders. Completed history remains available for statistics.
    *
    * @generated from rpc memos.api.v1.ReminderService.DeleteReminderList
    */
@@ -1036,7 +1036,7 @@ export const ReminderService: GenService<{
     output: typeof ReminderSchema;
   },
   /**
-   * Updates a reminder's scheduling, list, priority, tags, location, or archive state.
+   * Updates a reminder's scheduling, list, priority, tags, or location. New archives are not supported.
    *
    * @generated from rpc memos.api.v1.ReminderService.UpdateReminder
    */
@@ -1046,7 +1046,7 @@ export const ReminderService: GenService<{
     output: typeof ReminderSchema;
   },
   /**
-   * Deletes a reminder.
+   * Permanently deletes a reminder, retaining history only if it has completed occurrences.
    *
    * @generated from rpc memos.api.v1.ReminderService.DeleteReminder
    */
@@ -1066,7 +1066,7 @@ export const ReminderService: GenService<{
     output: typeof ReminderSchema;
   },
   /**
-   * Archives all completed reminders and returns the number cleared.
+   * Permanently deletes completed reminders, retaining their history and statistics.
    *
    * @generated from rpc memos.api.v1.ReminderService.ClearCompletedReminders
    */

@@ -148,7 +148,7 @@ export const useDeleteReminder = () => {
   });
 };
 
-export const useArchiveCompletedReminders = () => {
+export const useClearCompletedReminders = () => {
   const invalidate = useInvalidateReminders();
   return useMutation({
     mutationFn: (parent: string) => reminderServiceClient.clearCompletedReminders({ parent }),

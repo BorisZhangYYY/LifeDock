@@ -1,11 +1,18 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Reminders from "@/pages/Reminders";
 import { ListRemindersRequest_View } from "@/types/proto/api/v1/reminder_service_pb";
 import { rememberReminderList } from "@/utils/reminder-list-selection";
 
-const state = vi.hoisted(() => ({ requests: [] as Array<Record<string, unknown>>, empty: false, create: vi.fn(), createList: vi.fn() }));
+const state = vi.hoisted(() => ({
+  requests: [] as Array<Record<string, unknown>>,
+  empty: false,
+  memo: "",
+  create: vi.fn(),
+  createList: vi.fn(),
+  clear: vi.fn(),
+}));
 vi.mock("@/hooks/useCurrentUser", () => ({ default: () => ({ name: "users/test" }) }));
 vi.mock("@/utils/i18n", () => ({ useTranslate: () => (key: string) => key }));
 vi.mock("@/hooks/useReminderQueries", () => {
@@ -21,11 +28,11 @@ vi.mock("@/hooks/useReminderQueries", () => {
     useReminderLists: () => ({ data: lists }),
     useReminders: (_parent: string, request: Record<string, unknown>) => {
       state.requests.push(request);
-      return { data: state.empty ? [] : reminders, isLoading: false };
+      return { data: state.empty ? [] : reminders.map((reminder) => ({ ...reminder, memo: state.memo })), isLoading: false };
     },
     useCreateReminder: () => ({ mutateAsync: state.create, isPending: false }),
     useCompleteReminder: mutation,
-    useArchiveCompletedReminders: mutation,
+    useClearCompletedReminders: () => ({ mutateAsync: state.clear, isPending: false }),
     useDeleteReminder: mutation,
     useDeleteReminderList: mutation,
     useUpdateReminder: mutation,
@@ -33,9 +40,10 @@ vi.mock("@/hooks/useReminderQueries", () => {
     useUpdateReminderList: mutation,
   };
 });
-vi.mock("@/components/Reminder/ReminderMetadata", () => ({ default: () => null }));
 vi.mock("@/components/Reminder/ReminderCompletionDialog", () => ({ default: () => null }));
-vi.mock("@/components/Reminder/ReminderDetailDialog", () => ({ default: () => null }));
+vi.mock("@/components/Reminder/ReminderDetailDialog", () => ({
+  default: ({ open }: { open: boolean }) => (open ? <div>Reminder details</div> : null),
+}));
 vi.mock("@/components/Reminder/ReminderListDialog", () => ({
   default: ({
     open,
@@ -57,14 +65,20 @@ vi.mock("@/components/Reminder/ReminderListDialog", () => ({
 }));
 vi.mock("@/components/Reminder/ReminderStatistics", () => ({ default: () => <div>Reminder statistics</div> }));
 
-const LocationState = () => <output data-testid="location">{useLocation().search}</output>;
+const LocationState = () => {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search} ${JSON.stringify(location.state)}`}</output>;
+};
 
 describe("reminder page navigation", () => {
   beforeEach(() => {
     state.requests = [];
     state.empty = false;
+    state.memo = "";
     state.create.mockReset();
     state.create.mockResolvedValue(undefined);
+    state.clear.mockReset();
+    state.clear.mockResolvedValue({ clearedCount: 1 });
     state.createList.mockReset();
     state.createList.mockResolvedValue({ name: "users/test/reminderLists/new" });
     localStorage.clear();
@@ -78,6 +92,16 @@ describe("reminder page navigation", () => {
       </MemoryRouter>,
     );
 
+  it("clears completed reminders explicitly without offering a new archive action", async () => {
+    mount("/reminders?view=completed");
+    expect(screen.queryByRole("button", { name: "common.archive" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "reminder.clear-completed" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText("reminder.clear-completed-description")).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "common.clear" }));
+    await waitFor(() => expect(state.clear).toHaveBeenCalledWith("users/test"));
+  });
+
   it("shows a single list with top filters and switches to statistics", () => {
     const { container } = mount();
     expect(container.querySelector("aside")).toBeNull();
@@ -89,6 +113,41 @@ describe("reminder page navigation", () => {
     expect(screen.queryByPlaceholderText("reminder.search")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("tab", { name: "personal.records" }));
     expect(screen.getByRole("button", { name: "Review notes" })).toBeInTheDocument();
+  });
+
+  it.each(["all", "completed"])("opens a linked Memo from its metadata in the %s view and keeps the return location", (view) => {
+    state.memo = "memos/linked";
+    const origin = `/reminders?view=${view}&list=users/test/reminderLists/work`;
+    mount(origin);
+    const link = screen.getByRole("link", { name: "reminder.open-linked-memo" });
+    expect(link).toHaveAttribute("href", "/memos/linked");
+    expect(screen.getByRole("button", { name: "Review notes" })).toBeInTheDocument();
+    expect(screen.queryByText("Reminder details")).not.toBeInTheDocument();
+    fireEvent.click(link);
+    expect(screen.getByTestId("location")).toHaveTextContent(`/memos/linked ${JSON.stringify({ from: origin })}`);
+    expect(screen.queryByText("Reminder details")).not.toBeInTheDocument();
+  });
+
+  it("opens details from a linked reminder title without navigating to its Memo", () => {
+    state.memo = "memos/linked";
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "Review notes" }));
+    expect(screen.getByText("Reminder details")).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/reminders null");
+  });
+
+  it("keeps editing available for linked reminders", () => {
+    state.memo = "memos/linked";
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "reminder.details" }));
+    expect(screen.getByText("Reminder details")).toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent("/reminders null");
+  });
+
+  it("opens details when a reminder has no linked Memo", () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "Review notes" }));
+    expect(screen.getByText("Reminder details")).toBeInTheDocument();
   });
 
   it("combines a selected list with a top filter and preserves both in the URL", () => {

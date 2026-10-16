@@ -19,12 +19,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  useDeleteFinanceTransaction,
   useFinanceCategories,
   useFinanceSummary,
   useFinanceTransactionHistory,
   useFinanceTransactions,
   useFinanceWallets,
-  useVoidFinanceTransaction,
 } from "@/hooks/useFinanceQueries";
 import { financeRange, formatCNY } from "@/lib/finance";
 import { cn } from "@/lib/utils";
@@ -73,8 +73,8 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
   const [historyYear, setHistoryYear] = useState(todayRange.start.getFullYear());
   const [historyMonth, setHistoryMonth] = useState<number>();
   const [historyDate, setHistoryDate] = useState<string>();
-  const [voidTarget, setVoidTarget] = useState<FinanceTransaction>();
-  const { mutateAsync: voidTransaction, isPending: voidPending } = useVoidFinanceTransaction();
+  const [deleteTarget, setDeleteTarget] = useState<FinanceTransaction>();
+  const { mutateAsync: deleteTransaction, isPending: deletePending } = useDeleteFinanceTransaction();
   const { data: wallets = [] } = useFinanceWallets(parent);
   const { data: categories = [] } = useFinanceCategories(parent);
   const { data: todaySummary } = useFinanceSummary(parent, todayRange.start, todayRange.end, timeZone);
@@ -86,7 +86,20 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
     view === "statistics" && detailsView === "history",
   );
 
-  const walletNames = useMemo(() => new Map(wallets.map((wallet) => [wallet.name, wallet.displayName])), [wallets]);
+  const walletsByName = useMemo(() => new Map(wallets.map((wallet) => [wallet.name, wallet])), [wallets]);
+  const renderWalletName = (name: string) => {
+    const wallet = walletsByName.get(name);
+    const label = wallet?.displayName ?? name.split("/").pop();
+    return (
+      <span
+        className={cn(wallet?.deleteTime && "line-through")}
+        title={wallet?.deleteTime ? t("finance.wallet.deleted") : undefined}
+        aria-label={wallet?.deleteTime ? `${label} · ${t("finance.wallet.deleted")}` : undefined}
+      >
+        {label}
+      </span>
+    );
+  };
   const categoriesByName = useMemo(() => new Map(categories.map((category) => [category.name, category])), [categories]);
   const detailsRows = useMemo(() => {
     const byDate = new Map(detailsSummary?.dailySummaries.map((item) => [item.date, item]));
@@ -262,7 +275,7 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                   {activeTodayTransactions.map((transaction) => {
                     const presentation = transactionPresentation(transaction);
                     const category = categoriesByName.get(transaction.category);
-                    const destinationName = walletNames.get(transaction.destinationWallet);
+                    const destinationName = walletsByName.get(transaction.destinationWallet);
                     const title = transaction.note || category?.displayName || presentation.label;
                     return (
                       <div key={transaction.name} className="flex items-center gap-3 rounded-lg border bg-background/60 px-3 py-2.5">
@@ -276,8 +289,8 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-medium">{title}</div>
                           <div className="truncate text-xs text-muted-foreground">
-                            {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
-                            {destinationName ? ` → ${destinationName}` : ""} ·{" "}
+                            {renderWalletName(transaction.wallet)}
+                            {destinationName && <> → {renderWalletName(transaction.destinationWallet)}</>} ·{" "}
                             {transaction.occurTime
                               ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(
                                   timestampDate(transaction.occurTime),
@@ -289,6 +302,14 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                           <div className={cn("font-mono text-sm font-semibold", presentation.color)}>{presentation.amount}</div>
                           <div className="text-xs text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t("finance.transaction.delete")}
+                          onClick={() => setDeleteTarget(transaction)}
+                        >
+                          <Trash2Icon className="size-4" />
+                        </Button>
                       </div>
                     );
                   })}
@@ -353,7 +374,7 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                         {historyDateTransactions.map((transaction) => {
                           const presentation = transactionPresentation(transaction);
                           const category = categoriesByName.get(transaction.category);
-                          const destinationName = walletNames.get(transaction.destinationWallet);
+                          const destinationName = walletsByName.get(transaction.destinationWallet);
                           const title = transaction.note || category?.displayName || presentation.label;
                           return (
                             <div
@@ -375,9 +396,9 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                                   )}
                                 </div>
                                 <div className="truncate text-xs text-muted-foreground">
-                                  {walletNames.get(transaction.wallet) ?? transaction.wallet.split("/").pop()}
+                                  {renderWalletName(transaction.wallet)}
                                   {category ? ` · ${category.displayName}` : ""}
-                                  {destinationName ? ` → ${destinationName}` : ""} ·{" "}
+                                  {destinationName && <> → {renderWalletName(transaction.destinationWallet)}</>} ·{" "}
                                   {transaction.occurTime
                                     ? new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(
                                         timestampDate(transaction.occurTime),
@@ -405,16 +426,14 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                                 </div>
                                 <div className="text-xs text-muted-foreground">{formatCNY(transaction.balanceAfterMinor)}</div>
                               </div>
-                              {!transaction.voidTime && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  aria-label={t("finance.transaction.void")}
-                                  onClick={() => setVoidTarget(transaction)}
-                                >
-                                  <Trash2Icon className="size-4" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t("finance.transaction.delete")}
+                                onClick={() => setDeleteTarget(transaction)}
+                              >
+                                <Trash2Icon className="size-4" />
+                              </Button>
                             </div>
                           );
                         })}
@@ -540,12 +559,14 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {wallets.map((wallet) => (
-                    <div key={wallet.name} className="min-w-40 shrink-0 rounded-lg border bg-background px-3 py-2">
-                      <div className="truncate text-xs text-muted-foreground">{wallet.displayName}</div>
-                      <div className="mt-0.5 truncate font-mono text-sm font-semibold">{formatCNY(wallet.balanceMinor)}</div>
-                    </div>
-                  ))}
+                  {wallets
+                    .filter((wallet) => !wallet.deleteTime)
+                    .map((wallet) => (
+                      <div key={wallet.name} className="min-w-40 shrink-0 rounded-lg border bg-background px-3 py-2">
+                        <div className="truncate text-xs text-muted-foreground">{wallet.displayName}</div>
+                        <div className="mt-0.5 truncate font-mono text-sm font-semibold">{formatCNY(wallet.balanceMinor)}</div>
+                      </div>
+                    ))}
                 </div>
 
                 <div className="overflow-hidden rounded-xl border">
@@ -584,31 +605,31 @@ const FinanceDashboard = ({ parent, embedded = false, view = "records", onManage
           </>
         </DashboardDetails>
       )}
-      <Dialog open={!!voidTarget} onOpenChange={(open) => !open && setVoidTarget(undefined)}>
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(undefined)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("finance.transaction.void")}</DialogTitle>
-            <DialogDescription>{t("finance.transaction.void-description")}</DialogDescription>
+            <DialogTitle>{t("finance.transaction.delete")}</DialogTitle>
+            <DialogDescription>{t("finance.transaction.delete-description")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVoidTarget(undefined)}>
+            <Button variant="outline" onClick={() => setDeleteTarget(undefined)}>
               {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
-              disabled={voidPending}
+              disabled={deletePending}
               onClick={async () => {
-                if (!voidTarget) return;
+                if (!deleteTarget) return;
                 try {
-                  await voidTransaction(voidTarget.name);
-                  toast.success(t("finance.transaction.voided-success"));
-                  setVoidTarget(undefined);
+                  await deleteTransaction(deleteTarget.name);
+                  toast.success(t("finance.transaction.deleted-success"));
+                  setDeleteTarget(undefined);
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : t("finance.transaction.void-error"));
+                  toast.error(error instanceof Error ? error.message : t("finance.transaction.delete-error"));
                 }
               }}
             >
-              {t("finance.transaction.void")}
+              {t("finance.transaction.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

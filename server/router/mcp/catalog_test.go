@@ -17,7 +17,7 @@ func requireJSONSchema(t *testing.T, value any) jsonSchema {
 }
 
 func TestCuratedOperationIDsStayPersonalDataFocused(t *testing.T) {
-	require.Len(t, curatedOperationIDs, 52)
+	require.Len(t, curatedOperationIDs, 53)
 	allowedUserOperations := map[string]bool{
 		"UserService_GetUserStats":      true,
 		"UserService_GetUserSetting":    true,
@@ -67,6 +67,7 @@ func TestCuratedOperationIDsIncludeRequiredPersonalWorkflows(t *testing.T) {
 		"FinanceService_ListFinanceWallets",
 		"FinanceService_CreateFinanceWallet",
 		"FinanceService_UpdateFinanceWallet",
+		"FinanceService_DeleteFinanceWallet",
 		"FinanceService_ListFinanceCategories",
 		"FinanceService_CreateFinanceCategory",
 		"FinanceService_UpdateFinanceCategory",

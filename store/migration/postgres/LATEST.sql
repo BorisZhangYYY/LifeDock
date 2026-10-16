@@ -172,6 +172,7 @@ CREATE TABLE finance_wallet (
   initial_balance_minor BIGINT NOT NULL DEFAULT 0,
   balance_minor BIGINT NOT NULL DEFAULT 0,
   allow_negative_balance BOOLEAN NOT NULL DEFAULT FALSE,
+  deleted_ts BIGINT DEFAULT NULL,
   UNIQUE (creator_id, name)
 );
 

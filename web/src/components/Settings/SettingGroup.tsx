@@ -21,7 +21,11 @@ const SettingGroup: React.FC<SettingGroupProps> = ({ title, description, childre
             {(title || description) && (
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 {title && <h4 className="text-sm font-medium text-foreground">{title}</h4>}
-                {description && <p className="max-w-2xl text-xs leading-5 text-muted-foreground">{description}</p>}
+                {description && (
+                  <p className="max-w-2xl text-xs leading-5 text-muted-foreground text-pretty break-words [line-break:strict]">
+                    {description}
+                  </p>
+                )}
               </div>
             )}
             {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2 sm:ml-auto">{actions}</div> : null}

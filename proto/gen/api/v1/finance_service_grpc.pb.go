@@ -23,6 +23,7 @@ const (
 	FinanceService_ListFinanceWallets_FullMethodName         = "/memos.api.v1.FinanceService/ListFinanceWallets"
 	FinanceService_CreateFinanceWallet_FullMethodName        = "/memos.api.v1.FinanceService/CreateFinanceWallet"
 	FinanceService_UpdateFinanceWallet_FullMethodName        = "/memos.api.v1.FinanceService/UpdateFinanceWallet"
+	FinanceService_DeleteFinanceWallet_FullMethodName        = "/memos.api.v1.FinanceService/DeleteFinanceWallet"
 	FinanceService_ListFinanceCategories_FullMethodName      = "/memos.api.v1.FinanceService/ListFinanceCategories"
 	FinanceService_CreateFinanceCategory_FullMethodName      = "/memos.api.v1.FinanceService/CreateFinanceCategory"
 	FinanceService_UpdateFinanceCategory_FullMethodName      = "/memos.api.v1.FinanceService/UpdateFinanceCategory"
@@ -46,6 +47,8 @@ type FinanceServiceClient interface {
 	CreateFinanceWallet(ctx context.Context, in *CreateFinanceWalletRequest, opts ...grpc.CallOption) (*FinanceWallet, error)
 	// Updates a finance wallet's display name, negative-balance policy, or archive state.
 	UpdateFinanceWallet(ctx context.Context, in *UpdateFinanceWalletRequest, opts ...grpc.CallOption) (*FinanceWallet, error)
+	// Deletes a disabled wallet from management, retaining its identity and transactions for history.
+	DeleteFinanceWallet(ctx context.Context, in *DeleteFinanceWalletRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Lists the authenticated user's income and expense categories, including their display emojis.
 	ListFinanceCategories(ctx context.Context, in *ListFinanceCategoriesRequest, opts ...grpc.CallOption) (*ListFinanceCategoriesResponse, error)
 	// Creates an income or expense category with an optional display emoji.
@@ -58,7 +61,7 @@ type FinanceServiceClient interface {
 	CreateFinanceTransaction(ctx context.Context, in *CreateFinanceTransactionRequest, opts ...grpc.CallOption) (*FinanceTransaction, error)
 	// Corrects a ledger transaction and rebuilds affected chronological balance snapshots.
 	UpdateFinanceTransaction(ctx context.Context, in *UpdateFinanceTransactionRequest, opts ...grpc.CallOption) (*FinanceTransaction, error)
-	// Voids a ledger transaction, retains its audit record, and rebuilds active balance snapshots.
+	// Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
 	DeleteFinanceTransaction(ctx context.Context, in *DeleteFinanceTransactionRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Reconciles a wallet to an observed balance by creating an adjustment transaction.
 	AdjustFinanceWalletBalance(ctx context.Context, in *AdjustFinanceWalletBalanceRequest, opts ...grpc.CallOption) (*FinanceTransaction, error)
@@ -98,6 +101,16 @@ func (c *financeServiceClient) UpdateFinanceWallet(ctx context.Context, in *Upda
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FinanceWallet)
 	err := c.cc.Invoke(ctx, FinanceService_UpdateFinanceWallet_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeServiceClient) DeleteFinanceWallet(ctx context.Context, in *DeleteFinanceWalletRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, FinanceService_DeleteFinanceWallet_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +219,8 @@ type FinanceServiceServer interface {
 	CreateFinanceWallet(context.Context, *CreateFinanceWalletRequest) (*FinanceWallet, error)
 	// Updates a finance wallet's display name, negative-balance policy, or archive state.
 	UpdateFinanceWallet(context.Context, *UpdateFinanceWalletRequest) (*FinanceWallet, error)
+	// Deletes a disabled wallet from management, retaining its identity and transactions for history.
+	DeleteFinanceWallet(context.Context, *DeleteFinanceWalletRequest) (*emptypb.Empty, error)
 	// Lists the authenticated user's income and expense categories, including their display emojis.
 	ListFinanceCategories(context.Context, *ListFinanceCategoriesRequest) (*ListFinanceCategoriesResponse, error)
 	// Creates an income or expense category with an optional display emoji.
@@ -218,7 +233,7 @@ type FinanceServiceServer interface {
 	CreateFinanceTransaction(context.Context, *CreateFinanceTransactionRequest) (*FinanceTransaction, error)
 	// Corrects a ledger transaction and rebuilds affected chronological balance snapshots.
 	UpdateFinanceTransaction(context.Context, *UpdateFinanceTransactionRequest) (*FinanceTransaction, error)
-	// Voids a ledger transaction, retains its audit record, and rebuilds active balance snapshots.
+	// Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
 	DeleteFinanceTransaction(context.Context, *DeleteFinanceTransactionRequest) (*emptypb.Empty, error)
 	// Reconciles a wallet to an observed balance by creating an adjustment transaction.
 	AdjustFinanceWalletBalance(context.Context, *AdjustFinanceWalletBalanceRequest) (*FinanceTransaction, error)
@@ -242,6 +257,9 @@ func (UnimplementedFinanceServiceServer) CreateFinanceWallet(context.Context, *C
 }
 func (UnimplementedFinanceServiceServer) UpdateFinanceWallet(context.Context, *UpdateFinanceWalletRequest) (*FinanceWallet, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateFinanceWallet not implemented")
+}
+func (UnimplementedFinanceServiceServer) DeleteFinanceWallet(context.Context, *DeleteFinanceWalletRequest) (*emptypb.Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteFinanceWallet not implemented")
 }
 func (UnimplementedFinanceServiceServer) ListFinanceCategories(context.Context, *ListFinanceCategoriesRequest) (*ListFinanceCategoriesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListFinanceCategories not implemented")
@@ -341,6 +359,24 @@ func _FinanceService_UpdateFinanceWallet_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServiceServer).UpdateFinanceWallet(ctx, req.(*UpdateFinanceWalletRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FinanceService_DeleteFinanceWallet_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteFinanceWalletRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServiceServer).DeleteFinanceWallet(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinanceService_DeleteFinanceWallet_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServiceServer).DeleteFinanceWallet(ctx, req.(*DeleteFinanceWalletRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -525,6 +561,10 @@ var FinanceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateFinanceWallet",
 			Handler:    _FinanceService_UpdateFinanceWallet_Handler,
+		},
+		{
+			MethodName: "DeleteFinanceWallet",
+			Handler:    _FinanceService_DeleteFinanceWallet_Handler,
 		},
 		{
 			MethodName: "ListFinanceCategories",

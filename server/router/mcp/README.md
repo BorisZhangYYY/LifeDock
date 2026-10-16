@@ -174,24 +174,25 @@ auth operation is the read-only `AuthService_GetCurrentUser` ("whoami").
 | `ShortcutService_ListShortcuts` | `shortcut_list_shortcuts` | Reuse saved CEL filters for memo queries. |
 | `ReminderService_ListReminderLists` | `reminder_list_reminder_lists` | List the user's reminder lists. |
 | `ReminderService_CreateReminderList` | `reminder_create_reminder_list` | Create a reminder list. |
-| `ReminderService_UpdateReminderList` | `reminder_update_reminder_list` | Rename, reorder, or archive a reminder list. |
-| `ReminderService_DeleteReminderList` | `reminder_delete_reminder_list` | Delete a reminder list. |
+| `ReminderService_UpdateReminderList` | `reminder_update_reminder_list` | Rename or reorder a reminder list. |
+| `ReminderService_DeleteReminderList` | `reminder_delete_reminder_list` | Delete a list and its reminders, retaining completed history. |
 | `ReminderService_ListReminders` | `reminder_list_reminders` | Query reminders and completed items. |
 | `ReminderService_CreateReminder` | `reminder_create_reminder` | Create a reminder using `remindTime` or date-only `dueDate` (there is no details field). |
 | `ReminderService_UpdateReminder` | `reminder_update_reminder` | Update reminder details. |
 | `ReminderService_DeleteReminder` | `reminder_delete_reminder` | Delete a reminder. |
 | `ReminderService_CompleteReminder` | `reminder_complete_reminder` | Complete a reminder. |
-| `ReminderService_ClearCompletedReminders` | `reminder_clear_completed_reminders` | Archive completed reminders in bulk. |
+| `ReminderService_ClearCompletedReminders` | `reminder_clear_completed_reminders` | Delete completed reminders in bulk, retaining history and statistics. |
 | `FinanceService_ListFinanceWallets` | `finance_list_finance_wallets` | List private wallets and balances. |
 | `FinanceService_CreateFinanceWallet` | `finance_create_finance_wallet` | Create a private wallet; opening balance uses `initialBalanceMinor`. |
 | `FinanceService_UpdateFinanceWallet` | `finance_update_finance_wallet` | Update wallet metadata or state. |
+| `FinanceService_DeleteFinanceWallet` | `finance_delete_finance_wallet` | Delete a disabled wallet from management, retaining its historical transactions. |
 | `FinanceService_ListFinanceCategories` | `finance_list_finance_categories` | List income/expense categories. |
 | `FinanceService_CreateFinanceCategory` | `finance_create_finance_category` | Create an income/expense category. |
 | `FinanceService_UpdateFinanceCategory` | `finance_update_finance_category` | Update category metadata or state. |
 | `FinanceService_ListFinanceTransactions` | `finance_list_finance_transactions` | Query ledger transactions. |
 | `FinanceService_CreateFinanceTransaction` | `finance_create_finance_transaction` | Record income, expense, or a transfer; `occurTime` is required. |
 | `FinanceService_UpdateFinanceTransaction` | `finance_update_finance_transaction` | Correct a ledger transaction and rebuild chronological balance snapshots. |
-| `FinanceService_DeleteFinanceTransaction` | `finance_delete_finance_transaction` | Delete a ledger transaction and rebuild chronological balance snapshots. |
+| `FinanceService_DeleteFinanceTransaction` | `finance_delete_finance_transaction` | Permanently delete a ledger transaction and recalculate balances and statistics. |
 | `FinanceService_AdjustFinanceWalletBalance` | `finance_adjust_finance_wallet_balance` | Reconcile a wallet to an observed balance. |
 | `FinanceService_GetFinanceSummary` | `finance_get_finance_summary` | Read balance, income, expense, net, and daily summaries. |
 | `InstanceService_GetInstanceStats` | `instance_get_instance_stats` | Read admin-only instance resource statistics. |

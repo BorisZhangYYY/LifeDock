@@ -98,6 +98,9 @@ func (a Adapter) CreateWallet(ctx context.Context, create *store.FinanceWallet) 
 
 func (a Adapter) ListWallets(ctx context.Context, find *store.FindFinanceWallet) ([]*store.FinanceWallet, error) {
 	where, args := []string{"1 = 1"}, []any{}
+	if !find.IncludeDeleted {
+		where = append(where, "deleted_ts IS NULL")
+	}
 	if find.ID != nil {
 		where, args = append(where, "id = ?"), append(args, *find.ID)
 	}
@@ -120,7 +123,7 @@ func (a Adapter) ListWallets(ctx context.Context, find *store.FindFinanceWallet)
 	}
 	rows, err := a.DB.QueryContext(ctx, a.bind(`
 		SELECT id, uid, creator_id, created_ts, updated_ts, row_status, name,
-		       initial_balance_minor, balance_minor, allow_negative_balance
+		       initial_balance_minor, balance_minor, allow_negative_balance, deleted_ts
 		FROM finance_wallet
 		WHERE `+strings.Join(where, " AND ")+`
 		ORDER BY row_status ASC, id ASC`), args...)
@@ -175,6 +178,27 @@ func (a Adapter) UpdateWallet(ctx context.Context, update *store.UpdateFinanceWa
 		return nil, err
 	}
 	return a.getWallet(ctx, a.DB, update.ID, update.CreatorID, false)
+}
+
+// DeleteWallet retains the identity required by historical ledger entries.
+func (a Adapter) DeleteWallet(ctx context.Context, value *store.DeleteFinanceWallet) error {
+	tx, err := a.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	wallet, err := a.getWallet(ctx, tx, value.ID, value.CreatorID, true)
+	if err != nil {
+		return err
+	}
+	if wallet.RowStatus != store.Archived {
+		return store.ErrFinanceWalletActive
+	}
+	nowSec := time.Now().Unix()
+	if _, err := tx.ExecContext(ctx, a.bind("UPDATE finance_wallet SET deleted_ts = ?, updated_ts = ? WHERE id = ? AND creator_id = ?"), nowSec, nowSec, value.ID, value.CreatorID); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (a Adapter) CreateCategory(ctx context.Context, create *store.FinanceCategory) (*store.FinanceCategory, error) {
@@ -400,16 +424,11 @@ func (a Adapter) DeleteTransaction(ctx context.Context, delete *store.DeleteFina
 	if err != nil {
 		return err
 	}
-	existing, err := a.getTransaction(ctx, tx, delete.ID, delete.CreatorID, true)
-	if err != nil {
+	if _, err := a.getTransaction(ctx, tx, delete.ID, delete.CreatorID, true); err != nil {
 		return err
 	}
-	if existing.VoidedTs != nil {
-		return store.ErrFinanceTransactionVoided
-	}
-	nowSec := time.Now().Unix()
-	if _, err := tx.ExecContext(ctx, a.bind("UPDATE finance_transaction SET voided_ts = ?, updated_ts = ? WHERE id = ? AND creator_id = ?"),
-		nowSec, nowSec, delete.ID, delete.CreatorID); err != nil {
+	if _, err := tx.ExecContext(ctx, a.bind("DELETE FROM finance_transaction WHERE id = ? AND creator_id = ?"),
+		delete.ID, delete.CreatorID); err != nil {
 		return err
 	}
 	if err := a.rebuildLedger(ctx, tx, delete.CreatorID, wallets); err != nil {
@@ -423,8 +442,15 @@ type scanner interface {
 }
 
 func scanWallet(row scanner, wallet *store.FinanceWallet) error {
-	return row.Scan(&wallet.ID, &wallet.UID, &wallet.CreatorID, &wallet.CreatedTs, &wallet.UpdatedTs,
-		&wallet.RowStatus, &wallet.Name, &wallet.InitialBalanceMinor, &wallet.BalanceMinor, &wallet.AllowNegativeBalance)
+	var deletedTs sql.NullInt64
+	if err := row.Scan(&wallet.ID, &wallet.UID, &wallet.CreatorID, &wallet.CreatedTs, &wallet.UpdatedTs,
+		&wallet.RowStatus, &wallet.Name, &wallet.InitialBalanceMinor, &wallet.BalanceMinor, &wallet.AllowNegativeBalance, &deletedTs); err != nil {
+		return err
+	}
+	if deletedTs.Valid {
+		wallet.DeletedTs = &deletedTs.Int64
+	}
+	return nil
 }
 
 func scanCategory(row scanner, category *store.FinanceCategory) error {
@@ -459,13 +485,13 @@ func scanTransaction(row scanner, transaction *store.FinanceTransaction) error {
 func (a Adapter) getWallet(ctx context.Context, runner sqlRunner, id, creatorID int32, lock bool) (*store.FinanceWallet, error) {
 	wallet := &store.FinanceWallet{}
 	query := `SELECT id, uid, creator_id, created_ts, updated_ts, row_status, name,
-	                 initial_balance_minor, balance_minor, allow_negative_balance
+	                 initial_balance_minor, balance_minor, allow_negative_balance, deleted_ts
 	          FROM finance_wallet WHERE id = ? AND creator_id = ?`
 	if lock {
 		query += a.lockSuffix()
 	}
 	err := scanWallet(runner.QueryRowContext(ctx, a.bind(query), id, creatorID), wallet)
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, sql.ErrNoRows) || (err == nil && wallet.DeletedTs != nil) {
 		return nil, store.ErrFinanceWalletNotFound
 	}
 	return wallet, err
@@ -500,7 +526,7 @@ func (a Adapter) getTransaction(ctx context.Context, runner sqlRunner, id, creat
 
 func (a Adapter) loadCreatorWallets(ctx context.Context, tx *sql.Tx, creatorID int32) (map[int32]*store.FinanceWallet, error) {
 	query := `SELECT id, uid, creator_id, created_ts, updated_ts, row_status, name,
-	                 initial_balance_minor, balance_minor, allow_negative_balance
+	                 initial_balance_minor, balance_minor, allow_negative_balance, deleted_ts
 	          FROM finance_wallet WHERE creator_id = ? ORDER BY id ASC` + a.lockSuffix()
 	rows, err := tx.QueryContext(ctx, a.bind(query), creatorID)
 	if err != nil {
@@ -528,6 +554,9 @@ func (a Adapter) validateReferences(
 	if !ok {
 		return store.ErrFinanceWalletNotFound
 	}
+	if primaryWallet.DeletedTs != nil {
+		return store.ErrFinanceWalletNotFound
+	}
 	if primaryWallet.RowStatus != store.Normal {
 		return store.ErrFinanceArchivedResource
 	}
@@ -537,6 +566,9 @@ func (a Adapter) validateReferences(
 		}
 		destinationWallet, ok := wallets[*transaction.DestinationWalletID]
 		if !ok {
+			return store.ErrFinanceWalletNotFound
+		}
+		if destinationWallet.DeletedTs != nil {
 			return store.ErrFinanceWalletNotFound
 		}
 		if destinationWallet.RowStatus != store.Normal {

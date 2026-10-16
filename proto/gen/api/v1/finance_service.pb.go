@@ -140,8 +140,10 @@ type FinanceWallet struct {
 	State                State                  `protobuf:"varint,6,opt,name=state,proto3,enum=memos.api.v1.State" json:"state,omitempty"`
 	CreateTime           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=create_time,json=createTime,proto3" json:"create_time,omitempty"`
 	UpdateTime           *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=update_time,json=updateTime,proto3" json:"update_time,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Deleted wallets remain available only as read-only historical references.
+	DeleteTime    *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=delete_time,json=deleteTime,proto3" json:"delete_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FinanceWallet) Reset() {
@@ -226,6 +228,13 @@ func (x *FinanceWallet) GetCreateTime() *timestamppb.Timestamp {
 func (x *FinanceWallet) GetUpdateTime() *timestamppb.Timestamp {
 	if x != nil {
 		return x.UpdateTime
+	}
+	return nil
+}
+
+func (x *FinanceWallet) GetDeleteTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DeleteTime
 	}
 	return nil
 }
@@ -611,9 +620,11 @@ func (x *FinanceSummary) GetDailySummaries() []*FinanceDailySummary {
 }
 
 type ListFinanceWalletsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Parent        string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
-	State         State                  `protobuf:"varint,2,opt,name=state,proto3,enum=memos.api.v1.State" json:"state,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Parent string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
+	State  State                  `protobuf:"varint,2,opt,name=state,proto3,enum=memos.api.v1.State" json:"state,omitempty"`
+	// Include deleted wallets to label historical transactions. They cannot be restored or used for new entries.
+	ShowDeleted   bool `protobuf:"varint,3,opt,name=show_deleted,json=showDeleted,proto3" json:"show_deleted,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -660,6 +671,13 @@ func (x *ListFinanceWalletsRequest) GetState() State {
 		return x.State
 	}
 	return State_STATE_UNSPECIFIED
+}
+
+func (x *ListFinanceWalletsRequest) GetShowDeleted() bool {
+	if x != nil {
+		return x.ShowDeleted
+	}
+	return false
 }
 
 type ListFinanceWalletsResponse struct {
@@ -818,6 +836,50 @@ func (x *UpdateFinanceWalletRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
 	return nil
 }
 
+type DeleteFinanceWalletRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteFinanceWalletRequest) Reset() {
+	*x = DeleteFinanceWalletRequest{}
+	mi := &file_api_v1_finance_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteFinanceWalletRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteFinanceWalletRequest) ProtoMessage() {}
+
+func (x *DeleteFinanceWalletRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_v1_finance_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteFinanceWalletRequest.ProtoReflect.Descriptor instead.
+func (*DeleteFinanceWalletRequest) Descriptor() ([]byte, []int) {
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *DeleteFinanceWalletRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
 type ListFinanceCategoriesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Parent        string                 `protobuf:"bytes,1,opt,name=parent,proto3" json:"parent,omitempty"`
@@ -829,7 +891,7 @@ type ListFinanceCategoriesRequest struct {
 
 func (x *ListFinanceCategoriesRequest) Reset() {
 	*x = ListFinanceCategoriesRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[9]
+	mi := &file_api_v1_finance_service_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -841,7 +903,7 @@ func (x *ListFinanceCategoriesRequest) String() string {
 func (*ListFinanceCategoriesRequest) ProtoMessage() {}
 
 func (x *ListFinanceCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[9]
+	mi := &file_api_v1_finance_service_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -854,7 +916,7 @@ func (x *ListFinanceCategoriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFinanceCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListFinanceCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{9}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ListFinanceCategoriesRequest) GetParent() string {
@@ -887,7 +949,7 @@ type ListFinanceCategoriesResponse struct {
 
 func (x *ListFinanceCategoriesResponse) Reset() {
 	*x = ListFinanceCategoriesResponse{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[10]
+	mi := &file_api_v1_finance_service_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -899,7 +961,7 @@ func (x *ListFinanceCategoriesResponse) String() string {
 func (*ListFinanceCategoriesResponse) ProtoMessage() {}
 
 func (x *ListFinanceCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[10]
+	mi := &file_api_v1_finance_service_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -912,7 +974,7 @@ func (x *ListFinanceCategoriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFinanceCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListFinanceCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{10}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ListFinanceCategoriesResponse) GetCategories() []*FinanceCategory {
@@ -933,7 +995,7 @@ type CreateFinanceCategoryRequest struct {
 
 func (x *CreateFinanceCategoryRequest) Reset() {
 	*x = CreateFinanceCategoryRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[11]
+	mi := &file_api_v1_finance_service_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -945,7 +1007,7 @@ func (x *CreateFinanceCategoryRequest) String() string {
 func (*CreateFinanceCategoryRequest) ProtoMessage() {}
 
 func (x *CreateFinanceCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[11]
+	mi := &file_api_v1_finance_service_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -958,7 +1020,7 @@ func (x *CreateFinanceCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFinanceCategoryRequest.ProtoReflect.Descriptor instead.
 func (*CreateFinanceCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{11}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CreateFinanceCategoryRequest) GetParent() string {
@@ -992,7 +1054,7 @@ type UpdateFinanceCategoryRequest struct {
 
 func (x *UpdateFinanceCategoryRequest) Reset() {
 	*x = UpdateFinanceCategoryRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[12]
+	mi := &file_api_v1_finance_service_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1004,7 +1066,7 @@ func (x *UpdateFinanceCategoryRequest) String() string {
 func (*UpdateFinanceCategoryRequest) ProtoMessage() {}
 
 func (x *UpdateFinanceCategoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[12]
+	mi := &file_api_v1_finance_service_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1017,7 +1079,7 @@ func (x *UpdateFinanceCategoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFinanceCategoryRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFinanceCategoryRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{12}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdateFinanceCategoryRequest) GetCategory() *FinanceCategory {
@@ -1049,7 +1111,7 @@ type ListFinanceTransactionsRequest struct {
 
 func (x *ListFinanceTransactionsRequest) Reset() {
 	*x = ListFinanceTransactionsRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[13]
+	mi := &file_api_v1_finance_service_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1061,7 +1123,7 @@ func (x *ListFinanceTransactionsRequest) String() string {
 func (*ListFinanceTransactionsRequest) ProtoMessage() {}
 
 func (x *ListFinanceTransactionsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[13]
+	mi := &file_api_v1_finance_service_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1074,7 +1136,7 @@ func (x *ListFinanceTransactionsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFinanceTransactionsRequest.ProtoReflect.Descriptor instead.
 func (*ListFinanceTransactionsRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{13}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *ListFinanceTransactionsRequest) GetParent() string {
@@ -1136,7 +1198,7 @@ type ListFinanceTransactionsResponse struct {
 
 func (x *ListFinanceTransactionsResponse) Reset() {
 	*x = ListFinanceTransactionsResponse{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[14]
+	mi := &file_api_v1_finance_service_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1148,7 +1210,7 @@ func (x *ListFinanceTransactionsResponse) String() string {
 func (*ListFinanceTransactionsResponse) ProtoMessage() {}
 
 func (x *ListFinanceTransactionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[14]
+	mi := &file_api_v1_finance_service_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1161,7 +1223,7 @@ func (x *ListFinanceTransactionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListFinanceTransactionsResponse.ProtoReflect.Descriptor instead.
 func (*ListFinanceTransactionsResponse) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{14}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListFinanceTransactionsResponse) GetTransactions() []*FinanceTransaction {
@@ -1189,7 +1251,7 @@ type CreateFinanceTransactionRequest struct {
 
 func (x *CreateFinanceTransactionRequest) Reset() {
 	*x = CreateFinanceTransactionRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[15]
+	mi := &file_api_v1_finance_service_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1201,7 +1263,7 @@ func (x *CreateFinanceTransactionRequest) String() string {
 func (*CreateFinanceTransactionRequest) ProtoMessage() {}
 
 func (x *CreateFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[15]
+	mi := &file_api_v1_finance_service_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1214,7 +1276,7 @@ func (x *CreateFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateFinanceTransactionRequest.ProtoReflect.Descriptor instead.
 func (*CreateFinanceTransactionRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{15}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CreateFinanceTransactionRequest) GetParent() string {
@@ -1248,7 +1310,7 @@ type UpdateFinanceTransactionRequest struct {
 
 func (x *UpdateFinanceTransactionRequest) Reset() {
 	*x = UpdateFinanceTransactionRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[16]
+	mi := &file_api_v1_finance_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1260,7 +1322,7 @@ func (x *UpdateFinanceTransactionRequest) String() string {
 func (*UpdateFinanceTransactionRequest) ProtoMessage() {}
 
 func (x *UpdateFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[16]
+	mi := &file_api_v1_finance_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1273,7 +1335,7 @@ func (x *UpdateFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateFinanceTransactionRequest.ProtoReflect.Descriptor instead.
 func (*UpdateFinanceTransactionRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{16}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UpdateFinanceTransactionRequest) GetTransaction() *FinanceTransaction {
@@ -1299,7 +1361,7 @@ type DeleteFinanceTransactionRequest struct {
 
 func (x *DeleteFinanceTransactionRequest) Reset() {
 	*x = DeleteFinanceTransactionRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[17]
+	mi := &file_api_v1_finance_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1311,7 +1373,7 @@ func (x *DeleteFinanceTransactionRequest) String() string {
 func (*DeleteFinanceTransactionRequest) ProtoMessage() {}
 
 func (x *DeleteFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[17]
+	mi := &file_api_v1_finance_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1324,7 +1386,7 @@ func (x *DeleteFinanceTransactionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteFinanceTransactionRequest.ProtoReflect.Descriptor instead.
 func (*DeleteFinanceTransactionRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{17}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *DeleteFinanceTransactionRequest) GetName() string {
@@ -1347,7 +1409,7 @@ type AdjustFinanceWalletBalanceRequest struct {
 
 func (x *AdjustFinanceWalletBalanceRequest) Reset() {
 	*x = AdjustFinanceWalletBalanceRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[18]
+	mi := &file_api_v1_finance_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1359,7 +1421,7 @@ func (x *AdjustFinanceWalletBalanceRequest) String() string {
 func (*AdjustFinanceWalletBalanceRequest) ProtoMessage() {}
 
 func (x *AdjustFinanceWalletBalanceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[18]
+	mi := &file_api_v1_finance_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1372,7 +1434,7 @@ func (x *AdjustFinanceWalletBalanceRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use AdjustFinanceWalletBalanceRequest.ProtoReflect.Descriptor instead.
 func (*AdjustFinanceWalletBalanceRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{18}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AdjustFinanceWalletBalanceRequest) GetWallet() string {
@@ -1423,7 +1485,7 @@ type GetFinanceSummaryRequest struct {
 
 func (x *GetFinanceSummaryRequest) Reset() {
 	*x = GetFinanceSummaryRequest{}
-	mi := &file_api_v1_finance_service_proto_msgTypes[19]
+	mi := &file_api_v1_finance_service_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1435,7 +1497,7 @@ func (x *GetFinanceSummaryRequest) String() string {
 func (*GetFinanceSummaryRequest) ProtoMessage() {}
 
 func (x *GetFinanceSummaryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_v1_finance_service_proto_msgTypes[19]
+	mi := &file_api_v1_finance_service_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1448,7 +1510,7 @@ func (x *GetFinanceSummaryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetFinanceSummaryRequest.ProtoReflect.Descriptor instead.
 func (*GetFinanceSummaryRequest) Descriptor() ([]byte, []int) {
-	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{19}
+	return file_api_v1_finance_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GetFinanceSummaryRequest) GetParent() string {
@@ -1483,7 +1545,7 @@ var File_api_v1_finance_service_proto protoreflect.FileDescriptor
 
 const file_api_v1_finance_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1capi/v1/finance_service.proto\x12\fmemos.api.v1\x1a\x13api/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x81\x04\n" +
+	"\x1capi/v1/finance_service.proto\x12\fmemos.api.v1\x1a\x13api/v1/common.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/resource.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc3\x04\n" +
 	"\rFinanceWallet\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12&\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\x03\xe0A\x02R\vdisplayName\x127\n" +
@@ -1494,7 +1556,9 @@ const file_api_v1_finance_service_proto_rawDesc = "" +
 	"\vcreate_time\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime\x12@\n" +
 	"\vupdate_time\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"updateTime:]\xeaAZ\n" +
+	"updateTime\x12@\n" +
+	"\vdelete_time\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"deleteTime:]\xeaAZ\n" +
 	"\x1amemos.api.v1/FinanceWallet\x12\x1dusers/{user}/wallets/{wallet}*\x0efinanceWallets2\rfinanceWallet\"\x8f\x04\n" +
 	"\x0fFinanceCategory\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12&\n" +
@@ -1549,10 +1613,11 @@ const file_api_v1_finance_service_proto_rawDesc = "" +
 	"\fincome_minor\x18\x02 \x01(\x03R\vincomeMinor\x12#\n" +
 	"\rexpense_minor\x18\x03 \x01(\x03R\fexpenseMinor\x12\x1b\n" +
 	"\tnet_minor\x18\x04 \x01(\x03R\bnetMinor\x12J\n" +
-	"\x0fdaily_summaries\x18\x05 \x03(\v2!.memos.api.v1.FinanceDailySummaryR\x0edailySummaries\"h\n" +
+	"\x0fdaily_summaries\x18\x05 \x03(\v2!.memos.api.v1.FinanceDailySummaryR\x0edailySummaries\"\x90\x01\n" +
 	"\x19ListFinanceWalletsRequest\x12\x1b\n" +
 	"\x06parent\x18\x01 \x01(\tB\x03\xe0A\x02R\x06parent\x12.\n" +
-	"\x05state\x18\x02 \x01(\x0e2\x13.memos.api.v1.StateB\x03\xe0A\x01R\x05state\"S\n" +
+	"\x05state\x18\x02 \x01(\x0e2\x13.memos.api.v1.StateB\x03\xe0A\x01R\x05state\x12&\n" +
+	"\fshow_deleted\x18\x03 \x01(\bB\x03\xe0A\x01R\vshowDeleted\"S\n" +
 	"\x1aListFinanceWalletsResponse\x125\n" +
 	"\awallets\x18\x01 \x03(\v2\x1b.memos.api.v1.FinanceWalletR\awallets\"\x97\x01\n" +
 	"\x1aCreateFinanceWalletRequest\x12\x1b\n" +
@@ -1563,7 +1628,9 @@ const file_api_v1_finance_service_proto_rawDesc = "" +
 	"\x1aUpdateFinanceWalletRequest\x128\n" +
 	"\x06wallet\x18\x01 \x01(\v2\x1b.memos.api.v1.FinanceWalletB\x03\xe0A\x02R\x06wallet\x12@\n" +
 	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskB\x03\xe0A\x02R\n" +
-	"updateMask\"\xa8\x01\n" +
+	"updateMask\"5\n" +
+	"\x1aDeleteFinanceWalletRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\xa8\x01\n" +
 	"\x1cListFinanceCategoriesRequest\x12\x1b\n" +
 	"\x06parent\x18\x01 \x01(\tB\x03\xe0A\x02R\x06parent\x12;\n" +
 	"\x04type\x18\x02 \x01(\x0e2\".memos.api.v1.FinanceCategory.TypeB\x03\xe0A\x01R\x04type\x12.\n" +
@@ -1618,11 +1685,12 @@ const file_api_v1_finance_service_proto_rawDesc = "" +
 	"\n" +
 	"start_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\tstartTime\x12:\n" +
 	"\bend_time\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x02R\aendTime\x12 \n" +
-	"\ttime_zone\x18\x04 \x01(\tB\x03\xe0A\x02R\btimeZone2\xbb\x0f\n" +
+	"\ttime_zone\x18\x04 \x01(\tB\x03\xe0A\x02R\btimeZone2\xbf\x10\n" +
 	"\x0eFinanceService\x12\x91\x01\n" +
 	"\x12ListFinanceWallets\x12'.memos.api.v1.ListFinanceWalletsRequest\x1a(.memos.api.v1.ListFinanceWalletsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/v1/{parent=users/*}/wallets\x12\x8e\x01\n" +
 	"\x13CreateFinanceWallet\x12(.memos.api.v1.CreateFinanceWalletRequest\x1a\x1b.memos.api.v1.FinanceWallet\"0\x82\xd3\xe4\x93\x02*:\x06wallet\" /api/v1/{parent=users/*}/wallets\x12\x95\x01\n" +
-	"\x13UpdateFinanceWallet\x12(.memos.api.v1.UpdateFinanceWalletRequest\x1a\x1b.memos.api.v1.FinanceWallet\"7\x82\xd3\xe4\x93\x021:\x06wallet2'/api/v1/{wallet.name=users/*/wallets/*}\x12\xa5\x01\n" +
+	"\x13UpdateFinanceWallet\x12(.memos.api.v1.UpdateFinanceWalletRequest\x1a\x1b.memos.api.v1.FinanceWallet\"7\x82\xd3\xe4\x93\x021:\x06wallet2'/api/v1/{wallet.name=users/*/wallets/*}\x12\x81\x01\n" +
+	"\x13DeleteFinanceWallet\x12(.memos.api.v1.DeleteFinanceWalletRequest\x1a\x16.google.protobuf.Empty\"(\x82\xd3\xe4\x93\x02\"* /api/v1/{name=users/*/wallets/*}\x12\xa5\x01\n" +
 	"\x15ListFinanceCategories\x12*.memos.api.v1.ListFinanceCategoriesRequest\x1a+.memos.api.v1.ListFinanceCategoriesResponse\"3\x82\xd3\xe4\x93\x02-\x12+/api/v1/{parent=users/*}/finance-categories\x12\xa1\x01\n" +
 	"\x15CreateFinanceCategory\x12*.memos.api.v1.CreateFinanceCategoryRequest\x1a\x1d.memos.api.v1.FinanceCategory\"=\x82\xd3\xe4\x93\x027:\bcategory\"+/api/v1/{parent=users/*}/finance-categories\x12\xa9\x01\n" +
 	"\x15UpdateFinanceCategory\x12*.memos.api.v1.UpdateFinanceCategoryRequest\x1a\x1d.memos.api.v1.FinanceCategory\"E\x82\xd3\xe4\x93\x02?:\bcategory23/api/v1/{category.name=users/*/financeCategories/*}\x12\xad\x01\n" +
@@ -1647,7 +1715,7 @@ func file_api_v1_finance_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_v1_finance_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_api_v1_finance_service_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_api_v1_finance_service_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
 var file_api_v1_finance_service_proto_goTypes = []any{
 	(FinanceCategory_Type)(0),                 // 0: memos.api.v1.FinanceCategory.Type
 	(FinanceTransaction_Type)(0),              // 1: memos.api.v1.FinanceTransaction.Type
@@ -1660,86 +1728,90 @@ var file_api_v1_finance_service_proto_goTypes = []any{
 	(*ListFinanceWalletsResponse)(nil),        // 8: memos.api.v1.ListFinanceWalletsResponse
 	(*CreateFinanceWalletRequest)(nil),        // 9: memos.api.v1.CreateFinanceWalletRequest
 	(*UpdateFinanceWalletRequest)(nil),        // 10: memos.api.v1.UpdateFinanceWalletRequest
-	(*ListFinanceCategoriesRequest)(nil),      // 11: memos.api.v1.ListFinanceCategoriesRequest
-	(*ListFinanceCategoriesResponse)(nil),     // 12: memos.api.v1.ListFinanceCategoriesResponse
-	(*CreateFinanceCategoryRequest)(nil),      // 13: memos.api.v1.CreateFinanceCategoryRequest
-	(*UpdateFinanceCategoryRequest)(nil),      // 14: memos.api.v1.UpdateFinanceCategoryRequest
-	(*ListFinanceTransactionsRequest)(nil),    // 15: memos.api.v1.ListFinanceTransactionsRequest
-	(*ListFinanceTransactionsResponse)(nil),   // 16: memos.api.v1.ListFinanceTransactionsResponse
-	(*CreateFinanceTransactionRequest)(nil),   // 17: memos.api.v1.CreateFinanceTransactionRequest
-	(*UpdateFinanceTransactionRequest)(nil),   // 18: memos.api.v1.UpdateFinanceTransactionRequest
-	(*DeleteFinanceTransactionRequest)(nil),   // 19: memos.api.v1.DeleteFinanceTransactionRequest
-	(*AdjustFinanceWalletBalanceRequest)(nil), // 20: memos.api.v1.AdjustFinanceWalletBalanceRequest
-	(*GetFinanceSummaryRequest)(nil),          // 21: memos.api.v1.GetFinanceSummaryRequest
-	(State)(0),                                // 22: memos.api.v1.State
-	(*timestamppb.Timestamp)(nil),             // 23: google.protobuf.Timestamp
-	(*fieldmaskpb.FieldMask)(nil),             // 24: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),                     // 25: google.protobuf.Empty
+	(*DeleteFinanceWalletRequest)(nil),        // 11: memos.api.v1.DeleteFinanceWalletRequest
+	(*ListFinanceCategoriesRequest)(nil),      // 12: memos.api.v1.ListFinanceCategoriesRequest
+	(*ListFinanceCategoriesResponse)(nil),     // 13: memos.api.v1.ListFinanceCategoriesResponse
+	(*CreateFinanceCategoryRequest)(nil),      // 14: memos.api.v1.CreateFinanceCategoryRequest
+	(*UpdateFinanceCategoryRequest)(nil),      // 15: memos.api.v1.UpdateFinanceCategoryRequest
+	(*ListFinanceTransactionsRequest)(nil),    // 16: memos.api.v1.ListFinanceTransactionsRequest
+	(*ListFinanceTransactionsResponse)(nil),   // 17: memos.api.v1.ListFinanceTransactionsResponse
+	(*CreateFinanceTransactionRequest)(nil),   // 18: memos.api.v1.CreateFinanceTransactionRequest
+	(*UpdateFinanceTransactionRequest)(nil),   // 19: memos.api.v1.UpdateFinanceTransactionRequest
+	(*DeleteFinanceTransactionRequest)(nil),   // 20: memos.api.v1.DeleteFinanceTransactionRequest
+	(*AdjustFinanceWalletBalanceRequest)(nil), // 21: memos.api.v1.AdjustFinanceWalletBalanceRequest
+	(*GetFinanceSummaryRequest)(nil),          // 22: memos.api.v1.GetFinanceSummaryRequest
+	(State)(0),                                // 23: memos.api.v1.State
+	(*timestamppb.Timestamp)(nil),             // 24: google.protobuf.Timestamp
+	(*fieldmaskpb.FieldMask)(nil),             // 25: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),                     // 26: google.protobuf.Empty
 }
 var file_api_v1_finance_service_proto_depIdxs = []int32{
-	22, // 0: memos.api.v1.FinanceWallet.state:type_name -> memos.api.v1.State
-	23, // 1: memos.api.v1.FinanceWallet.create_time:type_name -> google.protobuf.Timestamp
-	23, // 2: memos.api.v1.FinanceWallet.update_time:type_name -> google.protobuf.Timestamp
-	0,  // 3: memos.api.v1.FinanceCategory.type:type_name -> memos.api.v1.FinanceCategory.Type
-	22, // 4: memos.api.v1.FinanceCategory.state:type_name -> memos.api.v1.State
-	23, // 5: memos.api.v1.FinanceCategory.create_time:type_name -> google.protobuf.Timestamp
-	23, // 6: memos.api.v1.FinanceCategory.update_time:type_name -> google.protobuf.Timestamp
-	1,  // 7: memos.api.v1.FinanceTransaction.type:type_name -> memos.api.v1.FinanceTransaction.Type
-	23, // 8: memos.api.v1.FinanceTransaction.occur_time:type_name -> google.protobuf.Timestamp
-	23, // 9: memos.api.v1.FinanceTransaction.create_time:type_name -> google.protobuf.Timestamp
-	23, // 10: memos.api.v1.FinanceTransaction.update_time:type_name -> google.protobuf.Timestamp
-	23, // 11: memos.api.v1.FinanceTransaction.void_time:type_name -> google.protobuf.Timestamp
-	5,  // 12: memos.api.v1.FinanceSummary.daily_summaries:type_name -> memos.api.v1.FinanceDailySummary
-	22, // 13: memos.api.v1.ListFinanceWalletsRequest.state:type_name -> memos.api.v1.State
-	2,  // 14: memos.api.v1.ListFinanceWalletsResponse.wallets:type_name -> memos.api.v1.FinanceWallet
-	2,  // 15: memos.api.v1.CreateFinanceWalletRequest.wallet:type_name -> memos.api.v1.FinanceWallet
-	2,  // 16: memos.api.v1.UpdateFinanceWalletRequest.wallet:type_name -> memos.api.v1.FinanceWallet
-	24, // 17: memos.api.v1.UpdateFinanceWalletRequest.update_mask:type_name -> google.protobuf.FieldMask
-	0,  // 18: memos.api.v1.ListFinanceCategoriesRequest.type:type_name -> memos.api.v1.FinanceCategory.Type
-	22, // 19: memos.api.v1.ListFinanceCategoriesRequest.state:type_name -> memos.api.v1.State
-	3,  // 20: memos.api.v1.ListFinanceCategoriesResponse.categories:type_name -> memos.api.v1.FinanceCategory
-	3,  // 21: memos.api.v1.CreateFinanceCategoryRequest.category:type_name -> memos.api.v1.FinanceCategory
-	3,  // 22: memos.api.v1.UpdateFinanceCategoryRequest.category:type_name -> memos.api.v1.FinanceCategory
-	24, // 23: memos.api.v1.UpdateFinanceCategoryRequest.update_mask:type_name -> google.protobuf.FieldMask
-	23, // 24: memos.api.v1.ListFinanceTransactionsRequest.start_time:type_name -> google.protobuf.Timestamp
-	23, // 25: memos.api.v1.ListFinanceTransactionsRequest.end_time:type_name -> google.protobuf.Timestamp
-	1,  // 26: memos.api.v1.ListFinanceTransactionsRequest.type:type_name -> memos.api.v1.FinanceTransaction.Type
-	4,  // 27: memos.api.v1.ListFinanceTransactionsResponse.transactions:type_name -> memos.api.v1.FinanceTransaction
-	4,  // 28: memos.api.v1.CreateFinanceTransactionRequest.transaction:type_name -> memos.api.v1.FinanceTransaction
-	4,  // 29: memos.api.v1.UpdateFinanceTransactionRequest.transaction:type_name -> memos.api.v1.FinanceTransaction
-	24, // 30: memos.api.v1.UpdateFinanceTransactionRequest.update_mask:type_name -> google.protobuf.FieldMask
-	23, // 31: memos.api.v1.AdjustFinanceWalletBalanceRequest.occur_time:type_name -> google.protobuf.Timestamp
-	23, // 32: memos.api.v1.GetFinanceSummaryRequest.start_time:type_name -> google.protobuf.Timestamp
-	23, // 33: memos.api.v1.GetFinanceSummaryRequest.end_time:type_name -> google.protobuf.Timestamp
-	7,  // 34: memos.api.v1.FinanceService.ListFinanceWallets:input_type -> memos.api.v1.ListFinanceWalletsRequest
-	9,  // 35: memos.api.v1.FinanceService.CreateFinanceWallet:input_type -> memos.api.v1.CreateFinanceWalletRequest
-	10, // 36: memos.api.v1.FinanceService.UpdateFinanceWallet:input_type -> memos.api.v1.UpdateFinanceWalletRequest
-	11, // 37: memos.api.v1.FinanceService.ListFinanceCategories:input_type -> memos.api.v1.ListFinanceCategoriesRequest
-	13, // 38: memos.api.v1.FinanceService.CreateFinanceCategory:input_type -> memos.api.v1.CreateFinanceCategoryRequest
-	14, // 39: memos.api.v1.FinanceService.UpdateFinanceCategory:input_type -> memos.api.v1.UpdateFinanceCategoryRequest
-	15, // 40: memos.api.v1.FinanceService.ListFinanceTransactions:input_type -> memos.api.v1.ListFinanceTransactionsRequest
-	17, // 41: memos.api.v1.FinanceService.CreateFinanceTransaction:input_type -> memos.api.v1.CreateFinanceTransactionRequest
-	18, // 42: memos.api.v1.FinanceService.UpdateFinanceTransaction:input_type -> memos.api.v1.UpdateFinanceTransactionRequest
-	19, // 43: memos.api.v1.FinanceService.DeleteFinanceTransaction:input_type -> memos.api.v1.DeleteFinanceTransactionRequest
-	20, // 44: memos.api.v1.FinanceService.AdjustFinanceWalletBalance:input_type -> memos.api.v1.AdjustFinanceWalletBalanceRequest
-	21, // 45: memos.api.v1.FinanceService.GetFinanceSummary:input_type -> memos.api.v1.GetFinanceSummaryRequest
-	8,  // 46: memos.api.v1.FinanceService.ListFinanceWallets:output_type -> memos.api.v1.ListFinanceWalletsResponse
-	2,  // 47: memos.api.v1.FinanceService.CreateFinanceWallet:output_type -> memos.api.v1.FinanceWallet
-	2,  // 48: memos.api.v1.FinanceService.UpdateFinanceWallet:output_type -> memos.api.v1.FinanceWallet
-	12, // 49: memos.api.v1.FinanceService.ListFinanceCategories:output_type -> memos.api.v1.ListFinanceCategoriesResponse
-	3,  // 50: memos.api.v1.FinanceService.CreateFinanceCategory:output_type -> memos.api.v1.FinanceCategory
-	3,  // 51: memos.api.v1.FinanceService.UpdateFinanceCategory:output_type -> memos.api.v1.FinanceCategory
-	16, // 52: memos.api.v1.FinanceService.ListFinanceTransactions:output_type -> memos.api.v1.ListFinanceTransactionsResponse
-	4,  // 53: memos.api.v1.FinanceService.CreateFinanceTransaction:output_type -> memos.api.v1.FinanceTransaction
-	4,  // 54: memos.api.v1.FinanceService.UpdateFinanceTransaction:output_type -> memos.api.v1.FinanceTransaction
-	25, // 55: memos.api.v1.FinanceService.DeleteFinanceTransaction:output_type -> google.protobuf.Empty
-	4,  // 56: memos.api.v1.FinanceService.AdjustFinanceWalletBalance:output_type -> memos.api.v1.FinanceTransaction
-	6,  // 57: memos.api.v1.FinanceService.GetFinanceSummary:output_type -> memos.api.v1.FinanceSummary
-	46, // [46:58] is the sub-list for method output_type
-	34, // [34:46] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	23, // 0: memos.api.v1.FinanceWallet.state:type_name -> memos.api.v1.State
+	24, // 1: memos.api.v1.FinanceWallet.create_time:type_name -> google.protobuf.Timestamp
+	24, // 2: memos.api.v1.FinanceWallet.update_time:type_name -> google.protobuf.Timestamp
+	24, // 3: memos.api.v1.FinanceWallet.delete_time:type_name -> google.protobuf.Timestamp
+	0,  // 4: memos.api.v1.FinanceCategory.type:type_name -> memos.api.v1.FinanceCategory.Type
+	23, // 5: memos.api.v1.FinanceCategory.state:type_name -> memos.api.v1.State
+	24, // 6: memos.api.v1.FinanceCategory.create_time:type_name -> google.protobuf.Timestamp
+	24, // 7: memos.api.v1.FinanceCategory.update_time:type_name -> google.protobuf.Timestamp
+	1,  // 8: memos.api.v1.FinanceTransaction.type:type_name -> memos.api.v1.FinanceTransaction.Type
+	24, // 9: memos.api.v1.FinanceTransaction.occur_time:type_name -> google.protobuf.Timestamp
+	24, // 10: memos.api.v1.FinanceTransaction.create_time:type_name -> google.protobuf.Timestamp
+	24, // 11: memos.api.v1.FinanceTransaction.update_time:type_name -> google.protobuf.Timestamp
+	24, // 12: memos.api.v1.FinanceTransaction.void_time:type_name -> google.protobuf.Timestamp
+	5,  // 13: memos.api.v1.FinanceSummary.daily_summaries:type_name -> memos.api.v1.FinanceDailySummary
+	23, // 14: memos.api.v1.ListFinanceWalletsRequest.state:type_name -> memos.api.v1.State
+	2,  // 15: memos.api.v1.ListFinanceWalletsResponse.wallets:type_name -> memos.api.v1.FinanceWallet
+	2,  // 16: memos.api.v1.CreateFinanceWalletRequest.wallet:type_name -> memos.api.v1.FinanceWallet
+	2,  // 17: memos.api.v1.UpdateFinanceWalletRequest.wallet:type_name -> memos.api.v1.FinanceWallet
+	25, // 18: memos.api.v1.UpdateFinanceWalletRequest.update_mask:type_name -> google.protobuf.FieldMask
+	0,  // 19: memos.api.v1.ListFinanceCategoriesRequest.type:type_name -> memos.api.v1.FinanceCategory.Type
+	23, // 20: memos.api.v1.ListFinanceCategoriesRequest.state:type_name -> memos.api.v1.State
+	3,  // 21: memos.api.v1.ListFinanceCategoriesResponse.categories:type_name -> memos.api.v1.FinanceCategory
+	3,  // 22: memos.api.v1.CreateFinanceCategoryRequest.category:type_name -> memos.api.v1.FinanceCategory
+	3,  // 23: memos.api.v1.UpdateFinanceCategoryRequest.category:type_name -> memos.api.v1.FinanceCategory
+	25, // 24: memos.api.v1.UpdateFinanceCategoryRequest.update_mask:type_name -> google.protobuf.FieldMask
+	24, // 25: memos.api.v1.ListFinanceTransactionsRequest.start_time:type_name -> google.protobuf.Timestamp
+	24, // 26: memos.api.v1.ListFinanceTransactionsRequest.end_time:type_name -> google.protobuf.Timestamp
+	1,  // 27: memos.api.v1.ListFinanceTransactionsRequest.type:type_name -> memos.api.v1.FinanceTransaction.Type
+	4,  // 28: memos.api.v1.ListFinanceTransactionsResponse.transactions:type_name -> memos.api.v1.FinanceTransaction
+	4,  // 29: memos.api.v1.CreateFinanceTransactionRequest.transaction:type_name -> memos.api.v1.FinanceTransaction
+	4,  // 30: memos.api.v1.UpdateFinanceTransactionRequest.transaction:type_name -> memos.api.v1.FinanceTransaction
+	25, // 31: memos.api.v1.UpdateFinanceTransactionRequest.update_mask:type_name -> google.protobuf.FieldMask
+	24, // 32: memos.api.v1.AdjustFinanceWalletBalanceRequest.occur_time:type_name -> google.protobuf.Timestamp
+	24, // 33: memos.api.v1.GetFinanceSummaryRequest.start_time:type_name -> google.protobuf.Timestamp
+	24, // 34: memos.api.v1.GetFinanceSummaryRequest.end_time:type_name -> google.protobuf.Timestamp
+	7,  // 35: memos.api.v1.FinanceService.ListFinanceWallets:input_type -> memos.api.v1.ListFinanceWalletsRequest
+	9,  // 36: memos.api.v1.FinanceService.CreateFinanceWallet:input_type -> memos.api.v1.CreateFinanceWalletRequest
+	10, // 37: memos.api.v1.FinanceService.UpdateFinanceWallet:input_type -> memos.api.v1.UpdateFinanceWalletRequest
+	11, // 38: memos.api.v1.FinanceService.DeleteFinanceWallet:input_type -> memos.api.v1.DeleteFinanceWalletRequest
+	12, // 39: memos.api.v1.FinanceService.ListFinanceCategories:input_type -> memos.api.v1.ListFinanceCategoriesRequest
+	14, // 40: memos.api.v1.FinanceService.CreateFinanceCategory:input_type -> memos.api.v1.CreateFinanceCategoryRequest
+	15, // 41: memos.api.v1.FinanceService.UpdateFinanceCategory:input_type -> memos.api.v1.UpdateFinanceCategoryRequest
+	16, // 42: memos.api.v1.FinanceService.ListFinanceTransactions:input_type -> memos.api.v1.ListFinanceTransactionsRequest
+	18, // 43: memos.api.v1.FinanceService.CreateFinanceTransaction:input_type -> memos.api.v1.CreateFinanceTransactionRequest
+	19, // 44: memos.api.v1.FinanceService.UpdateFinanceTransaction:input_type -> memos.api.v1.UpdateFinanceTransactionRequest
+	20, // 45: memos.api.v1.FinanceService.DeleteFinanceTransaction:input_type -> memos.api.v1.DeleteFinanceTransactionRequest
+	21, // 46: memos.api.v1.FinanceService.AdjustFinanceWalletBalance:input_type -> memos.api.v1.AdjustFinanceWalletBalanceRequest
+	22, // 47: memos.api.v1.FinanceService.GetFinanceSummary:input_type -> memos.api.v1.GetFinanceSummaryRequest
+	8,  // 48: memos.api.v1.FinanceService.ListFinanceWallets:output_type -> memos.api.v1.ListFinanceWalletsResponse
+	2,  // 49: memos.api.v1.FinanceService.CreateFinanceWallet:output_type -> memos.api.v1.FinanceWallet
+	2,  // 50: memos.api.v1.FinanceService.UpdateFinanceWallet:output_type -> memos.api.v1.FinanceWallet
+	26, // 51: memos.api.v1.FinanceService.DeleteFinanceWallet:output_type -> google.protobuf.Empty
+	13, // 52: memos.api.v1.FinanceService.ListFinanceCategories:output_type -> memos.api.v1.ListFinanceCategoriesResponse
+	3,  // 53: memos.api.v1.FinanceService.CreateFinanceCategory:output_type -> memos.api.v1.FinanceCategory
+	3,  // 54: memos.api.v1.FinanceService.UpdateFinanceCategory:output_type -> memos.api.v1.FinanceCategory
+	17, // 55: memos.api.v1.FinanceService.ListFinanceTransactions:output_type -> memos.api.v1.ListFinanceTransactionsResponse
+	4,  // 56: memos.api.v1.FinanceService.CreateFinanceTransaction:output_type -> memos.api.v1.FinanceTransaction
+	4,  // 57: memos.api.v1.FinanceService.UpdateFinanceTransaction:output_type -> memos.api.v1.FinanceTransaction
+	26, // 58: memos.api.v1.FinanceService.DeleteFinanceTransaction:output_type -> google.protobuf.Empty
+	4,  // 59: memos.api.v1.FinanceService.AdjustFinanceWalletBalance:output_type -> memos.api.v1.FinanceTransaction
+	6,  // 60: memos.api.v1.FinanceService.GetFinanceSummary:output_type -> memos.api.v1.FinanceSummary
+	48, // [48:61] is the sub-list for method output_type
+	35, // [35:48] is the sub-list for method input_type
+	35, // [35:35] is the sub-list for extension type_name
+	35, // [35:35] is the sub-list for extension extendee
+	0,  // [0:35] is the sub-list for field type_name
 }
 
 func init() { file_api_v1_finance_service_proto_init() }
@@ -1754,7 +1826,7 @@ func file_api_v1_finance_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_v1_finance_service_proto_rawDesc), len(file_api_v1_finance_service_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   20,
+			NumMessages:   21,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

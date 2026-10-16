@@ -51,7 +51,7 @@ func TestForkUpgradePreservesPersonalData(t *testing.T) {
 	// Explicit legacy columns avoid treating additive schema changes as data loss.
 	tables := map[string]string{
 		"memo":          "id,uid,creator_id,created_ts,updated_ts,row_status,content,visibility,pinned,payload",
-		"memo_relation": "*", "attachment": "*", "finance_wallet": "*", "finance_category": "*",
+		"memo_relation": "*", "attachment": "*", "finance_wallet": "id,uid,creator_id,created_ts,updated_ts,row_status,name,initial_balance_minor,balance_minor,allow_negative_balance", "finance_category": "*",
 		"finance_transaction": "id,uid,creator_id,created_ts,updated_ts,occurred_ts,type,amount_minor,wallet_id,destination_wallet_id,category_id,note,adjustment_delta_minor,balance_before_minor,balance_after_minor",
 		"reminder_list":       "*", "reminder": "*", "reminder_occurrence": "*",
 	}

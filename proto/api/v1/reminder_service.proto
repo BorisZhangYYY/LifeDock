@@ -25,14 +25,14 @@ service ReminderService {
       body: "reminder_list"
     };
   }
-  // Updates a reminder list's name, color, icon, order, or archive state.
+  // Updates a reminder list's name, color, icon, or order.
   rpc UpdateReminderList(UpdateReminderListRequest) returns (ReminderList) {
     option (google.api.http) = {
       patch: "/api/v1/{reminder_list.name=users/*/reminderLists/*}"
       body: "reminder_list"
     };
   }
-  // Deletes a reminder list.
+  // Permanently deletes a list and its reminders. Completed history remains available for statistics.
   rpc DeleteReminderList(DeleteReminderListRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/api/v1/{name=users/*/reminderLists/*}"};
   }
@@ -56,14 +56,14 @@ service ReminderService {
       body: "reminder"
     };
   }
-  // Updates a reminder's scheduling, list, priority, tags, location, or archive state.
+  // Updates a reminder's scheduling, list, priority, tags, or location. New archives are not supported.
   rpc UpdateReminder(UpdateReminderRequest) returns (Reminder) {
     option (google.api.http) = {
       patch: "/api/v1/{reminder.name=users/*/reminders/*}"
       body: "reminder"
     };
   }
-  // Deletes a reminder.
+  // Permanently deletes a reminder, retaining history only if it has completed occurrences.
   rpc DeleteReminder(DeleteReminderRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {delete: "/api/v1/{name=users/*/reminders/*}"};
   }
@@ -74,7 +74,7 @@ service ReminderService {
       body: "*"
     };
   }
-  // Archives all completed reminders and returns the number cleared.
+  // Permanently deletes completed reminders, retaining their history and statistics.
   rpc ClearCompletedReminders(ClearCompletedRemindersRequest) returns (ClearCompletedRemindersResponse) {
     option (google.api.http) = {
       post: "/api/v1/{parent=users/*}/reminders:clearCompleted"
@@ -301,6 +301,6 @@ message ClearCompletedRemindersRequest {
 }
 
 message ClearCompletedRemindersResponse {
-  // Number of completed reminders moved to the archived state.
+  // Number of completed reminders deleted. Their independent history remains available.
   int32 cleared_count = 1;
 }

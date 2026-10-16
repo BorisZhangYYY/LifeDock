@@ -337,9 +337,9 @@
     },
     "personal-features": {
       "label": "Personal features",
-      "description": "Choose which personal extensions appear in Memos and how their content is protected.",
+      "description": "Choose life management features and content privacy settings.",
       "features-title": "Feature switches",
-      "features-description": "Turn off every extension to return to the original memo-only experience. Existing personal data is kept.",
+      "features-description": "Turning a feature off hides it and keeps existing data.",
       "reminders": "Reminders",
       "reminders-description": "Reminder dashboard, lists, editor linking, and reminder notifications.",
       "finance": "Finances",
@@ -1127,10 +1127,10 @@
     "days-before": "{{count}} day before",
     "deleted": "Reminder deleted",
     "delete-list": "Delete list",
-    "delete-list-confirm": "Delete this reminder list?",
-    "delete-list-confirm-description": "Reminders in this list will be moved to the default Reminders list. The list itself will be archived.",
-    "delete-confirm": "Delete this reminder?",
-    "delete-confirm-description": "This cannot be undone. The reminder details and links will be removed; recorded completion snapshots remain available for statistics.",
+    "delete-list-confirm": "Delete reminder list?",
+    "delete-list-confirm-description": "Delete the list and all its reminders. Existing completion history and statistics stay.",
+    "delete-confirm": "Delete reminder?",
+    "delete-confirm-description": "History and statistics stay if previously completed; otherwise they are deleted. Linked memos stay.",
     "details": "Reminder details",
     "due-notification": "Reminder due",
     "due-today": "Due today",
@@ -1220,7 +1220,11 @@
     "unlink-reminder": "Click to unlink",
     "view-all": "Open Reminders",
     "weekly": "Weekly",
-    "yearly": "Yearly"
+    "yearly": "Yearly",
+    "clear-completed": "Clear completed",
+    "clear-completed-description": "Remove completed reminders. Completion history and statistics stay.",
+    "cleared-count": "Cleared {{count}} completed reminders. History and statistics kept.",
+    "legacy-archived": "Legacy archive"
   },
   "reference": {
     "no-memos-found": "No memos found",
@@ -1420,7 +1424,11 @@
       "void-error": "Failed to void entry",
       "voided": "Voided",
       "voided-at": "Voided at",
-      "voided-success": "Entry voided and balances updated"
+      "voided-success": "Entry voided and balances updated",
+      "delete": "Delete transaction",
+      "delete-description": "Permanently delete this transaction and update balances and statistics. This cannot be undone.",
+      "delete-error": "Failed to delete transaction",
+      "deleted-success": "Transaction deleted. Balances and statistics updated."
     },
     "type": {
       "expense": "Expense",
@@ -1441,7 +1449,12 @@
       "name": "Wallet name",
       "name-placeholder": "Enter a wallet name",
       "select-destination": "Select destination wallet",
-      "source": "From wallet"
+      "source": "From wallet",
+      "disable": "Disable",
+      "restore": "Restore",
+      "deleted": "Wallet deleted",
+      "delete-confirm": "Delete wallet?",
+      "delete-description": "This cannot be undone. Past transactions and statistics stay."
     },
     "adjustment": {
       "action": "Reconcile",

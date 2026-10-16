@@ -39,6 +39,8 @@ var (
 	ErrFinanceInsufficientBalance = errors.New("insufficient wallet balance")
 	// ErrFinanceArchivedResource indicates that an archived wallet or category was selected for a new transaction.
 	ErrFinanceArchivedResource = errors.New("archived finance resource")
+	// ErrFinanceWalletActive indicates that a wallet must be disabled before deletion.
+	ErrFinanceWalletActive = errors.New("wallet must be disabled before deletion")
 	// ErrFinanceAmountOutOfRange indicates an invalid amount or a wallet balance outside the supported range.
 	ErrFinanceAmountOutOfRange = errors.New("finance amount is outside the supported range")
 	// ErrFinanceInvalidTransaction indicates an invalid combination of transaction fields.
@@ -57,15 +59,23 @@ type FinanceWallet struct {
 	InitialBalanceMinor  int64
 	BalanceMinor         int64
 	AllowNegativeBalance bool
+	DeletedTs            *int64
 }
 
 // FindFinanceWallet filters wallets.
 type FindFinanceWallet struct {
-	ID        *int32
-	UID       *string
-	CreatorID *int32
-	RowStatus *RowStatus
-	IDList    []int32
+	ID             *int32
+	UID            *string
+	CreatorID      *int32
+	RowStatus      *RowStatus
+	IDList         []int32
+	IncludeDeleted bool
+}
+
+// DeleteFinanceWallet removes a disabled wallet from management while retaining its ledger history.
+type DeleteFinanceWallet struct {
+	ID        int32
+	CreatorID int32
 }
 
 // UpdateFinanceWallet contains mutable wallet fields. Balances are changed only by ledger mutations.
@@ -157,7 +167,7 @@ type UpdateFinanceTransaction struct {
 	Note                string
 }
 
-// DeleteFinanceTransaction identifies the transaction to void while retaining its audit snapshot.
+// DeleteFinanceTransaction identifies a transaction to permanently delete.
 type DeleteFinanceTransaction struct {
 	ID        int32
 	CreatorID int32
@@ -200,6 +210,11 @@ func (s *Store) ListFinanceWallets(ctx context.Context, find *FindFinanceWallet)
 // UpdateFinanceWallet updates wallet metadata.
 func (s *Store) UpdateFinanceWallet(ctx context.Context, update *UpdateFinanceWallet) (*FinanceWallet, error) {
 	return s.driver.UpdateFinanceWallet(ctx, update)
+}
+
+// DeleteFinanceWallet deletes a disabled wallet while keeping historical transactions.
+func (s *Store) DeleteFinanceWallet(ctx context.Context, delete *DeleteFinanceWallet) error {
+	return s.driver.DeleteFinanceWallet(ctx, delete)
 }
 
 // CreateFinanceCategory creates a category.

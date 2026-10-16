@@ -27,7 +27,7 @@ const FinanceTransactionDialog = ({ open, onOpenChange, parent, inline = false, 
   const { data: wallets = [] } = useFinanceWallets(parent);
   const { data: categories = [] } = useFinanceCategories(parent);
   const { mutateAsync: createTransaction, isPending } = useCreateFinanceTransaction();
-  const activeWallets = useMemo(() => wallets.filter((wallet) => wallet.state === State.NORMAL), [wallets]);
+  const activeWallets = useMemo(() => wallets.filter((wallet) => wallet.state === State.NORMAL && !wallet.deleteTime), [wallets]);
   const [type, setType] = useState<FinanceTransaction_Type>(initialType);
   const [amount, setAmount] = useState("");
   const [wallet, setWallet] = useState("");

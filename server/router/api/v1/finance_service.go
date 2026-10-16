@@ -115,7 +115,7 @@ func (s *APIV1Service) resolveFinanceTransaction(ctx context.Context, name strin
 }
 
 func convertFinanceWalletFromStore(username string, wallet *store.FinanceWallet) *v1pb.FinanceWallet {
-	return &v1pb.FinanceWallet{
+	message := &v1pb.FinanceWallet{
 		Name:                 financeWalletName(username, wallet.UID),
 		DisplayName:          wallet.Name,
 		InitialBalanceMinor:  wallet.InitialBalanceMinor,
@@ -125,6 +125,10 @@ func convertFinanceWalletFromStore(username string, wallet *store.FinanceWallet)
 		CreateTime:           timestamppb.New(time.Unix(wallet.CreatedTs, 0)),
 		UpdateTime:           timestamppb.New(time.Unix(wallet.UpdatedTs, 0)),
 	}
+	if wallet.DeletedTs != nil {
+		message.DeleteTime = timestamppb.New(time.Unix(*wallet.DeletedTs, 0))
+	}
+	return message
 }
 
 func convertFinanceCategoryFromStore(username string, category *store.FinanceCategory) *v1pb.FinanceCategory {
@@ -236,7 +240,7 @@ func financeStoreError(err error) error {
 	switch {
 	case errors.Is(err, store.ErrFinanceWalletNotFound), errors.Is(err, store.ErrFinanceCategoryNotFound), errors.Is(err, store.ErrFinanceTransactionNotFound):
 		return status.Error(codes.NotFound, err.Error())
-	case errors.Is(err, store.ErrFinanceInsufficientBalance), errors.Is(err, store.ErrFinanceArchivedResource), errors.Is(err, store.ErrFinanceTransactionVoided):
+	case errors.Is(err, store.ErrFinanceInsufficientBalance), errors.Is(err, store.ErrFinanceArchivedResource), errors.Is(err, store.ErrFinanceTransactionVoided), errors.Is(err, store.ErrFinanceWalletActive):
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, store.ErrFinanceAmountOutOfRange), errors.Is(err, store.ErrFinanceInvalidTransaction):
 		return status.Error(codes.InvalidArgument, err.Error())
@@ -250,7 +254,7 @@ func (s *APIV1Service) ListFinanceWallets(ctx context.Context, request *v1pb.Lis
 	if err != nil {
 		return nil, err
 	}
-	find := &store.FindFinanceWallet{CreatorID: &user.ID}
+	find := &store.FindFinanceWallet{CreatorID: &user.ID, IncludeDeleted: request.ShowDeleted}
 	if request.State != v1pb.State_STATE_UNSPECIFIED {
 		state := convertStateToStore(request.State)
 		find.RowStatus = &state
@@ -341,6 +345,18 @@ func (s *APIV1Service) UpdateFinanceWallet(ctx context.Context, request *v1pb.Up
 		return nil, financeStoreError(err)
 	}
 	return convertFinanceWalletFromStore(user.Username, updated), nil
+}
+
+// DeleteFinanceWallet deletes a disabled wallet without removing its historical transactions.
+func (s *APIV1Service) DeleteFinanceWallet(ctx context.Context, request *v1pb.DeleteFinanceWalletRequest) (*emptypb.Empty, error) {
+	user, wallet, err := s.resolveFinanceWallet(ctx, request.Name)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.Store.DeleteFinanceWallet(ctx, &store.DeleteFinanceWallet{ID: wallet.ID, CreatorID: user.ID}); err != nil {
+		return nil, financeStoreError(err)
+	}
+	return &emptypb.Empty{}, nil
 }
 
 func (s *APIV1Service) ListFinanceCategories(ctx context.Context, request *v1pb.ListFinanceCategoriesRequest) (*v1pb.ListFinanceCategoriesResponse, error) {
@@ -493,7 +509,7 @@ func (s *APIV1Service) buildStoreFinanceTransaction(ctx context.Context, user *s
 }
 
 func (s *APIV1Service) financeResourceMaps(ctx context.Context, userID int32) (map[int32]string, map[int32]string, error) {
-	wallets, err := s.Store.ListFinanceWallets(ctx, &store.FindFinanceWallet{CreatorID: &userID})
+	wallets, err := s.Store.ListFinanceWallets(ctx, &store.FindFinanceWallet{CreatorID: &userID, IncludeDeleted: true})
 	if err != nil {
 		return nil, nil, err
 	}

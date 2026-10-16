@@ -6,7 +6,6 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   CircleIcon,
-  FileTextIcon,
   FlagIcon,
   InboxIcon,
   InfoIcon,
@@ -17,7 +16,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import ReminderCompletionDialog from "@/components/Reminder/ReminderCompletionDialog";
 import { ReminderDatePicker } from "@/components/Reminder/ReminderDateTimePicker";
@@ -31,7 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import {
-  useArchiveCompletedReminders,
+  useClearCompletedReminders,
   useCompleteReminder,
   useCreateReminder,
   useCreateReminderList,
@@ -39,7 +38,6 @@ import {
   useDeleteReminderList,
   useReminderLists,
   useReminders,
-  useUpdateReminder,
   useUpdateReminderList,
 } from "@/hooks/useReminderQueries";
 import { cn } from "@/lib/utils";
@@ -87,7 +85,6 @@ const ReminderRow = ({
   list,
   archived,
   onComplete,
-  onArchive,
   onDelete,
   onChooseCompletionDate,
   onOpen,
@@ -97,7 +94,6 @@ const ReminderRow = ({
   list?: ReminderList;
   archived: boolean;
   onComplete: () => void;
-  onArchive: () => void;
   onDelete: () => void;
   onChooseCompletionDate: () => void;
   onOpen: () => void;
@@ -131,12 +127,14 @@ const ReminderRow = ({
       >
         {completed && <CheckIcon className="size-3" />}
       </button>
-      <button type="button" className="min-w-0 flex-1 text-left" onClick={onOpen}>
-        <span className={cn("block break-words text-sm leading-5", completed && "text-muted-foreground line-through")}>
-          {reminder.title}
-        </span>
-        <ReminderMetadata reminder={reminder} list={list} className="mt-1" />
-      </button>
+      <div className="min-w-0 flex-1">
+        <button type="button" className="block w-full text-left" onClick={onOpen}>
+          <span className={cn("block break-words text-sm leading-5", completed && "text-muted-foreground line-through")}>
+            {reminder.title}
+          </span>
+        </button>
+        <ReminderMetadata reminder={reminder} list={list} returnLocation={returnLocation} className="mt-1" />
+      </div>
       <div className="mt-0.5 flex shrink-0 items-center gap-1">
         {reminder.priority !== Reminder_Priority.PRIORITY_UNSPECIFIED ? (
           <span className="inline-flex size-7 items-center justify-center rounded-md bg-primary/10 text-sm font-semibold leading-none text-primary">
@@ -148,23 +146,10 @@ const ReminderRow = ({
             <FlagIcon className="size-3.5 fill-current" />
           </span>
         ) : null}
-        {reminder.memo ? (
-          <Button
-            nativeButton={false}
-            variant="ghost"
-            size="icon-sm"
-            className="size-7 shrink-0 p-0 text-primary"
-            render={<Link to={`/${reminder.memo}`} state={{ from: returnLocation }} />}
-            aria-label={t("reminder.open-linked-memo")}
-            title={t("reminder.open-linked-memo")}
-          >
-            <FileTextIcon className="size-4" />
-          </Button>
-        ) : null}
-        {canChooseCompletionDate ? (
+        {canChooseCompletionDate && (
           <button
             type="button"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive/10"
+            className="flex size-7 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-destructive/10"
             onClick={(event) => {
               event.stopPropagation();
               onChooseCompletionDate();
@@ -174,33 +159,19 @@ const ReminderRow = ({
           >
             <CalendarClockIcon className="size-4" />
           </button>
-        ) : completed && !archived ? (
-          <button
-            type="button"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            onClick={(event) => {
-              event.stopPropagation();
-              onArchive();
-            }}
-            aria-label={t("common.archive")}
-            title={t("common.archive")}
-          >
-            <ArchiveIcon className="size-4" />
-          </button>
-        ) : archived ? (
-          <button
-            type="button"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full text-destructive transition-colors hover:bg-destructive/10"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDelete();
-            }}
-            aria-label={t("common.delete")}
-            title={t("common.delete")}
-          >
-            <Trash2Icon className="size-4" />
-          </button>
-        ) : null}
+        )}
+        <button
+          type="button"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-destructive hover:bg-destructive/10"
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete();
+          }}
+          aria-label={t("common.delete")}
+          title={t("common.delete")}
+        >
+          <Trash2Icon className="size-4" />
+        </button>
         <button
           type="button"
           className="flex size-7 shrink-0 items-center justify-center rounded-full text-primary opacity-60 transition-opacity hover:bg-primary/10 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -241,6 +212,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   const [selectedReminder, setSelectedReminder] = useState<Reminder>();
   const selectedFromURL = searchParams.get("selected");
   const [deleteCandidate, setDeleteCandidate] = useState<Reminder>();
+  const [clearCompletedOpen, setClearCompletedOpen] = useState(false);
   const [completionCandidate, setCompletionCandidate] = useState<Reminder>();
   const [deleteListCandidate, setDeleteListCandidate] = useState<ReminderList>();
   const [detailDraft, setDetailDraft] = useState<ReminderDraft>();
@@ -261,7 +233,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   const { data: archivedForSelection = [] } = useReminders(parent, {
     state: State.ARCHIVED,
     timeZone,
-    enabled: Boolean(selectedFromURL),
+    enabled: Boolean(selectedFromURL) || activeView === "completed" || activeView === "archived",
   });
   useEffect(() => {
     if (!selectedFromURL) return;
@@ -283,10 +255,9 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
   });
   const createReminder = useCreateReminder();
   const completeReminder = useCompleteReminder();
-  const archiveCompleted = useArchiveCompletedReminders();
+  const clearCompleted = useClearCompletedReminders();
   const deleteReminder = useDeleteReminder();
   const deleteReminderList = useDeleteReminderList();
-  const updateReminder = useUpdateReminder();
   const createList = useCreateReminderList();
   const updateList = useUpdateReminderList();
 
@@ -561,26 +532,6 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="text-xl font-semibold tracking-tight">{t("common.reminders")}</h1>
             </div>
-            {activeView !== "completed" && activeView !== "archived" && recordsView && (
-              <Button size="sm" variant="outline" onClick={() => showDraftForList()} aria-label={t("reminder.new-reminder")}>
-                <PlusIcon className="size-3.5" />
-                {t("common.create")}
-              </Button>
-            )}
-            {activeView === "completed" && !activeList && reminders.length > 0 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  if (!parent) return;
-                  const response = await archiveCompleted.mutateAsync(parent);
-                  toast.success(t("reminder.archived-count", { count: response.clearedCount }));
-                }}
-              >
-                <ArchiveIcon className="size-3.5" />
-                {t("common.archive")}
-              </Button>
-            )}
           </div>
           <Tabs
             value={recordsView ? "records" : activeView}
@@ -625,7 +576,7 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                   </div>
                 )}
               </div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 {smartViews.map(({ id, label, icon: Icon }) => (
                   <Button
                     key={id}
@@ -650,16 +601,42 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                   <CheckIcon className="size-3.5" />
                   {t("reminder.completed")}
                 </Button>
-                <Button
-                  size="sm"
-                  variant={activeView === "archived" ? "secondary" : "ghost"}
-                  onClick={() => selectView("archived")}
-                  aria-pressed={activeView === "archived"}
-                  className="h-7 py-1 text-ui"
-                >
-                  <ArchiveIcon className="size-3.5" />
-                  {t("common.archived")}
-                </Button>
+                {archivedForSelection.some((item) => item.state === State.ARCHIVED) && (
+                  <Button
+                    size="sm"
+                    variant={activeView === "archived" ? "secondary" : "ghost"}
+                    onClick={() => selectView("archived")}
+                    aria-pressed={activeView === "archived"}
+                    className="h-7 py-1 text-ui"
+                  >
+                    <ArchiveIcon className="size-3.5" />
+                    {t("reminder.legacy-archived")}
+                  </Button>
+                )}
+                {activeView !== "completed" && activeView !== "archived" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-auto h-7 shrink-0 py-1 text-ui"
+                    onClick={() => showDraftForList()}
+                    aria-label={t("reminder.new-reminder")}
+                  >
+                    <PlusIcon className="size-3.5" />
+                    {t("common.create")}
+                  </Button>
+                )}
+                {activeView === "completed" && !activeList && reminders.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="ml-auto h-7 shrink-0 py-1 text-ui"
+                    disabled={clearCompleted.isPending}
+                    onClick={() => setClearCompletedOpen(true)}
+                  >
+                    <Trash2Icon className="size-3.5" />
+                    {t("reminder.clear-completed")}
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -776,13 +753,6 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                         list={group.list}
                         archived={activeView === "archived"}
                         onComplete={() => completeReminder.mutate({ name: reminder.name })}
-                        onArchive={async () => {
-                          await updateReminder.mutateAsync({
-                            reminder: { name: reminder.name, state: State.ARCHIVED },
-                            updateMask: ["state"],
-                          });
-                          toast.success(t("reminder.archived"));
-                        }}
                         onDelete={() => setDeleteCandidate(reminder)}
                         onChooseCompletionDate={() => setCompletionCandidate(reminder)}
                         onOpen={() => (onOpenReminder ? onOpenReminder(reminder.name) : setSelectedReminder(reminder))}
@@ -869,6 +839,20 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
           if (!open) setEditingList(undefined);
         }}
         onSave={saveList}
+      />
+      <ConfirmDialog
+        open={clearCompletedOpen}
+        onOpenChange={setClearCompletedOpen}
+        title={t("reminder.clear-completed")}
+        description={t("reminder.clear-completed-description")}
+        confirmLabel={t("common.clear")}
+        cancelLabel={t("common.cancel")}
+        confirmVariant="destructive"
+        onConfirm={async () => {
+          if (!parent) return;
+          const response = await clearCompleted.mutateAsync(parent);
+          toast.success(t("reminder.cleared-count", { count: response.clearedCount }));
+        }}
       />
       <ConfirmDialog
         open={!!deleteCandidate}

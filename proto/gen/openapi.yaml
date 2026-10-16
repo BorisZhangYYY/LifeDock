@@ -2410,7 +2410,7 @@ paths:
         delete:
             tags:
                 - FinanceService
-            description: Voids a ledger transaction, retains its audit record, and rebuilds active balance snapshots.
+            description: Permanently deletes a ledger transaction and rebuilds balances and cash-flow statistics.
             operationId: FinanceService_DeleteFinanceTransaction
             parameters:
                 - name: user
@@ -2947,7 +2947,7 @@ paths:
         delete:
             tags:
                 - ReminderService
-            description: Deletes a reminder list.
+            description: Permanently deletes a list and its reminders. Completed history remains available for statistics.
             operationId: ReminderService_DeleteReminderList
             parameters:
                 - name: user
@@ -2975,7 +2975,7 @@ paths:
         patch:
             tags:
                 - ReminderService
-            description: Updates a reminder list's name, color, icon, order, or archive state.
+            description: Updates a reminder list's name, color, icon, or order.
             operationId: ReminderService_UpdateReminderList
             parameters:
                 - name: user
@@ -3112,7 +3112,7 @@ paths:
         delete:
             tags:
                 - ReminderService
-            description: Deletes a reminder.
+            description: Permanently deletes a reminder, retaining history only if it has completed occurrences.
             operationId: ReminderService_DeleteReminder
             parameters:
                 - name: user
@@ -3140,7 +3140,7 @@ paths:
         patch:
             tags:
                 - ReminderService
-            description: Updates a reminder's scheduling, list, priority, tags, location, or archive state.
+            description: Updates a reminder's scheduling, list, priority, tags, or location. New archives are not supported.
             operationId: ReminderService_UpdateReminder
             parameters:
                 - name: user
@@ -3221,7 +3221,7 @@ paths:
         post:
             tags:
                 - ReminderService
-            description: Archives all completed reminders and returns the number cleared.
+            description: Permanently deletes completed reminders, retaining their history and statistics.
             operationId: ReminderService_ClearCompletedReminders
             parameters:
                 - name: user
@@ -3762,6 +3762,11 @@ paths:
                         - ARCHIVED
                     type: string
                     format: enum
+                - name: showDeleted
+                  in: query
+                  description: Include deleted wallets to label historical transactions. They cannot be restored or used for new entries.
+                  schema:
+                    type: boolean
             responses:
                 "200":
                     description: OK
@@ -3811,6 +3816,34 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Status'
     /api/v1/users/{user}/wallets/{wallet}:
+        delete:
+            tags:
+                - FinanceService
+            description: Deletes a disabled wallet from management, retaining its identity and transactions for history.
+            operationId: FinanceService_DeleteFinanceWallet
+            parameters:
+                - name: user
+                  in: path
+                  description: The user id.
+                  required: true
+                  schema:
+                    type: string
+                - name: wallet
+                  in: path
+                  description: The wallet id.
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: OK
+                    content: {}
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
         patch:
             tags:
                 - FinanceService
@@ -4367,7 +4400,7 @@ components:
             properties:
                 clearedCount:
                     type: integer
-                    description: Number of completed reminders moved to the archived state.
+                    description: Number of completed reminders deleted. Their independent history remains available.
                     format: int32
         Color:
             type: object
@@ -4756,6 +4789,11 @@ components:
                 updateTime:
                     readOnly: true
                     type: string
+                    format: date-time
+                deleteTime:
+                    readOnly: true
+                    type: string
+                    description: Deleted wallets remain available only as read-only historical references.
                     format: date-time
         GeneralSetting_CustomProfile:
             type: object
