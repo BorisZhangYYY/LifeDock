@@ -6,7 +6,7 @@ import { memoServiceClient } from "@/connect";
 import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
 import { AttachmentSchema } from "@/types/proto/api/v1/attachment_service_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
-import { MemoSchema } from "@/types/proto/api/v1/memo_service_pb";
+import { MemoSchema, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import type { EditorState } from "../state";
 import { uploadService } from "./uploadService";
 
@@ -36,6 +36,15 @@ function buildUpdateMask(
   if (!isEqual(state.metadata.visibility, prevMemo.visibility)) {
     mask.add("visibility");
     patch.visibility = state.metadata.visibility;
+  }
+  if (!prevMemo.parent && state.metadata.space !== undefined && state.metadata.space !== (prevMemo.space ?? "")) {
+    mask.add("space");
+    patch.space = state.metadata.space;
+    // Moving SPACE-visible memos requires an explicit audience even when it stays SPACE.
+    if (prevMemo.visibility === Visibility.SPACE) {
+      mask.add("visibility");
+      patch.visibility = state.metadata.visibility;
+    }
   }
   if (!isEqual(allAttachments, prevMemo.attachments)) {
     mask.add("attachments");
@@ -119,7 +128,7 @@ export const memoService = {
       moodLevel: state.metadata.moodLevel,
       createTime: state.timestamps.createTime ? timestampFromDate(state.timestamps.createTime) : undefined,
       updateTime: state.timestamps.updateTime ? timestampFromDate(state.timestamps.updateTime) : undefined,
-      space: options.parentMemoName ? undefined : options.space,
+      space: options.parentMemoName ? undefined : (state.metadata.space ?? options.space),
     });
 
     const memo = options.parentMemoName
@@ -141,6 +150,7 @@ export const memoService = {
     return {
       content: memo.content,
       metadata: {
+        space: memo.space ?? "",
         visibility: memo.visibility,
         attachments: memo.attachments,
         relations: memo.relations,

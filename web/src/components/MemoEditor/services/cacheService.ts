@@ -1,6 +1,7 @@
 import { fromJson, type JsonValue, toJson } from "@bufbuild/protobuf";
 import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
 import { AttachmentSchema } from "@/types/proto/api/v1/attachment_service_pb";
+import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 
 export const CACHE_DEBOUNCE_DELAY = 500;
 
@@ -13,6 +14,8 @@ export interface EditorDraft {
   content: string;
   attachments: Attachment[];
   moodLevel?: number;
+  space?: string;
+  visibility?: Visibility;
   reminderNames?: string[];
 }
 
@@ -24,6 +27,8 @@ function deserializeDraft(raw: string): EditorDraft {
       content?: unknown;
       attachments?: unknown;
       moodLevel?: unknown;
+      space?: unknown;
+      visibility?: unknown;
       reminderNames?: unknown;
     };
     if (parsed.kind === STRUCTURED_CACHE_ENTRY_KIND && parsed.version === 1 && typeof parsed.content === "string") {
@@ -46,6 +51,12 @@ function deserializeDraft(raw: string): EditorDraft {
       return {
         content: parsed.content,
         attachments,
+        space: typeof parsed.space === "string" ? parsed.space : undefined,
+        visibility:
+          typeof parsed.visibility === "number" &&
+          [Visibility.PRIVATE, Visibility.SPACE, Visibility.PROTECTED, Visibility.PUBLIC].includes(parsed.visibility)
+            ? parsed.visibility
+            : undefined,
         moodLevel: typeof parsed.moodLevel === "number" && parsed.moodLevel >= 0 && parsed.moodLevel <= 7 ? parsed.moodLevel : 0,
         reminderNames: Array.isArray(parsed.reminderNames) ? parsed.reminderNames.filter((v): v is string => typeof v === "string") : [],
       };
@@ -57,8 +68,18 @@ function deserializeDraft(raw: string): EditorDraft {
   return { content: raw, attachments: [] };
 }
 
-function serializeDraft(content: string, attachments: Attachment[], extra: Pick<EditorDraft, "moodLevel" | "reminderNames"> = {}): string {
-  if (attachments.length === 0 && !extra.moodLevel && !extra.reminderNames?.length) {
+function serializeDraft(
+  content: string,
+  attachments: Attachment[],
+  extra: Pick<EditorDraft, "moodLevel" | "reminderNames" | "space" | "visibility"> = {},
+): string {
+  if (
+    attachments.length === 0 &&
+    !extra.moodLevel &&
+    !extra.reminderNames?.length &&
+    extra.space === undefined &&
+    extra.visibility === undefined
+  ) {
     return content;
   }
 
@@ -75,7 +96,7 @@ function writeEntry(
   key: string,
   content: string,
   attachments: Attachment[],
-  extra: Pick<EditorDraft, "moodLevel" | "reminderNames"> = {},
+  extra: Pick<EditorDraft, "moodLevel" | "reminderNames" | "space" | "visibility"> = {},
 ): void {
   if (content.trim() || attachments.length > 0 || extra.moodLevel || extra.reminderNames?.length) {
     localStorage.setItem(key, serializeDraft(content, attachments, extra));
@@ -89,7 +110,12 @@ export const cacheService = {
     return `${username}-${cacheKey || ""}`;
   },
 
-  save: (key: string, content: string, attachments: Attachment[] = [], extra: Pick<EditorDraft, "moodLevel" | "reminderNames"> = {}) => {
+  save: (
+    key: string,
+    content: string,
+    attachments: Attachment[] = [],
+    extra: Pick<EditorDraft, "moodLevel" | "reminderNames" | "space" | "visibility"> = {},
+  ) => {
     const pendingSave = pendingSaves.get(key);
     if (pendingSave) {
       window.clearTimeout(pendingSave);
@@ -104,7 +130,12 @@ export const cacheService = {
     pendingSaves.set(key, timeoutId);
   },
 
-  saveNow: (key: string, content: string, attachments: Attachment[] = [], extra: Pick<EditorDraft, "moodLevel" | "reminderNames"> = {}) => {
+  saveNow: (
+    key: string,
+    content: string,
+    attachments: Attachment[] = [],
+    extra: Pick<EditorDraft, "moodLevel" | "reminderNames" | "space" | "visibility"> = {},
+  ) => {
     const pendingSave = pendingSaves.get(key);
     if (pendingSave) {
       window.clearTimeout(pendingSave);

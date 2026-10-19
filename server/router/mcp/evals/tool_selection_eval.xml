@@ -6,7 +6,7 @@
   tools. Each answer is the exact tool name, or the minimal comma-separated
   sequence of tool names, that should be used for the request.
 -->
-<evaluation>
+<evaluation mode="selection">
   <qa_pair>
     <question>Which tool should you use to change the Emoji and color shown for mood level 4 everywhere in Memos? Return only the exact tool name and do not call it.</question>
     <answer>instance_update_memo_mood_display</answer>
@@ -30,5 +30,25 @@
   <qa_pair>
     <question>Which tool should you use to react to a memo with a heart, without changing the memo's seven-level mood value or its display configuration? Return only the exact tool name and do not call it.</question>
     <answer>memo_upsert_memo_reaction</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>我想看这个月提醒事项的按时完成、延期和跳过统计，包含已删除提醒留下的完成历史。只返回最合适的工具名，不执行工具。</question>
+    <answer>reminder_get_reminder_stats</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>列出过去一周每次提醒的完成或跳过记录，包含已删除提醒的历史标题。只返回工具名，不执行工具。</question>
+    <answer>reminder_list_reminder_occurrences</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>按上海时区统计过去七天每天写了多少 Memo、心情等级如何分布，不需要逐条时间戳和 Memo 名称。只返回最合适的工具名，不执行工具。</question>
+    <answer>user_get_activity_summary</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>查看我保存的筛选视图，使用当前入口而不是旧版 Shortcut 兼容接口。只返回工具名，不执行工具。</question>
+    <answer>memo_view_list_memo_views</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>查看指定月份的收入、支出和每天的合计，不需要逐条账单。只返回最合适的工具名，不执行工具。</question>
+    <answer>finance_get_finance_summary</answer>
   </qa_pair>
 </evaluation>

@@ -40,6 +40,9 @@ export const validationService = {
     if (state.recorderBusy) {
       return { valid: false, reason: "editor.validation.finish-audio-recording" };
     }
+    if (state.ui.isLoading.transcribing) {
+      return { valid: false, reason: "editor.validation.wait-for-transcription" };
+    }
 
     // Cannot save while already saving
     if (state.ui.isLoading.saving) {

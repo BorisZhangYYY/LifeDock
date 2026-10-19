@@ -46,3 +46,5 @@ describe("TagsSection", () => {
     expect(listButton).toHaveClass("text-muted-foreground/65");
   });
 });
+
+vi.mock("@/hooks/useCurrentUser", () => ({ default: () => ({ name: "users/test", username: "test" }) }));

@@ -7,13 +7,13 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInstance } from "@/contexts/InstanceContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useFilteredMemoStats } from "@/hooks/useFilteredMemoStats";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import { useMemoFilters } from "@/hooks/useMemoFilters";
 import { formatMonthLabel, getToday } from "@/lib/calendar-utils";
 import { combineCELFilters } from "@/lib/cel-filter";
-import { buildMemoCreatorFilter } from "@/lib/resource-names";
 import { isMemoBlurred } from "@/lib/tag";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
@@ -52,6 +52,7 @@ export const CalendarView = ({ month, date }: CalendarViewProps) => {
   const navigate = useNavigate();
   const { search } = useLocation();
   const user = useCurrentUser();
+  const { creatorName, creatorFilter } = useBrowseScope();
   const md = useMediaQuery("md");
   const xl = useMediaQuery("xl");
   const panelRef = useRef<HTMLElement>(null);
@@ -67,14 +68,14 @@ export const CalendarView = ({ month, date }: CalendarViewProps) => {
   // Statistics are already creator-scoped server-side, so leaving the creator out of their
   // filter shares the sidebar's cached query whenever no view or tag is active.
   const statsFilter = useMemo(() => combineCELFilters(contextFilter, viewFilter), [contextFilter, viewFilter]);
-  const memoFilter = useMemo(() => combineCELFilters(viewFilter, user && buildMemoCreatorFilter(user.name)), [viewFilter, user]);
+  const memoFilter = useMemo(() => combineCELFilters(viewFilter, creatorFilter), [viewFilter, creatorFilter]);
   const monthFilter = useMemo(() => combineCELFilters(contextFilter, memoFilter), [contextFilter, memoFilter]);
 
   // Statistics draw counts before the month's memos load, and are the only signal the grid
   // has for days outside the month.
   const { statistics } = useFilteredMemoStats({
-    context: "home",
-    userName: user?.name,
+    context: creatorName ? "profile" : "collection",
+    userName: creatorName,
     filter: statsFilter,
     enabled: authInitialized && instanceInitialized,
   });
@@ -86,7 +87,7 @@ export const CalendarView = ({ month, date }: CalendarViewProps) => {
     month,
     filter: monthFilter,
     isRedacted,
-    enabled: Boolean(user) && isUserSettingsInitialized,
+    enabled: authInitialized && instanceInitialized && (!user || isUserSettingsInitialized),
   });
 
   const monthLabel = useMemo(() => formatMonthLabel(month, i18n.language), [month, i18n.language]);

@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import { MemoFilterProvider } from "@/contexts/MemoFilterContext";
 import { useDateFilterNavigation } from "@/hooks/useDateFilterNavigation";
 
-const Harness = () => {
+const Harness = ({ target }: { target?: string }) => {
   const location = useLocation();
-  const navigateToDate = useDateFilterNavigation();
+  const navigateToDate = useDateFilterNavigation(target);
   return (
     <>
       <output data-testid="search">{location.search}</output>
@@ -18,6 +18,17 @@ const Harness = () => {
 };
 
 describe("useDateFilterNavigation", () => {
+  it("keeps the creator when a calendar statistic opens the Timeline", async () => {
+    render(
+      <MemoryRouter initialEntries={["/calendar?creator=alice"]}>
+        <MemoFilterProvider>
+          <Harness target="/" />
+        </MemoFilterProvider>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Select date" }));
+    await waitFor(() => expect(new URLSearchParams(screen.getByTestId("search").textContent ?? "").get("creator")).toBe("alice"));
+  });
   it("preserves unrelated query parameters while replacing the date filter", async () => {
     render(
       <MemoryRouter initialEntries={["/u/steven?view=map&filter=tagSearch%3Awork"]}>

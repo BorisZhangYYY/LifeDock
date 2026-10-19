@@ -5,6 +5,7 @@ import RootLayout from "@/layouts/RootLayout";
 
 const authState = vi.hoisted(() => ({ currentUser: { name: "users/test" } as { name: string } | undefined }));
 const instanceState = vi.hoisted(() => ({ accessMode: 2, instanceUrl: "https://example.com", demo: true }));
+vi.mock("@/components/PersonalNavigationGuard", () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 
 vi.mock("@/components/AppSidebar", () => ({
   default: () => <aside data-testid="desktop-sidebar">Desktop sidebar</aside>,
@@ -109,3 +110,5 @@ describe("RootLayout global editor shell", () => {
     expect(screen.getByTestId("route")).toHaveTextContent("/auth");
   });
 });
+
+vi.mock("@/hooks/useMemoSuggestions", () => ({ useMemoSuggestions: () => [] }));

@@ -1,5 +1,5 @@
 import { XIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useInstance } from "@/contexts/InstanceContext";
 import { replaceFiltersByFactor, stringifyFilters, useMemoFilterContext } from "@/contexts/MemoFilterContext";
@@ -19,6 +19,7 @@ interface Props {
 const MoodFilterSection = ({ navigationTarget, onSelect }: Props) => {
   const t = useTranslate();
   const navigate = useNavigate();
+  const location = useLocation();
   const { filters, setFilters } = useMemoFilterContext();
   const { memoRelatedSetting } = useInstance();
   const emojis = memoRelatedSetting?.moodEmojis?.length === 7 ? memoRelatedSetting.moodEmojis : DEFAULT_MOOD_EMOJIS;
@@ -35,7 +36,11 @@ const MoodFilterSection = ({ navigationTarget, onSelect }: Props) => {
         : replaceFiltersByFactor(filters, "moodLevel", []);
     if (navigationTarget) {
       setFilters(nextFilters);
-      navigate({ pathname: navigationTarget, search: `?filter=${stringifyFilters(nextFilters)}` });
+      const params = new URLSearchParams();
+      params.set("filter", stringifyFilters(nextFilters));
+      const creator = new URLSearchParams(location.search).get("creator");
+      if (creator !== null) params.set("creator", creator);
+      navigate({ pathname: navigationTarget, search: `?${params}` });
       onSelect?.();
       return;
     }

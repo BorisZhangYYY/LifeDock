@@ -1,5 +1,57 @@
 # Changelog
 
+## [0.36.2](https://github.com/BorisZhangYYY/memos/compare/v0.36.1...v0.36.2) (2026-10-19)
+
+### Summary
+
+This release improves MCP workflows, brings selected upstream writing and
+browsing features into LifeDock, and verifies private-area access before navigation.
+
+### Features and improvements
+
+* **MCP:** expand the complete toolset from 53 to 56 tools with reminder history,
+  reminder statistics, and compact daily Memo/mood summaries. Optional `notes`
+  and `personal` profiles expose 27 and 37 tools respectively. Add parameter
+  examples, clearer tool guidance, reusable compiled validation, workflow tests,
+  and a tool-selection evaluation runner.
+* **Editor suggestions:** offer tags, checklist formatting, and audience choices
+  derived from active filters and Saved Views. Suggestions require an explicit
+  click and disappear when the draft meets the condition.
+* **Audio transcription:** transcribe existing audio attachments into an editable
+  draft using the configured provider. Preserve original content and attachments,
+  prevent duplicate requests, and wait for transcription before saving.
+* **Consistent browsing:** retain the selected author and Space across Timeline,
+  Calendar, Map, and Attachments. Shared attachment browsing follows Memo read
+  permissions and supports combined creator/Space filters across all databases.
+* **Audience and placement:** select a Space from the editor's visibility menu
+  and save placement, visibility, and content together. Preserve mood and reminder
+  associations; make long editor toolbars wrap on small screens.
+
+### Fixes
+
+* Verify the account password on the current page before entering personal
+  management when Hide personal content is enabled. Incorrect passwords and
+  closing the dialog keep the original page; leaving and re-entering the personal
+  area requires verification again. Protect direct personal-page URLs as well.
+* Use a top-right close button and existing toast notifications in the privacy
+  dialog. Remove redundant reveal controls inside personal pages and ignore
+  verification results after cancellation or unmounting.
+* Require verification before opening protected Memo details, editors, previews,
+  and linked reminders. Older hidden-content settings also require a password
+  even if their separate password toggle was previously off.
+* Preserve author and filter queries when Calendar redirects to its current month.
+
+### Upgrade notes
+
+* No database migrations, API path changes, or new dependencies are required.
+* Existing MCP URLs continue to expose the complete toolset. Focused profiles
+  select tools without changing account permissions.
+* Hide personal content now always requires the account password. This remains
+  frontend display protection; Memo sharing permissions and data encryption are
+  unchanged.
+* Transcription requires a configured AI transcription provider. The local
+  acceptance fixture and its fixed response are not included in the release.
+
 ## [0.36.1](https://github.com/BorisZhangYYY/memos/compare/v0.36.0...v0.36.1) (2026-10-16)
 
 ### Summary

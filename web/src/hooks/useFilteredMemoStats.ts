@@ -19,7 +19,7 @@ export interface FilteredMemoStats {
   loading: boolean;
 }
 
-export type MemoStatsContext = "home" | "explore" | "archived" | "profile";
+export type MemoStatsContext = "home" | "explore" | "archived" | "profile" | "collection";
 
 export interface UseFilteredMemoStatsOptions {
   userName?: string;
@@ -76,8 +76,10 @@ export const useFilteredMemoStats = (options: UseFilteredMemoStatsOptions = {}):
       ? { state: State.NORMAL, filter: combineCELFilters(filter, exploreVisibilityFilter) }
       : context === "archived"
         ? { state: State.ARCHIVED, filter }
-        : {};
-  const shouldFetchAllUserStats = context === "explore" || (context === "archived" && !!currentUser?.name);
+        : context === "collection"
+          ? { state: State.NORMAL, filter }
+          : {};
+  const shouldFetchAllUserStats = context === "explore" || context === "collection" || (context === "archived" && !!currentUser?.name);
   const { data: allUserStats = [], isLoading: isLoadingAllUserStats } = useAllUserStats(allUserStatsRequest, {
     enabled: enabled && shouldFetchAllUserStats,
   });
@@ -89,7 +91,7 @@ export const useFilteredMemoStats = (options: UseFilteredMemoStatsOptions = {}):
     // Mood averages are only meaningful per user; the calendar shows them in home/profile.
     let dailyMoodStats: Record<string, number> = {};
 
-    if (context === "explore" || context === "archived") {
+    if (context === "explore" || context === "archived" || context === "collection") {
       const displayDates: string[] = [];
       tagCount = mergeTagCounts(...allUserStats.map((stats) => stats.tagCount));
       for (const stats of allUserStats) {

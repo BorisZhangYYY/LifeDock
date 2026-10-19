@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Archived from "@/pages/Archived";
 import Explore from "@/pages/Explore";
-import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 
 const state = vi.hoisted(() => ({
   selectedSpaceName: undefined as string | undefined,
@@ -63,17 +63,17 @@ describe("Memo feed collection scope", () => {
 
   it("uses the All collection without a Space filter for Explore and the user archive", () => {
     render(
-      <>
+      <MemoryRouter initialEntries={["/explore"]}>
         <Explore />
         <Archived />
-      </>,
+      </MemoryRouter>,
     );
 
     expect(state.listProps).toHaveLength(2);
     expect(state.listProps[0]).toMatchObject({ contextFilter: undefined });
     expect(state.listProps[1]).not.toHaveProperty("contextFilter");
     expect(state.filterOptions[0]).toMatchObject({
-      visibilities: [Visibility.PUBLIC, Visibility.PROTECTED, Visibility.SPACE],
+      creatorName: undefined,
     });
     expect(state.memoViewProps).toEqual([expect.objectContaining({ showSpace: true }), expect.objectContaining({ showSpace: true })]);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Archived");
@@ -82,11 +82,15 @@ describe("Memo feed collection scope", () => {
   it("uses the selected Space filter and includes its member audience in Explore", () => {
     state.selectedSpaceName = "spaces/product";
     state.memoFilter = 'space == "spaces/product"';
-    render(<Explore />);
+    render(
+      <MemoryRouter initialEntries={["/explore"]}>
+        <Explore />
+      </MemoryRouter>,
+    );
 
     expect(state.listProps[0]).toMatchObject({ contextFilter: 'space == "spaces/product"' });
     expect(state.filterOptions[0]).toMatchObject({
-      visibilities: [Visibility.PUBLIC, Visibility.PROTECTED, Visibility.SPACE],
+      creatorName: undefined,
     });
     expect(state.memoViewProps[0]).toMatchObject({ showSpace: false });
   });

@@ -6,7 +6,7 @@
 
 | 产物 | 地址 |
 |------|------|
-| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.0` / `0.36` / `stable`） |
+| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.2` / `0.36` / `stable`） |
 | 二进制 | [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases)（linux/darwin/windows × amd64/arm64/armv7） |
 
 ## 方式一：Docker 部署（推荐）
@@ -28,7 +28,7 @@ docker run -d \
 从 [Releases](https://github.com/BorisZhangYYY/memos/releases) 下载对应平台压缩包：
 
 ```bash
-tar -xzf memos_0.36.0_linux_amd64.tar.gz
+tar -xzf memos_0.36.2_linux_amd64.tar.gz
 ./memos --data ~/memos-data --port 5230
 ```
 
@@ -72,6 +72,14 @@ GOPROXY=https://goproxy.cn,direct go build \
 ```
 
 访问令牌在网页「设置 → 我的账户 → 访问令牌」创建。Agent 即可通过 `memo_create_memo` 等工具自动记录日记、心情（`mood_level` 1-7 参数）。
+
+默认 `/mcp` 提供完整的 56 个工具；笔记场景可改用 `/mcp?profile=notes`（27 个工具），生活管理可用 `/mcp?profile=personal`（37 个工具）。这只调整工具集合，不改变令牌所属账号的权限。每日记录与心情汇总优先使用 `user_get_activity_summary`；提醒历史与统计包含删除事项后保留的完成记录。
+
+## 个人内容隐私
+
+开启“隐藏个人内容”后，进入个人管理前会在当前页面验证账户密码，验证成功才跳转。密码错误或关闭弹窗都停留在原页；个人区内部切换模块无需重复输入，离开后再次进入需重新验证。刷新或直接打开个人地址时，先在首页验证，再进入原目标。
+
+敏感 Memo 的显示、编辑、附件预览和关联提醒入口也会使用已有的密码验证流程。此功能保护前端显示，不改变 Memo 的分享权限，也不对数据加密。
 
 ## 与官方版的差异
 

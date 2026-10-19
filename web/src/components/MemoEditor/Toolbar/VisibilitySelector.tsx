@@ -1,13 +1,18 @@
-import { CheckIcon, ChevronDownIcon, TriangleAlertIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, PlusIcon, TriangleAlertIcon, XIcon } from "lucide-react";
+import SpaceMark from "@/components/SpaceMark";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import VisibilityIcon from "@/components/VisibilityIcon";
 import { useInstance } from "@/contexts/InstanceContext";
+import { extractSpaceUidFromName, getDuplicateSpaceTitles } from "@/lib/space-display";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 import { getAssignableVisibilityOptions, getVisibilityOption } from "@/utils/memo";
@@ -28,12 +33,20 @@ const VisibilitySelector = (props: VisibilitySelectorProps) => {
   // when that audience is not currently on offer.
   const currentOption = getVisibilityOption(value);
   const currentVisibilityAllowed = isMemoVisibilityEnabled(currentOption?.name ?? "PRIVATE", allowedVis);
+  const spaces = props.spaces ?? [];
+  const duplicates = getDuplicateSpaceTitles(spaces);
+  const spaceLabel = (space: (typeof spaces)[number]) =>
+    duplicates.has(space.title) ? `${space.title} (${extractSpaceUidFromName(space.name)})` : space.title;
+  const selectedSpace = spaces.find((space) => space.name === props.space);
+  const destination = selectedSpace ? spaceLabel(selectedSpace) : props.space ? extractSpaceUidFromName(props.space) : "";
 
   return (
     <DropdownMenu onOpenChange={props.onOpenChange}>
       <DropdownMenuTrigger
         render={
           <button
+            type="button"
+            disabled={props.disabled}
             className={cn(
               "inline-flex items-center rounded-md hover:bg-accent transition-colors",
               compact ? "px-1.5 py-[3px] text-[13px] leading-5 text-foreground/85" : "h-8 px-2 text-sm text-muted-foreground",
@@ -47,6 +60,11 @@ const VisibilitySelector = (props: VisibilitySelectorProps) => {
           />
         }
       >
+        {props.onSpaceChange && props.space && (
+          <span className="mr-1.5 max-w-28 truncate" title={destination}>
+            {destination} ·
+          </span>
+        )}
         <VisibilityIcon visibility={value} className={cn("opacity-60 mr-1.5", compact && "w-[13px]")} />
         <span className="truncate">{currentOption ? t(currentOption.labelKey) : ""}</span>
         <ChevronDownIcon className={cn("ml-0.5 opacity-60", compact ? "size-3.5 text-muted-foreground/70" : "w-4 h-4")} />
@@ -85,6 +103,41 @@ const VisibilitySelector = (props: VisibilitySelectorProps) => {
             {value === option.value && <CheckIcon className="ml-auto w-4 h-4 text-primary" />}
           </DropdownMenuItem>
         ))}
+        {props.onSpaceChange && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                {props.space ? <SpaceMark icon={selectedSpace?.icon} size="sm" /> : <PlusIcon className="size-4" />}
+                <span className="min-w-0 flex-1 truncate">{destination || t("space.add-to")}</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-72 w-60 overflow-y-auto">
+                {props.space && (
+                  <DropdownMenuItem onClick={() => props.onSpaceChange?.("")}>
+                    <XIcon className="size-4" />
+                    {t("space.remove-from", { space: destination })}
+                  </DropdownMenuItem>
+                )}
+                {spaces.map((space) => (
+                  <DropdownMenuItem key={space.name} onClick={() => props.onSpaceChange?.(space.name)}>
+                    <SpaceMark icon={space.icon} size="sm" />
+                    <span className="min-w-0 flex-1 truncate">{spaceLabel(space)}</span>
+                    {space.name === props.space && <CheckIcon className="size-4" />}
+                  </DropdownMenuItem>
+                ))}
+                {props.spacesLoading && <DropdownMenuItem disabled>{t("space.loading")}</DropdownMenuItem>}
+                {props.spacesError && (
+                  <DropdownMenuItem closeOnClick={false} onClick={props.onRetrySpaces}>
+                    {t("space.load-error")} · {t("search.retry")}
+                  </DropdownMenuItem>
+                )}
+                {!props.spacesLoading && !props.spacesError && !spaces.length && (
+                  <DropdownMenuItem disabled>{t("space.no-spaces")}</DropdownMenuItem>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

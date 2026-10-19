@@ -141,6 +141,8 @@ vi.mock("@/hooks/useUserQueries", () => ({
     memoViews: (parent?: string) => ["users", "memoViews", parent],
   },
   useMemoViews: () => ({ data: authState.memoViews }),
+  useAllUserStats: () => ({ data: [] }),
+  useUsersByNames: () => ({ data: new Map() }),
   useNotifications: () => ({ data: authState.notifications }),
   useUser: () => ({ data: undefined }),
 }));
@@ -250,7 +252,7 @@ describe("App sidebar logo", () => {
       </MemoryRouter>,
     );
 
-    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "explore", filter: 'space == "spaces/product"' }));
+    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "collection", filter: 'space == "spaces/product"' }));
   });
 
   it("includes authorized Space memos in All Explore statistics", () => {
@@ -260,7 +262,7 @@ describe("App sidebar logo", () => {
       </MemoryRouter>,
     );
 
-    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "explore", filter: undefined }));
+    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "collection", filter: undefined }));
   });
 
   it("keeps Profile statistics and tag UI state independent of the remembered Space", () => {
@@ -370,9 +372,9 @@ describe("App sidebar logo", () => {
     expect(screen.queryByText("common.views")).not.toBeInTheDocument();
     expect(screen.queryByText("Tags")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "common.memos", expanded: false })).toHaveTextContent("Memos logo");
-    expect(screen.getByRole("link", { name: "common.attachments" })).toHaveAttribute("href", "/attachments");
+    expect(screen.getByRole("link", { name: "common.attachments" })).toHaveAttribute("href", "/attachments?creator=test");
     expect(screen.queryByRole("link", { name: "common.inbox" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "common.timeline" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "common.timeline" })).toHaveAttribute("href", "/?creator=test");
     expect(screen.queryByRole("link", { name: "common.about" })).not.toBeInTheDocument();
     expect(screen.getByText("User menu").closest("footer")).not.toBeNull();
   });
@@ -385,7 +387,7 @@ describe("App sidebar logo", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("link", { name: "common.explore" })).toHaveAttribute("href", "/explore");
+    expect(screen.getByRole("link", { name: "common.explore" })).toHaveAttribute("href", "/explore?creator=all");
     expect(screen.queryByRole("link", { name: "common.timeline" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "common.attachments" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "common.inbox" })).not.toBeInTheDocument();
@@ -534,7 +536,7 @@ describe("App sidebar logo", () => {
     fireEvent.click(screen.getByRole("button", { name: "common.memos" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "common.explore" }));
     expect(screen.getByRole("link", { name: "common.timeline" })).toHaveAttribute("aria-current", "page");
-    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "explore" }));
+    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "collection" }));
   });
 
   it("returns from Archived to the personal timeline", () => {
@@ -546,8 +548,8 @@ describe("App sidebar logo", () => {
     );
 
     fireEvent.click(screen.getByRole("link", { name: "common.timeline" }));
-    expect(screen.getByRole("link", { name: "common.timeline" })).toHaveAttribute("href", "/");
-    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "home" }));
+    expect(screen.getByRole("link", { name: "common.timeline" })).toHaveAttribute("href", "/?creator=test");
+    expect(filteredStatsHook).toHaveBeenCalledWith(expect.objectContaining({ context: "profile" }));
   });
 
   it("keeps the mobile header limited to navigation and context", () => {

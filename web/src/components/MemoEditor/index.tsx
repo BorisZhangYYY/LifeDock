@@ -14,6 +14,7 @@ import { useTranslate } from "@/utils/i18n";
 import { convertVisibilityFromString } from "@/utils/memo";
 import { resolveDefaultMemoVisibility } from "@/utils/visibility";
 import { AudioRecorderPanel, EditorContent, EditorMetadata, FocusModeOverlay, TimestampPopover } from "./components";
+import { EditorSuggestions } from "./components/EditorSuggestions";
 import { FOCUS_MODE_STYLES, FORMATTING_TOOLBAR_STORAGE_KEY } from "./constants";
 import type { EditorFileOrigin } from "./Editor/extensions";
 import {
@@ -27,6 +28,7 @@ import {
   useMemoInit,
   useMemoSave,
 } from "./hooks";
+import { useAttachmentTranscription } from "./hooks/useAttachmentTranscription";
 import { cacheService, errorService, transcriptionService } from "./services";
 import { EditorProvider, useEditorContext, useEditorSelector } from "./state";
 import { EditorToolbar, FormattingToolbar } from "./Toolbar";
@@ -48,6 +50,7 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
   memo,
   parentMemoName,
   defaultSpace,
+  suggestions = [],
   autoFocus,
   onFocusModeExit,
   placeholder,
@@ -113,7 +116,9 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
   }, [linkedReminderNames]);
   // Existing resources own their placement. New replies are not placed
   // independently; only a new top-level memo inherits its host's target.
-  const editorSpace = memo ? memo.space : parentMemoName ? undefined : defaultSpace;
+  const draftSpace = useEditorSelector((state) => state.metadata.space);
+  const canChooseSpace = !parentMemoName && (!memo || (!memo.parent && memo.creator === currentUser?.name));
+  const editorSpace = parentMemoName || memo?.parent ? memo?.space : draftSpace;
   const canTranscribe = useMemo(() => {
     const providerId = aiSetting.transcription?.providerId ?? "";
     if (!providerId) return false;
@@ -135,6 +140,8 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
     autoFocus,
     defaultVisibility,
     defaultCreateTime,
+    defaultSpace,
+    allowedVisibilities: memoRelatedSetting.allowedVisibilities,
   });
   const isDraftCacheEnabled = !memo;
 
@@ -179,6 +186,10 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
     editor.insertMarkdown(text);
     editor.scrollToCursor();
   }, []);
+  const { transcribeAttachment, transcribingAttachment } = useAttachmentTranscription(insertTranscribedText);
+  useEffect(() => {
+    dispatch(actions.setLoading("transcribing", isTranscribingAudio || Boolean(transcribingAttachment)));
+  }, [actions, dispatch, isTranscribingAudio, transcribingAttachment]);
 
   const handleTranscribeRecordedAudio = useCallback(
     async (localFile: LocalFile) => {
@@ -438,12 +449,19 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
             uploadingLocalFileURLs={inlineImageUpload.uploadingLocalFileURLs}
             onInsertAttachments={inlineImageUpload.insertRemoteImages}
             onInsertLocalFiles={inlineImageUpload.insertLocalImages}
+            onTranscribeAttachment={canTranscribe ? transcribeAttachment : undefined}
+            transcribingAttachment={transcribingAttachment}
+            transcriptionDisabled={isSaving || audioRecorder.isBusy || isTranscribingAudio}
           />
+          {!memo && !parentMemoName && isInitialized && suggestions.length > 0 && (
+            <EditorSuggestions suggestions={suggestions} controllerRef={editorRef} space={editorSpace} />
+          )}
           <EditorToolbar
             onSave={handleSave}
             onCancel={onCancel ? handleCancel : undefined}
             memoName={memoName}
             space={editorSpace}
+            canChooseSpace={canChooseSpace}
             onAudioRecorderClick={handleAudioRecorderClick}
             reminders={reminders}
             linkedReminderNames={linkedReminderNames}
@@ -452,6 +470,8 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
               if (!memoName) {
                 cacheService.saveNow(editorCacheKey, getState().content, getState().metadata.attachments, {
                   moodLevel: getState().metadata.moodLevel,
+                  space: getState().metadata.space,
+                  visibility: getState().metadata.visibility,
                   reminderNames: names,
                 });
               }

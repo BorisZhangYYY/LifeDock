@@ -16,8 +16,15 @@ func requireJSONSchema(t *testing.T, value any) jsonSchema {
 	return schema
 }
 
+func requireValueAs[T any](t testing.TB, value any) T {
+	t.Helper()
+	typed, ok := value.(T)
+	require.True(t, ok, "unexpected value type %T", value)
+	return typed
+}
+
 func TestCuratedOperationIDsStayPersonalDataFocused(t *testing.T) {
-	require.Len(t, curatedOperationIDs, 53)
+	require.Len(t, curatedOperationIDs, 55)
 	allowedUserOperations := map[string]bool{
 		"UserService_GetUserStats":      true,
 		"UserService_GetUserSetting":    true,
@@ -64,6 +71,8 @@ func TestCuratedOperationIDsIncludeRequiredPersonalWorkflows(t *testing.T) {
 		"ReminderService_DeleteReminderList",
 		"ReminderService_DeleteReminder",
 		"ReminderService_ClearCompletedReminders",
+		"ReminderService_ListReminderOccurrences",
+		"ReminderService_GetReminderStats",
 		"FinanceService_ListFinanceWallets",
 		"FinanceService_CreateFinanceWallet",
 		"FinanceService_UpdateFinanceWallet",

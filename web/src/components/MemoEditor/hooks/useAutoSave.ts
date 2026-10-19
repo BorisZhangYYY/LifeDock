@@ -6,6 +6,8 @@ import { useEditorStore } from "../state";
 
 const sameDraft = (left: EditorDraft, right: EditorDraft): boolean =>
   left.content === right.content &&
+  left.space === right.space &&
+  left.visibility === right.visibility &&
   (left.moodLevel ?? 0) === (right.moodLevel ?? 0) &&
   left.attachments.length === right.attachments.length &&
   left.attachments.every((attachment, index) => {
@@ -26,6 +28,8 @@ export const useAutoSave = (username: string, cacheKey: string | undefined, enab
     content: initialState.content,
     attachments: initialState.metadata.attachments,
     moodLevel: initialState.metadata.moodLevel,
+    space: initialState.metadata.space,
+    visibility: initialState.metadata.visibility,
   });
   const discardedDraftRef = useRef<EditorDraft | undefined>(undefined);
 
@@ -40,16 +44,30 @@ export const useAutoSave = (username: string, cacheKey: string | undefined, enab
       }
       cacheService.save(key, draft.content, draft.attachments, {
         moodLevel: draft.moodLevel,
+        space: draft.space,
+        visibility: draft.visibility,
         reminderNames: cacheService.loadDraft(key).reminderNames,
       });
     };
 
     // Persist the current draft on mount/enable, then on every relevant change.
     const state = store.getState();
-    persist({ content: state.content, attachments: state.metadata.attachments, moodLevel: state.metadata.moodLevel });
+    persist({
+      content: state.content,
+      attachments: state.metadata.attachments,
+      moodLevel: state.metadata.moodLevel,
+      space: state.metadata.space,
+      visibility: state.metadata.visibility,
+    });
     return store.subscribe(() => {
       const nextState = store.getState();
-      const draft = { content: nextState.content, attachments: nextState.metadata.attachments, moodLevel: nextState.metadata.moodLevel };
+      const draft = {
+        content: nextState.content,
+        attachments: nextState.metadata.attachments,
+        moodLevel: nextState.metadata.moodLevel,
+        space: nextState.metadata.space,
+        visibility: nextState.metadata.visibility,
+      };
       if (!sameDraft(draft, latestDraftRef.current)) {
         persist(draft);
       }
@@ -67,6 +85,8 @@ export const useAutoSave = (username: string, cacheKey: string | undefined, enab
 
       cacheService.saveNow(key, latestDraftRef.current.content, latestDraftRef.current.attachments, {
         moodLevel: latestDraftRef.current.moodLevel,
+        space: latestDraftRef.current.space,
+        visibility: latestDraftRef.current.visibility,
         reminderNames: cacheService.loadDraft(key).reminderNames,
       });
     };

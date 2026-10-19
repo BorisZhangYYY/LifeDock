@@ -7,16 +7,19 @@ import { cacheService } from "@/components/MemoEditor/services/cacheService";
 import { EditorProvider, useEditorContext } from "@/components/MemoEditor/state";
 import type { EditorController } from "@/components/MemoEditor/types/editorController";
 import { AttachmentSchema } from "@/types/proto/api/v1/attachment_service_pb";
+import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 
 const editorRef = { current: null } as RefObject<EditorController | null>;
 let getEditorState: ReturnType<typeof useEditorContext>["getState"];
 
-function Probe() {
+function Probe({ allowedVisibilities }: { allowedVisibilities?: string[] }) {
   getEditorState = useEditorContext().getState;
   useMemoInit({
     editorRef,
     username: "users/steven",
     cacheKey: "restored-draft",
+    allowedVisibilities,
+    defaultVisibility: Visibility.PRIVATE,
   });
   return null;
 }
@@ -54,5 +57,35 @@ describe("useMemoInit", () => {
       expect(getEditorState().content).toBe("![image](/file/attachments/image-one)");
       expect(getEditorState().metadata.attachments).toEqual([attachment]);
     });
+  });
+
+  it("restores Space and audience together with mood and reminder metadata", async () => {
+    cacheService.saveNow(cacheService.key("users/steven", "restored-draft"), "Draft", [], {
+      space: "spaces/work",
+      visibility: Visibility.SPACE,
+      moodLevel: 6,
+      reminderNames: ["users/steven/reminders/one"],
+    });
+    render(
+      <EditorProvider>
+        <Probe />
+      </EditorProvider>,
+    );
+    await waitFor(() =>
+      expect(getEditorState().metadata).toMatchObject({ space: "spaces/work", visibility: Visibility.SPACE, moodLevel: 6 }),
+    );
+    expect(cacheService.loadDraft(cacheService.key("users/steven", "restored-draft")).reminderNames).toEqual([
+      "users/steven/reminders/one",
+    ]);
+  });
+
+  it("does not restore public visibility disabled by the instance", async () => {
+    cacheService.saveNow(cacheService.key("users/steven", "restored-draft"), "Draft", [], { visibility: Visibility.PUBLIC });
+    render(
+      <EditorProvider>
+        <Probe allowedVisibilities={["PRIVATE"]} />
+      </EditorProvider>,
+    );
+    await waitFor(() => expect(getEditorState().metadata.visibility).toBe(Visibility.PRIVATE));
   });
 });

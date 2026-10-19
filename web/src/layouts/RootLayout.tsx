@@ -9,6 +9,7 @@ import AppSidebar, {
   SidebarResizeHandle,
   useSidebarWidth,
 } from "@/components/AppSidebar";
+import PersonalNavigationGuard from "@/components/PersonalNavigationGuard";
 import { AppSidebarProvider } from "@/contexts/AppSidebarContext";
 import { GlobalMemoEditorProvider } from "@/contexts/GlobalMemoEditorContext";
 import { useInstance } from "@/contexts/InstanceContext";
@@ -92,7 +93,9 @@ const RootLayoutContent = () => {
       <main className="flex min-h-full w-full min-w-0 flex-col items-center md:ps-(--app-sidebar-width)">
         <MobileAppHeader />
         {profile.demo && <DemoBanner />}
-        <Outlet />
+        <PersonalNavigationGuard>
+          <Outlet />
+        </PersonalNavigationGuard>
       </main>
       <QuickFindDialog />
     </div>

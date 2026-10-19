@@ -1,5 +1,5 @@
 import { LinkIcon } from "lucide-react";
-import { type ComponentType, memo, Suspense, useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { type ComponentType, memo, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useResolvedUser } from "@/components/MemoContent/MentionResolutionContext";
 import { loadMemoEditor } from "@/components/MemoEditor/loader";
@@ -48,6 +48,8 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
   const [EditorComponent, setEditorComponent] = useState<ComponentType<MemoEditorProps>>();
   const [cardWidth, setCardWidth] = useState(0);
   const [privacyUnlockOpen, setPrivacyUnlockOpen] = useState(false);
+  const pendingActionRef = useRef<(() => void) | undefined>(undefined);
+  const promptedMemoRef = useRef<string | null>(null);
 
   const currentUser = useCurrentUser();
   const { userTagsSetting } = useAuth();
@@ -93,9 +95,24 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
     }
   }, [memoData.name, passwordProtected, privacySession, showBlurredContent]);
 
-  const { previewState, openPreview, setPreviewOpen } = useImagePreview();
+  const requestPrivateAction = useCallback(
+    (action: () => void) => {
+      if (passwordProtected && !showBlurredContent) {
+        pendingActionRef.current = action;
+        setPrivacyUnlockOpen(true);
+        return;
+      }
+      action();
+    },
+    [passwordProtected, showBlurredContent],
+  );
+  const { previewState, openPreview: showPreview, setPreviewOpen } = useImagePreview();
+  const openPreview = useCallback<typeof showPreview>(
+    (...args) => requestPrivateAction(() => showPreview(...args)),
+    [requestPrivateAction, showPreview],
+  );
 
-  const openEditor = useCallback(() => {
+  const loadEditor = useCallback(() => {
     void loadMemoEditor()
       .then(({ default: MemoEditor }) => {
         setEditorComponent(() => MemoEditor);
@@ -103,9 +120,20 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
       })
       .catch(() => undefined);
   }, []);
+  const openEditor = useCallback(() => requestPrivateAction(loadEditor), [loadEditor, requestPrivateAction]);
   const closeEditor = useCallback(() => setShowEditor(false), []);
 
   const isInMemoDetailPage = isMemoDetailPath(location.pathname, memoData.name);
+  useEffect(() => {
+    if (!isInMemoDetailPage) {
+      promptedMemoRef.current = null;
+      return;
+    }
+    if (passwordProtected && !showBlurredContent && promptedMemoRef.current !== memoData.name) {
+      promptedMemoRef.current = memoData.name;
+      setPrivacyUnlockOpen(true);
+    }
+  }, [isInMemoDetailPage, memoData.name, passwordProtected, showBlurredContent]);
   const showCommentPreview = !isInMemoDetailPage && computeCommentAmount(memoData) > 0;
 
   // The card width is only needed by the share-image dialog. Keep feed cards
@@ -193,7 +221,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
         showPinned={showPinned}
         showSpace={showSpace}
         linkedReminders={props.linkedReminders}
-        onReminderSelect={props.onReminderSelect}
+        onReminderSelect={props.onReminderSelect ? (name) => requestPrivateAction(() => props.onReminderSelect?.(name)) : undefined}
       />
 
       {props.onLinkToMemo && props.linkingReminderTitle && (
@@ -253,7 +281,19 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
         memoDisplay
       )}
       {privacyUnlockOpen && (
-        <PrivacyUnlockDialog open onOpenChange={setPrivacyUnlockOpen} onUnlocked={() => privacySession.unlockMemo(memoData.name)} />
+        <PrivacyUnlockDialog
+          open
+          onOpenChange={(open) => {
+            setPrivacyUnlockOpen(open);
+            if (!open) pendingActionRef.current = undefined;
+          }}
+          onUnlocked={() => {
+            privacySession.unlockMemo(memoData.name);
+            const action = pendingActionRef.current;
+            pendingActionRef.current = undefined;
+            action?.();
+          }}
+        />
       )}
     </MemoViewContext.Provider>
   );

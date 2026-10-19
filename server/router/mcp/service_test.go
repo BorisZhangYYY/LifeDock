@@ -90,7 +90,8 @@ func TestMCPToolHandlerForwardsArgumentsAndAuthorization(t *testing.T) {
 			Parameters: []openAPIParameter{{Name: "pageSize", In: "query", Schema: jsonSchema{"type": "integer"}}},
 		},
 	}
-	handler := newMCPToolHandler(newAPIAdapter(echoServer), operation)
+	handler, err := newMCPToolHandler(newAPIAdapter(echoServer), operation)
+	require.NoError(t, err)
 	arguments, err := json.Marshal(map[string]any{"pageSize": 7})
 	require.NoError(t, err)
 
@@ -135,11 +136,12 @@ func TestMCPToolHandlerInjectsCurrentUserFromAuthorization(t *testing.T) {
 			{Name: "user", In: "path", Required: true, Schema: jsonSchema{"type": "string"}},
 		},
 	}
-	handler := newMCPToolHandler(newAPIAdapter(echoServer), &registeredOperation{
+	handler, err := newMCPToolHandler(newAPIAdapter(echoServer), &registeredOperation{
 		Operation:           apiOperation,
 		InputSchema:         jsonSchema{"type": "object", "properties": map[string]any{}, "additionalProperties": false},
 		ImplicitCurrentUser: true,
 	})
+	require.NoError(t, err)
 
 	result, err := handler(context.Background(), &sdkmcp.CallToolRequest{
 		Params: &sdkmcp.CallToolParamsRaw{
@@ -176,7 +178,7 @@ func TestMCPProtocolListsCuratedToolsOnly(t *testing.T) {
 	require.True(t, ok)
 	tools, ok := result["tools"].([]any)
 	require.True(t, ok)
-	require.Len(t, tools, len(curatedOperationIDs))
+	require.Len(t, tools, len(curatedOperationIDs)+1)
 
 	names := map[string]struct{}{}
 	for _, rawTool := range tools {
@@ -597,10 +599,15 @@ func initializeMCP(t *testing.T, echoServer *echo.Echo) {
 
 func postMCP(t *testing.T, echoServer *echo.Echo, payload map[string]any) map[string]any {
 	t.Helper()
+	return postMCPAt(t, echoServer, "/mcp", payload)
+}
+
+func postMCPAt(t *testing.T, echoServer *echo.Echo, path string, payload map[string]any) map[string]any {
+	t.Helper()
 	data, err := json.Marshal(payload)
 	require.NoError(t, err)
 
-	request := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(data))
+	request := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(data))
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Accept", "application/json, text/event-stream")
 

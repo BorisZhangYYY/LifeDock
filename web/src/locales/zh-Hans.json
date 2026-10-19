@@ -211,7 +211,8 @@
       "resolve-image-uploads": "请先处理未完成的图片上传",
       "save-in-progress": "正在保存",
       "unsupported-attachment-image-url": "不支持的附件图片地址：{{url}}",
-      "wait-for-upload": "请等待上传完成"
+      "wait-for-upload": "请等待上传完成",
+      "wait-for-transcription": "请等待音频转写完成后再保存"
     },
     "insert-menu": {
       "add-attachment": "添加附件",
@@ -273,7 +274,8 @@
       "unsupported-description": "此浏览器无法录制备忘录编辑器中的音频。"
     },
     "unsupported-syntax-raw-mode": "此备忘包含富文本编辑器无法安全编辑的语法，已切换到原始 Markdown 模式。",
-    "wysiwyg-editor": "所见即所得编辑器"
+    "wysiwyg-editor": "所见即所得编辑器",
+    "suggestions": "建议"
   },
   "finance": {
     "amount": "金额",
@@ -671,7 +673,9 @@
       "protected": "工作区",
       "protected-description": "对登录用户可见",
       "public": "公开",
-      "public-description": "对所有人可见"
+      "public-description": "对所有人可见",
+      "space": "空间",
+      "space-description": "此空间的成员可见"
     },
     "outline": "概要",
     "share": {
@@ -790,6 +794,7 @@
       "label": "收支管理"
     },
     "personal-features": {
+      "password-required-by-hiding": "开启“隐藏个人内容”时，必须验证账户密码后才能查看。",
       "label": "个人功能管理",
       "description": "按需开启生活管理功能，设置内容隐私。",
       "features-title": "功能开关",
@@ -803,9 +808,9 @@
       "disable-all": "一键禁用全部个人功能",
       "all-disabled": "已禁用全部个人功能",
       "privacy-title": "隐私保护",
-      "privacy-description": "模糊个人摘要和敏感 Memo，解锁后显示。内容不会加密。",
+      "privacy-description": "隐藏个人内容，验证账户密码后显示。内容不会加密。",
       "home-privacy": "隐藏个人内容",
-      "home-privacy-description": "默认隐藏心情、收支、提醒事项及关联 Memo 的内容。",
+      "home-privacy-description": "进入心情、收支、提醒事项及敏感 Memo 前，先验证账户密码。",
       "privacy-visible": "直接显示",
       "privacy-blurred": "默认模糊",
       "privacy-collapsed": "默认折叠",
@@ -1462,6 +1467,17 @@
       "use-emoji": "使用 {{emoji}}"
     },
     "unavailable": "空间不存在或你没有访问权限。",
-    "back-to-memos": "返回 Memos"
+    "back-to-memos": "返回 Memos",
+    "add-to": "添加到空间",
+    "remove-from": "从 {{space}} 移除",
+    "no-spaces": "暂无可选空间"
+  },
+  "browse": {
+    "creator": "作者",
+    "all": "全部作者",
+    "mine": "我的记录",
+    "choose": "按作者浏览",
+    "username": "用户名",
+    "apply": "浏览"
   }
 }

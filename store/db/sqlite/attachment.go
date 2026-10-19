@@ -142,6 +142,7 @@ func (d *DB) ListAttachments(ctx context.Context, find *store.FindAttachment) ([
 
 	query := "SELECT " + strings.Join(fields, ", ") + " FROM `attachment`" + " " +
 		"LEFT JOIN `memo` ON `attachment`.`memo_id` = `memo`.`id`" + " " +
+		"LEFT JOIN `user` AS `attachment_creator` ON `attachment_creator`.`id` = COALESCE(`memo`.`creator_id`, `attachment`.`creator_id`)" + " " +
 		"LEFT JOIN `space` AS `attachment_space` ON `memo`.`space_id` = `attachment_space`.`id`" + " " +
 		"WHERE " + strings.Join(where, " AND ") + " " +
 		"ORDER BY `attachment`.`updated_ts` DESC"

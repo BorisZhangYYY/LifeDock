@@ -13,6 +13,9 @@ export interface EditorController {
   isEmpty(): boolean;
   /** Current document as a markdown string (the only storage format). */
   getMarkdown(): string;
+  getTags(): string[];
+  hasChecklist(): boolean;
+  insertTag(tag: string): boolean;
   /** Replace the whole document from a markdown string. */
   setMarkdown(markdown: string): void;
   /** Insert markdown at the cursor as its own block. */

@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { type ComponentType, createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { getRouteActionPolicy } from "@/components/AppSidebar/routes";
+import { getRouteActionPolicy, routeSupportsCollectionScope } from "@/components/AppSidebar/routes";
 import { loadMemoEditor } from "@/components/MemoEditor/loader";
 import type { MemoEditorProps } from "@/components/MemoEditor/types";
 import { VisuallyHidden } from "@/components/ui/visually-hidden";
@@ -9,6 +9,7 @@ import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
+import { useMemoSuggestions } from "@/hooks/useMemoSuggestions";
 import { spaceScopedCacheKey } from "@/lib/resource-names";
 import { useTranslate } from "@/utils/i18n";
 
@@ -39,6 +40,7 @@ const findVisibleFocusTarget = (selector: string): HTMLElement | null =>
 export function GlobalMemoEditorProvider({ children }: { children: ReactNode }) {
   const t = useTranslate();
   const location = useLocation();
+  const suggestions = useMemoSuggestions(routeSupportsCollectionScope(location.pathname));
   const currentUserName = useCurrentUser()?.name;
   const { selectedSpaceName } = useSpaceContext();
   const { isUserSettingsInitialized } = useAuth();
@@ -144,6 +146,7 @@ export function GlobalMemoEditorProvider({ children }: { children: ReactNode }) 
                 <DialogPrimitive.Title>{t("editor.new-memo")}</DialogPrimitive.Title>
               </VisuallyHidden>
               <EditorComponent
+                suggestions={suggestions}
                 autoFocus
                 cacheKey={spaceScopedCacheKey("global-memo-editor", opened?.space)}
                 defaultSpace={opened?.space}

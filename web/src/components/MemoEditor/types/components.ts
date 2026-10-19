@@ -1,6 +1,8 @@
+import type { MemoSuggestion } from "@/lib/memo-suggestions";
 import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
 import type { Location, Memo, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import type { Reminder } from "@/types/proto/api/v1/reminder_service_pb";
+import type { Space } from "@/types/proto/api/v1/space_service_pb";
 import type { EditorFileOrigin } from "../Editor/extensions";
 import type { AudioRecorderStatus } from "../hooks/useAudioRecorder";
 import type { LocalFile } from "./attachment";
@@ -14,6 +16,7 @@ export interface MemoEditorProps {
   parentMemoName?: string;
   /** Assigns a newly created top-level memo to this Space. Ignored for edits and comments. */
   defaultSpace?: string;
+  suggestions?: readonly MemoSuggestion[];
   autoFocus?: boolean;
   /**
    * Marks the instance as *hosted*: a host (the global composer dialog) presents
@@ -62,6 +65,7 @@ export interface EditorToolbarProps {
   memoName?: string;
   /** The Space that owns the memo being created or edited, if any. */
   space?: string;
+  canChooseSpace?: boolean;
   onAudioRecorderClick: () => void;
   reminders?: Reminder[];
   linkedReminderNames?: string[];
@@ -75,6 +79,9 @@ export interface EditorMetadataProps {
   uploadingLocalFileURLs: ReadonlySet<string>;
   onInsertAttachments: (attachments: Attachment[]) => void;
   onInsertLocalFiles: (localFiles: LocalFile[]) => void;
+  onTranscribeAttachment?: (attachment: Attachment) => void;
+  transcribingAttachment?: string;
+  transcriptionDisabled?: boolean;
 }
 
 export interface AudioRecorderPanelProps {
@@ -115,6 +122,12 @@ export interface VisibilitySelectorProps {
   onChange: (visibility: Visibility) => void;
   /** The memo's actual placement; independent of the ambient collection scope. */
   space?: string;
+  onSpaceChange?: (space: string) => void;
+  spaces?: Space[];
+  spacesLoading?: boolean;
+  spacesError?: boolean;
+  onRetrySpaces?: () => void;
+  disabled?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** "compact" renders a 13px trigger that blends into dense surfaces like the memo detail rail. */
   size?: "default" | "compact";

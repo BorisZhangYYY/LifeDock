@@ -13,7 +13,9 @@ import { useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { NewMemoProvider } from "@/contexts/NewMemoContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useCurrentUser from "@/hooks/useCurrentUser";
+import { useMemoSuggestions } from "@/hooks/useMemoSuggestions";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useReminderLists, useReminders, useUpdateReminder } from "@/hooks/useReminderQueries";
 import { spaceScopedCacheKey } from "@/lib/resource-names";
@@ -24,6 +26,8 @@ import { ListRemindersRequest_View } from "@/types/proto/api/v1/reminder_service
 import { useTranslate } from "@/utils/i18n";
 
 const Home = () => {
+  const suggestions = useMemoSuggestions();
+  const { creatorName, isOwn, isMixed } = useBrowseScope();
   const user = useCurrentUser();
   const t = useTranslate();
   const { isUserSettingsInitialized } = useAuth();
@@ -125,13 +129,13 @@ const Home = () => {
     );
   };
   const memoFilter = useMemoFilters({
-    creatorName: user?.name,
+    creatorName,
     includeMemoViews: true,
     includePinned: true,
   });
 
   const { listSort, orderBy } = useMemoSorting({
-    pinnedFirst: true,
+    pinnedFirst: !isMixed,
     state: State.NORMAL,
   });
 
@@ -150,7 +154,8 @@ const Home = () => {
               key={getMemoKey(memo)}
               memo={memo}
               showVisibility
-              showPinned
+              showPinned={!isMixed}
+              showCreator={isMixed || !isOwn}
               showSpace={!selectedSpaceName}
               compact={compact}
               linkedReminders={remindersEnabled ? reminders.filter((reminder) => reminder.memo === memo.name) : []}
@@ -164,7 +169,7 @@ const Home = () => {
           filter={memoFilter}
           contextFilter={contextFilter}
           renderLeading={({ useGrid }) => {
-            if (!isUserSettingsInitialized) return null;
+            if (!isUserSettingsInitialized || !isOwn) return null;
 
             return (
               <div className={useGrid ? "contents" : undefined}>
@@ -180,6 +185,7 @@ const Home = () => {
                   </div>
                 )}
                 <MemoEditor
+                  suggestions={suggestions}
                   className={useGrid ? undefined : "mb-2"}
                   key={editorCacheKey}
                   cacheKey={editorCacheKey}

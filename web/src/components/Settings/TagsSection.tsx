@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useTagCounts, useUpdateUserGeneralSetting, useUpdateUserSetting } from "@/hooks/useUserQueries";
 import { colorToHex } from "@/lib/color";
 import { buildUserSettingName } from "@/lib/resource-names";
 import { isValidTagPattern } from "@/lib/tag";
 import { cn } from "@/lib/utils";
 import {
+  UserSetting_GeneralSetting_PersonalFeaturePrivacy,
   UserSetting_Key,
   UserSetting_TagMetadataSchema,
   UserSetting_TagsSettingSchema,
@@ -50,7 +52,9 @@ const toLocalTagMeta = (meta: {
 
 const TagsSection = () => {
   const t = useTranslate();
-  const { currentUser, userGeneralSetting, userTagsSetting, refetchSettings } = useAuth();
+  const { currentUser, userTagsSetting, refetchSettings } = useAuth();
+  const { privacyMode, requirePasswordForPrivateContent } = usePersonalFeatures();
+  const privacyEnabled = privacyMode !== UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE;
   const { mutateAsync: updateUserSetting } = useUpdateUserSetting();
   const { mutateAsync: updateGeneralSetting, isPending: updatingGeneralSetting } = useUpdateUserGeneralSetting(currentUser?.name);
   const { data: tagCounts = {} } = useTagCounts(true);
@@ -283,11 +287,15 @@ const TagsSection = () => {
           <SettingListItem
             icon={<ShieldCheckIcon className="size-4" />}
             label={t("setting.tags.require-password")}
-            description={t("setting.personal-features.password-unlock-description")}
+            description={t(
+              privacyEnabled
+                ? "setting.personal-features.password-required-by-hiding"
+                : "setting.personal-features.password-unlock-description",
+            )}
           >
             <Switch
-              checked={userGeneralSetting?.requirePasswordForPrivateContent ?? false}
-              disabled={updatingGeneralSetting}
+              checked={requirePasswordForPrivateContent}
+              disabled={updatingGeneralSetting || privacyEnabled}
               onCheckedChange={(enabled) =>
                 void updateGeneralSetting(
                   { generalSetting: { requirePasswordForPrivateContent: enabled }, updateMask: ["require_password_for_private_content"] },

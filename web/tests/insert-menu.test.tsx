@@ -113,3 +113,5 @@ describe("InsertMenu", () => {
 });
 
 vi.mock("@/contexts/InstanceContext", () => ({ useInstance: () => ({ memoRelatedSetting: { allowedVisibilities: [] } }) }));
+
+vi.mock("@/hooks/useSpaceQueries", () => ({ useSpaces: () => ({ data: [], isLoading: false, isError: false }) }));

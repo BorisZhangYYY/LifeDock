@@ -60,9 +60,19 @@ func (a *apiAdapter) resolveCurrentUserName(ctx context.Context, authorization s
 }
 
 func (a *apiAdapter) execute(ctx context.Context, operation *openAPIOperation, arguments map[string]any, authorization string) (*sdkmcp.CallToolResult, error) {
-	req, err := buildAPIRequest(ctx, operation, arguments, authorization)
+	value, err := a.executeJSON(ctx, operation, arguments, authorization)
 	if err != nil {
 		return newToolErrorResult(err.Error()), nil
+	}
+	return newStructuredToolResult(value)
+}
+
+// executeJSON also supports compact MCP views without first serializing the
+// full API response into a text content block.
+func (a *apiAdapter) executeJSON(ctx context.Context, operation *openAPIOperation, arguments map[string]any, authorization string) (any, error) {
+	req, err := buildAPIRequest(ctx, operation, arguments, authorization)
+	if err != nil {
+		return nil, err
 	}
 
 	recorder := httptest.NewRecorder()
@@ -70,12 +80,12 @@ func (a *apiAdapter) execute(ctx context.Context, operation *openAPIOperation, a
 
 	value, err := decodeJSONValue(recorder.Body.Bytes())
 	if err != nil {
-		return newToolErrorResult(err.Error()), nil
+		return nil, err
 	}
 	if recorder.Code < http.StatusOK || recorder.Code >= http.StatusMultipleChoices {
-		return newToolErrorResult(apiErrorMessage(recorder.Code, value)), nil
+		return nil, errors.New(apiErrorMessage(recorder.Code, value))
 	}
-	return newStructuredToolResult(value)
+	return value, nil
 }
 
 func buildAPIRequest(ctx context.Context, operation *openAPIOperation, arguments map[string]any, authorization string) (*http.Request, error) {
