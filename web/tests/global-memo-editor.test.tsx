@@ -318,3 +318,5 @@ describe("GlobalMemoEditorProvider", () => {
     });
   });
 });
+
+vi.mock("@/hooks/useMemoSuggestions", () => ({ useMemoSuggestions: () => [] }));

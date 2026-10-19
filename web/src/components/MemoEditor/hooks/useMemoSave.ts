@@ -91,6 +91,7 @@ export function useMemoSave({
         if (!memoName && defaultVisibility) {
           dispatch(actions.setMetadata({ visibility: defaultVisibility }));
         }
+        if (!memoName && !parentMemoName) dispatch(actions.setMetadata({ space: defaultSpace ?? "" }));
         // Reset creates a fresh editor state, so restore calendar-derived values
         // for the next memo created without remounting this composer.
         if (!memoName && defaultCreateTime) {

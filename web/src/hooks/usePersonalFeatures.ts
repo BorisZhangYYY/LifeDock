@@ -3,13 +3,16 @@ import { UserSetting_GeneralSetting_PersonalFeaturePrivacy } from "@/types/proto
 
 export const usePersonalFeatures = () => {
   const { userGeneralSetting } = useAuth();
+  const privacyMode = userGeneralSetting?.personalFeaturePrivacy ?? UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE;
+  const privacyEnabled = privacyMode !== UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE;
 
   return {
     remindersEnabled: !userGeneralSetting?.disableReminders,
     financeEnabled: !userGeneralSetting?.disableFinance,
     moodEnabled: !userGeneralSetting?.disableMood,
-    privacyMode: userGeneralSetting?.personalFeaturePrivacy ?? UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE,
-    requirePasswordForPrivateContent: userGeneralSetting?.requirePasswordForPrivateContent ?? false,
+    privacyMode,
+    // Hidden personal content requires verification even with an older saved password toggle set to false.
+    requirePasswordForPrivateContent: privacyEnabled || (userGeneralSetting?.requirePasswordForPrivateContent ?? false),
   };
 };
 

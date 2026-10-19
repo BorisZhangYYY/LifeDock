@@ -1,13 +1,4 @@
-import {
-  ChartLineIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  EyeIcon,
-  ListTodoIcon,
-  LockIcon,
-  type LucideIcon,
-  WalletCardsIcon,
-} from "lucide-react";
+import { ChartLineIcon, ChevronDownIcon, ChevronUpIcon, ListTodoIcon, LockIcon, type LucideIcon, WalletCardsIcon } from "lucide-react";
 import { Children, type ReactNode, useEffect, useState } from "react";
 import PrivacyUnlockDialog from "@/components/PrivacyUnlockDialog";
 import { Button } from "@/components/ui/button";
@@ -29,7 +20,7 @@ interface Props {
 
 const PersonalDashboardWidget = ({ children, labels, icons: customIcons, className }: Props) => {
   const t = useTranslate();
-  const { privacyMode, requirePasswordForPrivateContent } = usePersonalFeatures();
+  const { privacyMode } = usePersonalFeatures();
   const privacySession = usePrivacySession();
   const panels = Children.toArray(children);
   const icons = customIcons ?? [ChartLineIcon, WalletCardsIcon, ListTodoIcon];
@@ -48,13 +39,10 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
       return false;
     }
   });
-  const [revealed, setRevealed] = useState(false);
   const [unlockOpen, setUnlockOpen] = useState(false);
   const privacyEnabled = privacyMode !== UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE;
-  const visible = requirePasswordForPrivateContent ? privacySession.unlocked : revealed;
+  const visible = privacySession.unlocked;
   const hidden = privacyEnabled && !visible;
-
-  useEffect(() => setRevealed(false), [privacyMode]);
 
   useEffect(() => {
     if (activeIndex < panels.length) return;
@@ -67,6 +55,7 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
   }, [activeIndex, panels.length]);
 
   const selectPanel = (index: number) => {
+    if (hidden) setUnlockOpen(true);
     setActiveIndex(index);
     try {
       localStorage.setItem(STORAGE_KEY, String(index));
@@ -76,6 +65,7 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
   };
 
   const toggleExpanded = () => {
+    if (hidden) setUnlockOpen(true);
     setExpanded((current) => {
       const next = !current;
       try {
@@ -88,13 +78,11 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
   };
 
   const requestReveal = () => {
-    if (requirePasswordForPrivateContent) setUnlockOpen(true);
-    else setRevealed(true);
+    setUnlockOpen(true);
   };
 
   const hideAgain = () => {
-    if (requirePasswordForPrivateContent) privacySession.lockAll();
-    else setRevealed(false);
+    privacySession.lockAll();
   };
 
   return (
@@ -162,7 +150,7 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
           )}
           role="tabpanel"
         >
-          {panels[activeIndex]}
+          {!hidden && panels[activeIndex]}
         </div>
         {hidden && (
           <div className="absolute inset-0 z-10 flex items-center justify-center pt-4">
@@ -172,13 +160,13 @@ const PersonalDashboardWidget = ({ children, labels, icons: customIcons, classNa
               className="cursor-pointer rounded-lg bg-card px-3 text-xs text-foreground shadow-sm hover:-translate-y-0.5 hover:border-ring/40 hover:bg-accent hover:text-accent-foreground hover:shadow-md active:translate-y-0 active:shadow-sm"
               onClick={requestReveal}
             >
-              {requirePasswordForPrivateContent ? <LockIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              <LockIcon className="size-4" />
               {t("setting.personal-features.reveal-personal-panels")}
             </Button>
           </div>
         )}
       </div>
-      {unlockOpen && <PrivacyUnlockDialog open onOpenChange={setUnlockOpen} onUnlocked={privacySession.unlockAll} />}
+      {hidden && unlockOpen && <PrivacyUnlockDialog open onOpenChange={setUnlockOpen} onUnlocked={privacySession.unlockAll} />}
     </section>
   );
 };

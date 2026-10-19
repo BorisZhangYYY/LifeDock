@@ -9,33 +9,49 @@ import (
 	"github.com/pkg/errors"
 )
 
-func validateToolArguments(schema jsonSchema, arguments map[string]any) error {
-	if schema == nil {
-		return nil
-	}
-	if err := validateSchemaValue(schema, "argument", "argument", arguments, schema); err != nil {
-		return err
-	}
-	return validateArgumentsWithJSONSchema(schema, arguments)
+type toolArgumentValidator struct {
+	schema   jsonSchema
+	resolved *googlejsonschema.Resolved
 }
 
-func validateArgumentsWithJSONSchema(schema jsonSchema, arguments map[string]any) error {
+func compileToolArgumentValidator(schema jsonSchema) (*toolArgumentValidator, error) {
+	if schema == nil {
+		return nil, nil
+	}
 	data, err := json.Marshal(schema)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal MCP tool input schema")
+		return nil, errors.Wrap(err, "failed to marshal MCP tool input schema")
 	}
 	jsonSchema := &googlejsonschema.Schema{}
 	if err := json.Unmarshal(data, jsonSchema); err != nil {
-		return errors.Wrap(err, "failed to parse MCP tool input schema")
+		return nil, errors.Wrap(err, "failed to parse MCP tool input schema")
 	}
 	resolved, err := jsonSchema.Resolve(nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to resolve MCP tool input schema")
+		return nil, errors.Wrap(err, "failed to resolve MCP tool input schema")
 	}
-	if err := resolved.Validate(arguments); err != nil {
+	return &toolArgumentValidator{schema: schema, resolved: resolved}, nil
+}
+
+func (v *toolArgumentValidator) validate(arguments map[string]any) error {
+	if v == nil {
+		return nil
+	}
+	if err := validateSchemaValue(v.schema, "argument", "argument", arguments, v.schema); err != nil {
+		return err
+	}
+	if err := v.resolved.Validate(arguments); err != nil {
 		return errors.Wrap(err, "MCP tool arguments do not match input schema")
 	}
 	return nil
+}
+
+func validateToolArguments(schema jsonSchema, arguments map[string]any) error {
+	validator, err := compileToolArgumentValidator(schema)
+	if err != nil {
+		return err
+	}
+	return validator.validate(arguments)
 }
 
 func validateSchemaValue(schemaValue any, path string, label string, value any, root jsonSchema) error {

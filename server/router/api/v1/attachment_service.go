@@ -300,10 +300,9 @@ func (s *APIV1Service) ListAttachments(ctx context.Context, request *v1pb.ListAt
 	}
 
 	findAttachment := &store.FindAttachment{
-		CreatorID: &user.ID,
-		Access:    newMemoAccessScope(user, true),
-		Limit:     &pageSize,
-		Offset:    &offset,
+		Access: newMemoAccessScope(user, true),
+		Limit:  &pageSize,
+		Offset: &offset,
 	}
 	// Parse filter if provided
 	if request.Filter != "" {

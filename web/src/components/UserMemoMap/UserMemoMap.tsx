@@ -19,7 +19,7 @@ import { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 
 interface Props {
-  creator: string;
+  creator?: string;
   scopeFilter?: string;
   className?: string;
 }
@@ -56,7 +56,7 @@ const UserMemoMap = ({ creator, scopeFilter, className }: Props) => {
   const t = useTranslate();
   const location = useLocation();
   const parentPage = `${location.pathname}${location.search}`;
-  const creatorFilter = useMemo(() => buildMemoCreatorFilter(creator), [creator]);
+  const creatorFilter = useMemo(() => (creator ? buildMemoCreatorFilter(creator) : undefined), [creator]);
 
   const { data, isLoading, isError, isFetching, hasNextPage, fetchNextPage } = useInfiniteMemos(
     {
@@ -65,7 +65,7 @@ const UserMemoMap = ({ creator, scopeFilter, className }: Props) => {
       pageSize: 1000,
       filter: combineCELFilters(creatorFilter, scopeFilter, "has_location"),
     },
-    { enabled: Boolean(creatorFilter) },
+    { enabled: true },
   );
 
   useEffect(() => {

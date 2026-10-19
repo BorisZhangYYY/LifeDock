@@ -2,24 +2,19 @@ import MemoView from "@/components/MemoView";
 import PagedMemoList, { getMemoKey } from "@/components/PagedMemoList";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useMemoFilters, useMemoSorting } from "@/hooks";
-import useCurrentUser from "@/hooks/useCurrentUser";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import { State } from "@/types/proto/api/v1/common_pb";
-import { Memo, Visibility } from "@/types/proto/api/v1/memo_service_pb";
+import { Memo } from "@/types/proto/api/v1/memo_service_pb";
 
 const Explore = () => {
-  const currentUser = useCurrentUser();
+  const { creatorName } = useBrowseScope();
   const { memoFilter: contextFilter, selectedSpaceName } = useSpaceContext();
 
-  // Determine visibility filter based on authentication status
-  // - Logged-in users: Can see every audience the backend authorizes, including SPACE memos
-  // - Visitors: Can only see PUBLIC memos
-  // Note: The backend is responsible for filtering stats based on visibility permissions.
-  const visibilities = currentUser ? [Visibility.PUBLIC, Visibility.PROTECTED, Visibility.SPACE] : [Visibility.PUBLIC];
-
+  // Readable content and creator scoping match the other collection lenses.
   const memoFilter = useMemoFilters({
     includeMemoViews: true,
     includePinned: false,
-    visibilities,
+    creatorName,
   });
 
   // Get sorting logic using unified hook (no pinned sorting)

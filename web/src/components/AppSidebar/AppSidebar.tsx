@@ -54,11 +54,14 @@ import { useInstance } from "@/contexts/InstanceContext";
 import { getFilterSearch, useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useAttachmentLibraryStats } from "@/hooks/useAttachmentLibrary";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { type MemoStatsContext, useFilteredMemoStats } from "@/hooks/useFilteredMemoStats";
 import useMediaQuery from "@/hooks/useMediaQuery";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useMemoViews, useNotifications, userKeys, useUser } from "@/hooks/useUserQueries";
+import { buildBrowseSearch } from "@/lib/browse-scope";
+import { combineCELFilters } from "@/lib/cel-filter";
 import { handleError } from "@/lib/error";
 import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoCollectionRoute, type PrimaryMemoScope, resolveMemoScope } from "@/lib/memo-views";
 import { cn } from "@/lib/utils";
@@ -68,6 +71,7 @@ import type { MemoView } from "@/types/proto/api/v1/memo_view_service_pb";
 import { User_Role, UserNotification_Status, UserNotification_Type } from "@/types/proto/api/v1/user_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import MemosLogo from "../MemosLogo";
+import CreatorSelector from "./CreatorSelector";
 import MoodFilterSection from "./MoodFilterSection";
 import PersonalNavigation from "./PersonalNavigation";
 import { getSidebarRouteKind, routeSupportsCollectionScope } from "./routes";
@@ -118,10 +122,11 @@ const ViewsSection = ({ manageActive = false }: { manageActive?: boolean }) => {
   const { setMobileOpen } = useAppSidebar();
   const [deleteTarget, setDeleteTarget] = useState<MemoView>();
   const location = useLocation();
+  const browse = useBrowseScope();
 
   const handleView = (viewId: string) => {
     setMemoView(selectedMemoView === viewId ? undefined : viewId);
-    if (!isMemoCollectionRoute(location.pathname)) navigate(ROUTES.HOME);
+    if (!isMemoCollectionRoute(location.pathname)) navigate({ pathname: ROUTES.HOME, search: browse.search });
     setMobileOpen(false);
   };
 
@@ -252,6 +257,7 @@ const CollectionSidebarContent = ({ context }: { context: MemoStatsContext }) =>
   const t = useTranslate();
   const location = useLocation();
   const currentUser = useCurrentUser();
+  const browse = useBrowseScope();
   const { memoFilter, selectedSpaceName } = useSpaceContext();
   const md = useMediaQuery("md");
   const { mobileOpen, setMobileOpen } = useAppSidebar();
@@ -262,12 +268,13 @@ const CollectionSidebarContent = ({ context }: { context: MemoStatsContext }) =>
   const { data: profileUser } = useUser(profileMatch?.params.username ? `users/${profileMatch.params.username}` : "", {
     enabled: context === "profile" && !!profileMatch?.params.username,
   });
-  const statsUserName = context === "home" ? currentUser?.name : context === "profile" ? profileUser?.name : undefined;
+  const statsUserName =
+    context === "home" || context === "explore" ? browse.creatorName : context === "profile" ? profileUser?.name : undefined;
   // User-level collections stay aligned with their unscoped feeds even when a Space is remembered.
   const isUserLevelCollection = context === "profile" || context === "archived";
   const statsFilter = isUserLevelCollection ? undefined : memoFilter;
   const { statistics, tags, dailyMoodStats } = useFilteredMemoStats({
-    context,
+    context: context === "home" || context === "explore" ? (statsUserName ? "profile" : "collection") : context,
     userName: statsUserName,
     filter: statsFilter,
     enabled: authInitialized && instanceInitialized && (md || mobileOpen),
@@ -304,8 +311,9 @@ const CollectionSidebarContent = ({ context }: { context: MemoStatsContext }) =>
 const AttachmentsSidebarContent = () => {
   const t = useTranslate();
   const { memoFilter, selectedSpaceName } = useSpaceContext();
+  const { creatorFilter, isOwn } = useBrowseScope();
   const { attachmentSection, setAttachmentSection, setMobileOpen } = useAppSidebar();
-  const { isComplete, stats } = useAttachmentLibraryStats(memoFilter);
+  const { isComplete, stats } = useAttachmentLibraryStats(combineCELFilters(memoFilter, creatorFilter));
   const total = stats.media + stats.documents + stats.audio;
   const rows: Array<{ value: AttachmentSection; icon: LucideIcon; label: string; count?: number }> = [
     { value: "all", icon: ListIcon, label: t("common.all"), count: isComplete ? total : undefined },
@@ -319,7 +327,7 @@ const AttachmentsSidebarContent = () => {
     },
   ];
   // Unlinked uploads do not belong to any Space, so "Unused" is only a Memos-level collection.
-  if (!selectedSpaceName) {
+  if (!selectedSpaceName && isOwn) {
     rows.push({
       value: "unused",
       icon: Trash2Icon,
@@ -456,6 +464,7 @@ const CollectionNavigationItems = () => {
   const t = useTranslate();
   const location = useLocation();
   const navigate = useNavigate();
+  const currentUser = useCurrentUser();
   const { filters } = useMemoFilterContext();
   const { setMobileOpen, setMemoScope } = useAppSidebar();
   const destinations = [
@@ -472,7 +481,15 @@ const CollectionNavigationItems = () => {
           aria-current={location.pathname === path ? "page" : undefined}
           onClick={() => {
             if (scope) setMemoScope(scope);
-            navigate({ pathname: path, search: scope ? getFilterSearch(filters) : "" });
+            navigate({
+              pathname: path,
+              search: scope
+                ? buildBrowseSearch(
+                    getFilterSearch(filters),
+                    scope === "home" ? (currentUser?.username ?? currentUser?.name.slice("users/".length)) : undefined,
+                  )
+                : "",
+            });
             setMobileOpen(false);
           }}
         >
@@ -488,6 +505,7 @@ const GlobalNavigation = () => {
   const t = useTranslate();
   const location = useLocation();
   const currentUser = useCurrentUser();
+  const browse = useBrowseScope();
   const { memoDetail, memoScope, setMemoScope, setMobileOpen } = useAppSidebar();
   const { isUserSettingsInitialized } = useAuth();
   const { remindersEnabled, financeEnabled, moodEnabled } = usePersonalFeatures();
@@ -533,7 +551,7 @@ const GlobalNavigation = () => {
           )}
         >
           <Link
-            to={{ pathname: timelinePath, search: getFilterSearch(filters) }}
+            to={{ pathname: timelinePath, search: buildBrowseSearch(getFilterSearch(filters), browse.creator) }}
             onClick={() => {
               if (currentUser) setMemoScope("home");
               setMobileOpen(false);
@@ -553,7 +571,7 @@ const GlobalNavigation = () => {
             <TooltipTrigger
               render={
                 <Link
-                  to={path}
+                  to={routeSupportsCollectionScope(path) ? { pathname: path, search: browse.search } : path}
                   onClick={() => setMobileOpen(false)}
                   aria-label={label}
                   aria-current={active ? "page" : undefined}
@@ -618,6 +636,7 @@ const SidebarBrand = ({ className }: { className?: string }) => {
 };
 
 const AppSidebar = ({ className }: { className?: string }) => {
+  const location = useLocation();
   const t = useTranslate();
   const currentUser = useCurrentUser();
   const { setMobileOpen, setQuickFindOpen } = useAppSidebar();
@@ -643,6 +662,11 @@ const AppSidebar = ({ className }: { className?: string }) => {
         </div>
       </div>
       <GlobalNavigation />
+      {routeSupportsCollectionScope(location.pathname) && (
+        <div className={cn("mt-2", SIDEBAR_HORIZONTAL_PADDING)}>
+          <CreatorSelector />
+        </div>
+      )}
       <div className="mx-3 mt-2 border-t border-border/70" />
       <div className={cn("min-h-0 flex-1 overflow-y-auto overflow-x-hidden pt-2 pb-3 [scrollbar-width:thin]", SIDEBAR_HORIZONTAL_PADDING)}>
         <RouteSidebarContent />

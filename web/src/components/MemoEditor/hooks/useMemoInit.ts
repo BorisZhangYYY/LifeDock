@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Memo, Visibility } from "@/types/proto/api/v1/memo_service_pb";
+import { Visibility as MemoVisibility } from "@/types/proto/api/v1/memo_service_pb";
+import { convertVisibilityToString } from "@/utils/memo";
+import { isMemoVisibilityEnabled } from "@/utils/visibility";
 import { cacheService, memoService } from "../services";
 import { useEditorContext } from "../state";
 import type { EditorController } from "../types/editorController";
@@ -12,6 +15,8 @@ interface UseMemoInitOptions {
   autoFocus?: boolean;
   defaultVisibility?: Visibility;
   defaultCreateTime?: Date;
+  defaultSpace?: string;
+  allowedVisibilities?: string[];
 }
 
 export const useMemoInit = ({
@@ -22,6 +27,8 @@ export const useMemoInit = ({
   autoFocus,
   defaultVisibility,
   defaultCreateTime,
+  defaultSpace,
+  allowedVisibilities,
 }: UseMemoInitOptions) => {
   const { actions, dispatch } = useEditorContext();
   const initializedRef = useRef(false);
@@ -45,8 +52,15 @@ export const useMemoInit = ({
         dispatch(actions.setMetadata({ attachments: cachedDraft.attachments }));
       }
       dispatch(actions.setMetadata({ moodLevel: cachedDraft.moodLevel ?? 0 }));
-      if (defaultVisibility !== undefined) {
-        dispatch(actions.setMetadata({ visibility: defaultVisibility }));
+      const space = cachedDraft.space ?? defaultSpace ?? "";
+      dispatch(actions.setMetadata({ space }));
+      const cachedVisibility = cachedDraft.visibility;
+      const canRestoreVisibility =
+        cachedVisibility !== undefined &&
+        isMemoVisibilityEnabled(convertVisibilityToString(cachedVisibility), allowedVisibilities) &&
+        (cachedVisibility !== MemoVisibility.SPACE || Boolean(space));
+      if (canRestoreVisibility || defaultVisibility !== undefined) {
+        dispatch(actions.setMetadata({ visibility: canRestoreVisibility ? cachedVisibility : defaultVisibility }));
       }
       if (defaultCreateTime) {
         dispatch(actions.setTimestamps({ createTime: defaultCreateTime, updateTime: defaultCreateTime }));

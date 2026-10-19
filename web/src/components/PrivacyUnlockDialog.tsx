@@ -1,5 +1,6 @@
 import { LockKeyholeIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,37 +19,56 @@ const PrivacyUnlockDialog = ({ open, onOpenChange, onUnlocked }: Props) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const verificationRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
       setPassword("");
       setError("");
-      return;
+      setVerifying(false);
+    } else {
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
-    requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      verificationRef.current += 1;
+    };
   }, [open]);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      verificationRef.current += 1;
+      setPassword("");
+      setError("");
+      setVerifying(false);
+    }
+    onOpenChange(nextOpen);
+  };
 
   const unlock = async () => {
     if (!password || verifying) return;
     setVerifying(true);
     setError("");
+    const verification = ++verificationRef.current;
     try {
       await authServiceClient.verifyPassword({ password });
+      if (verification !== verificationRef.current) return;
       onUnlocked();
-      onOpenChange(false);
+      handleOpenChange(false);
     } catch {
+      if (verification !== verificationRef.current) return;
       setError(t("setting.personal-features.incorrect-password"));
+      toast.error(t("setting.personal-features.incorrect-password"), { id: "privacy-unlock-error" });
       setPassword("");
       requestAnimationFrame(() => inputRef.current?.focus());
     } finally {
-      setVerifying(false);
+      if (verification === verificationRef.current) setVerifying(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm" className="gap-3 rounded-xl p-4 md:max-w-[20rem]" showCloseButton={false}>
-        <DialogHeader className="gap-1 text-left">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent size="sm" className="gap-3 rounded-xl p-4 md:max-w-[20rem]">
+        <DialogHeader className="gap-1 pe-6 text-left">
           <DialogTitle className="flex items-center gap-2 text-sm">
             <span className="flex size-7 items-center justify-center rounded-full bg-muted text-muted-foreground">
               <LockKeyholeIcon className="size-3.5" />
@@ -75,14 +95,6 @@ const PrivacyUnlockDialog = ({ open, onOpenChange, onUnlocked }: Props) => {
             {verifying ? t("setting.personal-features.verifying") : t("setting.personal-features.unlock")}
           </Button>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <button
-          type="button"
-          className="self-center text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => onOpenChange(false)}
-        >
-          {t("common.cancel")}
-        </button>
       </DialogContent>
     </Dialog>
   );

@@ -13,6 +13,8 @@ export const useDateFilterNavigation = (targetPath?: string) => {
       const filterQuery = stringifyFilters(nextFilters);
       const basePath = targetPath ?? location.pathname;
       const nextSearchParams = targetPath ? new URLSearchParams() : new URLSearchParams(location.search);
+      const creator = new URLSearchParams(location.search).get("creator");
+      if (targetPath && creator !== null) nextSearchParams.set("creator", creator);
       nextSearchParams.set("filter", filterQuery);
       setFilters(nextFilters);
       navigate({ pathname: basePath, search: nextSearchParams.toString() });

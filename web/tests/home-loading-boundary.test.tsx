@@ -143,3 +143,5 @@ describe("<Home>", () => {
     });
   });
 });
+
+vi.mock("@/hooks/useMemoSuggestions", () => ({ useMemoSuggestions: () => [] }));

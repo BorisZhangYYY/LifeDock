@@ -293,7 +293,8 @@
       "resolve-image-uploads": "請先處理未完成的圖片上傳",
       "save-in-progress": "正在儲存",
       "unsupported-attachment-image-url": "不支援的附件圖片網址：{{url}}",
-      "wait-for-upload": "請等待上傳完成"
+      "wait-for-upload": "請等待上傳完成",
+      "wait-for-transcription": "請等待音訊轉寫完成後再儲存"
     },
     "unsupported-syntax-raw-mode": "此備忘錄包含富文字編輯器無法安全編輯的語法，因此已使用原始 Markdown 模式開啟。",
     "wysiwyg-editor": "所見即所得編輯器",
@@ -327,7 +328,8 @@
       "trigger": "錄製音訊",
       "unsupported": "不支援錄音",
       "unsupported-description": "此瀏覽器無法錄製備忘錄編輯器中的音訊。"
-    }
+    },
+    "suggestions": "建議"
   },
   "inbox": {
     "failed-to-load": "載入失敗",
@@ -520,6 +522,11 @@
     "go-to-home": "回到首頁"
   },
   "setting": {
+    "personal-features": {
+      "home-privacy-description": "進入心情、收支、提醒事項及敏感 Memo 前，先驗證帳戶密碼。",
+      "privacy-description": "隱藏個人內容，驗證帳戶密碼後顯示。內容不會加密。",
+      "password-required-by-hiding": "開啟「隱藏個人內容」時，必須驗證帳戶密碼後才能查看。"
+    },
     "access-token": {
       "access-token-copied-to-clipboard": "存取令牌已複製到剪貼簿",
       "access-token-deleted": "存取令牌 `{{description}}` 已刪除",
@@ -1065,7 +1072,10 @@
     "loading": "正在載入空間…",
     "name-placeholder": "例如：產品",
     "spaces": "空間",
-    "switch": "切換空間"
+    "switch": "切換空間",
+    "add-to": "加入空間",
+    "remove-from": "從 {{space}} 移除",
+    "no-spaces": "暫無可選空間"
   },
   "tag": {
     "all-tags": "所有標籤",
@@ -1090,5 +1100,13 @@
     "select-visibility": "瀏覽權限",
     "tags": "標籤",
     "upload-attachment": "上傳附件"
+  },
+  "browse": {
+    "creator": "作者",
+    "all": "全部作者",
+    "mine": "我的記錄",
+    "choose": "依作者瀏覽",
+    "username": "使用者名稱",
+    "apply": "瀏覽"
   }
 }

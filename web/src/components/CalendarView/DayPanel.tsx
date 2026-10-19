@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { NewMemoProvider } from "@/contexts/NewMemoContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useView } from "@/contexts/ViewContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
+import { useMemoSuggestions } from "@/hooks/useMemoSuggestions";
 import { parseLocalDate } from "@/lib/calendar-utils";
 import { cn } from "@/lib/utils";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
@@ -32,6 +34,8 @@ export interface DayPanelProps {
  * end of a day; the memo it saves seeds its creation time to that date and lands right above it.
  */
 export const DayPanel = ({ date, memos, onClose }: DayPanelProps) => {
+  const suggestions = useMemoSuggestions();
+  const { isOwn, isMixed } = useBrowseScope();
   const t = useTranslate();
   const { i18n } = useTranslation();
   const { isUserSettingsInitialized } = useAuth();
@@ -71,6 +75,7 @@ export const DayPanel = ({ date, memos, onClose }: DayPanelProps) => {
               memo={memo}
               timeDisplay="time"
               showVisibility
+              showCreator={isMixed || !isOwn}
               showPinned
               showSpace={!selectedSpaceName}
               compact={compactMode}
@@ -78,8 +83,10 @@ export const DayPanel = ({ date, memos, onClose }: DayPanelProps) => {
           ))}
         </MentionResolutionProvider>
         {isUserSettingsInitialized &&
+          isOwn &&
           (composing ? (
             <MemoEditor
+              suggestions={suggestions}
               cacheKey={`calendar-day-editor:${date}`}
               autoFocus
               placeholder={t("editor.any-thoughts")}

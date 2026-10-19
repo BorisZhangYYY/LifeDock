@@ -6,12 +6,15 @@ This package serves an [OpenAPI](https://www.openapis.org/)-driven
 transport using the official `github.com/modelcontextprotocol/go-sdk`.
 
 The core design principle: **tool calls execute in-process against the existing
-REST API.** The package owns no store or service logic of its own. Each tool is
-derived from an operation in the generated OpenAPI document
+REST API.** The package owns no store or authorization logic of its own. Tools are
+derived from operations in the generated OpenAPI document
 (`proto/gen/openapi.yaml`, embedded via `proto.OpenAPIYAML()`), and a tool call
 is translated into the matching `/api/v1/...` HTTP request and run against the
 same Echo server that serves the public API. This keeps OpenAPI as the single
 source of truth and reuses the API's authentication and authorization as-is.
+The activity-summary tool is a compact presentation of `GetUserStats`, with
+its own input/output schemas; it aggregates the API response without accessing
+the database or changing the API's visibility and retained-history rules.
 
 ## Integration
 
@@ -40,8 +43,11 @@ fast on any inconsistency:
 3. `buildCuratedTools` (`catalog.go`) selects the allowlisted operation IDs and
    converts each into an `*sdkmcp.Tool` plus a `registeredOperation`. Missing
    IDs or duplicate tool names are construction errors.
-4. Each tool is registered with `server.AddTool(tool, newMCPToolHandler(...))`.
-5. `sdkmcp.NewStreamableHTTPHandler` wraps the server in stateless,
+4. Tool argument schemas are compiled once; invalid schemas fail startup.
+   The same immutable validators and handlers are reused across profiles.
+   Each tool is registered with `server.AddTool`.
+5. `sdkmcp.NewStreamableHTTPHandler` selects a prebuilt server by the optional
+   `profile` URL query parameter and wraps it in stateless,
    JSON-response mode (no SSE, no session tracking).
 
 ## Request flow
@@ -53,8 +59,8 @@ fast on any inconsistency:
 3. The SDK streamable handler dispatches the MCP message.
 4. On a `tools/call` request, `newMCPToolHandler` (`service.go`) decodes the JSON
    arguments into a map.
-5. `validateToolArguments` (`validation.go`) checks them against the tool's
-   input schema.
+5. The precompiled validator (`validation.go`) checks them against the tool's
+   input schema. Historical occurrence queries also validate their date range.
 6. The caller's `Authorization` header is read from the request (`request.Extra.Header` on the SDK's `*sdkmcp.CallToolRequest`).
 7. For REST operations scoped by `/users/{user}`, the adapter calls
    `/api/v1/auth/me` with the same Authorization header and injects the
@@ -145,7 +151,8 @@ a personal access token as a bearer credential. Example client config:
 
 ## Tool surface
 
-The server exposes a curated allowlist (`curatedOperationIDs` in `catalog.go`).
+The default endpoint exposes 56 tools: 55 operations in the curated allowlist
+(`curatedOperationIDs` in `catalog.go`) and one compact activity-summary view.
 Entries are intentionally scoped to notes, reminders, a private finance ledger,
 personal settings, narrow mood-display configuration, or statistics. The only
 auth operation is the read-only `AuthService_GetCurrentUser` ("whoami").
@@ -167,7 +174,7 @@ auth operation is the read-only `AuthService_GetCurrentUser` ("whoami").
 | `MemoService_DeleteMemoReaction` | `memo_delete_memo_reaction` | Remove a reaction. |
 | `MemoService_ListMemoRelations` | `memo_list_memo_relations` | Read memo relations. |
 | `MemoService_SetMemoRelations` | `memo_set_memo_relations` | Replace memo relations. |
-| `AttachmentService_ListAttachments` | `attachment_list_attachments` | List the user's attachments. |
+| `AttachmentService_ListAttachments` | `attachment_list_attachments` | List readable memos' attachments and the user's unlinked uploads; filter by `creator` or `space`. |
 | `AttachmentService_CreateAttachment` | `attachment_create_attachment` | Upload an image or file, optionally attaching it to an existing memo. |
 | `AttachmentService_GetAttachment` | `attachment_get_attachment` | Read attachment metadata/content. |
 | `AttachmentService_DeleteAttachment` | `attachment_delete_attachment` | Delete an attachment. |
@@ -177,6 +184,8 @@ auth operation is the read-only `AuthService_GetCurrentUser` ("whoami").
 | `ReminderService_UpdateReminderList` | `reminder_update_reminder_list` | Rename or reorder a reminder list. |
 | `ReminderService_DeleteReminderList` | `reminder_delete_reminder_list` | Delete a list and its reminders, retaining completed history. |
 | `ReminderService_ListReminders` | `reminder_list_reminders` | Query reminders and completed items. |
+| `ReminderService_ListReminderOccurrences` | `reminder_list_reminder_occurrences` | Read retained completion and skipped-period history; `startDate` and `endDate` are required, inclusive YYYY-MM-DD dates, at most 366 calendar days including both endpoints. |
+| `ReminderService_GetReminderStats` | `reminder_get_reminder_stats` | Read completion totals and rates, including retained history; optional inclusive `startDate`/`endDate`. |
 | `ReminderService_CreateReminder` | `reminder_create_reminder` | Create a reminder using `remindTime` or date-only `dueDate` (there is no details field). |
 | `ReminderService_UpdateReminder` | `reminder_update_reminder` | Update reminder details. |
 | `ReminderService_DeleteReminder` | `reminder_delete_reminder` | Delete a reminder. |
@@ -199,9 +208,58 @@ auth operation is the read-only `AuthService_GetCurrentUser` ("whoami").
 | `InstanceService_GetMemoMoodDisplay` | `instance_get_memo_mood_display` | Read all seven effective memo mood display Emoji/color entries. |
 | `InstanceService_UpdateMemoMoodDisplay` | `instance_update_memo_mood_display` | Partially update the Emoji/color displayed for selected mood levels; admin-only. |
 | `UserService_GetUserStats` | `user_get_user_stats` | Read structured user memo, tag, and mood statistics. |
+| `UserService_GetUserStats` (compact view) | `user_get_activity_summary` | Read daily memo counts and mood distributions in an explicit date range and time zone, without per-record timestamps or resource names. |
 | `UserService_GetUserSetting` | `user_get_user_setting` | Read the caller's `GENERAL`, `TAGS`, or `PERSONA` setting (uppercase key). |
 | `UserService_UpdateUserSetting` | `user_update_user_setting` | Update `GENERAL`, `TAGS`, or `PERSONA`; field masks use proto snake_case names. |
 | `AuthService_GetCurrentUser` | `auth_get_current_user` | Resolve the authenticated user. |
+| `MemoViewService_ListMemoViews` | `memo_view_list_memo_views` | List Saved Views; preferred over the legacy Shortcut alias. |
+| `SpaceService_ListSpaces` | `space_list_spaces` | List the caller's Spaces. |
+| `SpaceService_GetSpace` | `space_get_space` | Read one Space. |
+
+### Focused tool profiles
+
+Choose a stable URL in the client configuration:
+
+| URL | Tools |
+| --- | --- |
+| `/mcp` or `/mcp?profile=all` | Complete toolset, including existing compatibility aliases. |
+| `/mcp?profile=notes` | Memos, attachments, Saved Views, Spaces, mood, statistics, and identity. |
+| `/mcp?profile=personal` | Reminders, finance, mood, personal settings, statistics, identity, and memo search/read/create/update for linked notes. |
+
+Both focused profiles omit the legacy Shortcut alias and instance statistics.
+The Shortcut tool stays available at the default URL, with a deprecation hint
+and a description pointing to Saved Views. Tools carry a `category` in `_meta`.
+Profiles select both discovery and callable tools; they do not grant or restrict
+the token's API permissions. Unknown, empty, or repeated `profile` values return
+HTTP 400 instead of silently changing the toolset.
+
+### Compact reviews and bounded results
+
+For daily activity, use `user_get_activity_summary`:
+
+```json
+{"startDate":"2026-10-01","endDate":"2026-10-31","timeZone":"Asia/Shanghai"}
+```
+
+The inclusive range is limited to 366 calendar days. The result contains
+`memoCount`, `activeDays`, `moodCount`, `moodLevelCounts`, and ascending daily
+buckets, including empty days. Each `moodLevelCounts` array has seven counts
+ordered from mood level 1 to 7. Memo counts use creation dates of normal,
+top-level memos. Deleted memos contribute only their retained mood records.
+The authenticated user is resolved internally; callers cannot select another
+user or omit the time zone. `Local` is rejected because it depends on the server.
+
+This reduces the response sent to the MCP client. The underlying `GetUserStats`
+API still reads its existing detailed data; this change does not reduce database
+work. Existing detailed statistics and their output schemas remain available.
+For reminder totals, prefer `reminder_get_reminder_stats`; request occurrence
+details only when needed. For finances, prefer `finance_get_finance_summary`.
+For memo and attachment lists, request a small `pageSize` and follow
+`nextPageToken` as `pageToken`, rather than collecting every record in one call.
+
+Creation/update tools include schema examples covering date-only reminders,
+field masks, and minor-unit amounts. Example resource names are illustrative;
+resolve the caller's actual lists, wallets, and categories before writing.
 
 To write an illustrated memo, call `memo_create_memo` first, then call
 `attachment_create_attachment` with `body.filename`, `body.type` (for example
@@ -284,7 +342,7 @@ not replace API authorization.
 This is deliberate: it fixes [#6022](https://github.com/usememos/memos/issues/6022),
 where collection tools returned a bare array that strict MCP clients reject.
 
-Inside that envelope the API's JSON is passed through verbatim, so the gateway's
+For direct API tools, the API's JSON is passed through verbatim, so the gateway's
 own encoding is part of the tool contract: whatever it emits is validated against
 the output schema resolved from the same OpenAPI spec. grpc-gateway's stock
 marshaler emits `null` for unset message fields, which no schema declares as
@@ -315,6 +373,8 @@ validate an error payload against the tool's success-only output schema:
 | --- | --- |
 | `service.go` | Constructs the MCP server, registers tools, builds the streamable HTTP handler, and binds the `/mcp` route. |
 | `catalog.go` | The curated operation allowlist, tool naming, input/output schema assembly, and method-derived annotations. |
+| `discovery.go` | Tool categories, validated input examples, compatibility hints, and focused profile selection. |
+| `activity_summary.go` | Bounded daily presentation of the authenticated user's API statistics. |
 | `adapter.go` | Translates a tool call into an `/api/v1/...` request and runs it in-process against the Echo server. |
 | `openapi.go` | Parses the OpenAPI spec, builds the operation registry, and resolves `$ref` schemas into self-contained JSON Schema. |
 | `validation.go` | Validates tool-call arguments against the tool's input schema. |
@@ -347,7 +407,10 @@ go test ./server/router/mcp/...
 - `openapi_test.go` — spec parsing, registry building, `$ref` resolution.
 - `catalog_test.go` — tool selection, naming, schema and annotation building.
 - `adapter_test.go` — request construction and in-process execution (`adapter.go`), plus result normalization and error shaping (`result.go`).
-- `validation_test.go` — argument validation against input schemas.
+- `validation_test.go` — argument validation, concurrent compiled-validator reuse, startup rejection of invalid schemas, and a benchmark against per-call compilation.
+- `activity_summary_test.go` — calendar/time-zone boundaries, retained moods, bounded output size, and output-schema validation.
+- `discovery_test.go` — valid examples, focused discovery/callability, and explicit invalid-profile errors.
+- `../../test/mcp_workflows_test.go` — reminder, ledger, retained-mood and identity-isolation workflows through the real server.
 - `service_test.go` — the origin-header check, plus the end-to-end MCP protocol
   (`initialize`, `tools/list`, `tools/call`) confirming object-shaped
   `structuredContent`.
@@ -356,10 +419,12 @@ go test ./server/router/mcp/...
 
 ## Design notes
 
-- **Two-layer input validation.** `validateToolArguments` runs a hand-rolled
+- **Two-layer input validation.** Each compiled tool validator runs a hand-rolled
   structural check (`validateSchemaValue`) and then the `google/jsonschema-go`
   validator. The first yields friendly messages; the second is the
-  spec-complete backstop.
+  spec-complete backstop. Schema serialization and resolution happen at startup,
+  not on each call. Compare using
+  `go test ./server/router/mcp -run '^$' -bench BenchmarkToolArgumentValidation -benchmem`.
 - **Embedded vs. file load.** Production reads the spec from
   `proto.OpenAPIYAML()` (`loadMCPServiceOpenAPISpec`). The path-based
   `loadOpenAPISpec` in `openapi.go` exists for tests.

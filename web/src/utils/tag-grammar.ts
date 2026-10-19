@@ -224,3 +224,10 @@ export function findTagMatches(source: string, from = 0, limit = source.length):
 
   return matches;
 }
+
+/** A suggested tag must round-trip through the shared tag grammar unchanged. */
+export function isCompleteTagValue(value: string): boolean {
+  const source = `#${value}`;
+  const match = scanTagAt(source, 0);
+  return Boolean(match && match.to === source.length && match.value === value);
+}

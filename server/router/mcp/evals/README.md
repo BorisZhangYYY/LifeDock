@@ -16,7 +16,54 @@ model to return the exact tool name(s), without calling anything, for similar
 configuration and content-editing requests. It specifically guards the
 difference between a memo's `moodLevel`, the seven-level Emoji/color display
 configuration, memo reactions, and finance category Emoji. Its answers do not
-depend on seeded data.
+depend on seeded data. It also covers Chinese requests for reminder history,
+retained statistics, compact daily summaries, Saved Views, and finance totals.
+
+## Automated checks and model evaluation
+
+The normal backend server test job runs
+`server/test/mcp_workflows_test.go` against a fresh SQLite database and the real
+HTTP MCP endpoint. It verifies recurring-reminder advancement, retained history
+after list deletion, ledger corrections/deletion, deleted-memo mood summaries,
+anonymous refusal, and cross-user isolation. These are deterministic service
+checks, not evidence that a language model can complete the tasks.
+
+`run.py` provides a repeatable model-evaluation and scoring entry point using
+only the Python standard library:
+
+```bash
+# Supply an executable that connects to your chosen model.
+# MEMOS_MCP_TOKEN is read from the environment and is never printed by the harness.
+python3 -B server/router/mcp/evals/run.py \
+  --suite server/router/mcp/evals/tool_selection_eval.xml \
+  --mcp-url http://localhost:8099/mcp \
+  --runner '/absolute/path/to/your-model-runner' \
+  --report /tmp/mcp-tool-selection-report.json
+
+# Score saved model answers without connecting to an instance or model.
+python3 -B server/router/mcp/evals/run.py \
+  --suite server/router/mcp/evals/tool_selection_eval.xml \
+  --answers /tmp/mcp-answers.json
+
+# Harness self-tests, also run by backend CI.
+python3 -B -m unittest discover -s server/router/mcp/evals -p '*_test.py'
+```
+
+The runner is invoked directly, without a shell, once per question. It reads a
+JSON object from stdin containing `question`, `mode`, `instructions`, `tools`,
+and `mcp` (`url` and request `headers`). Expected answers are never sent to it.
+It writes only its final answer to stdout. In `selection` mode it must not call
+tools; in `tasks` mode it may compose read-only MCP calls against the supplied
+instance. Use `memos_eval.xml` for seeded task questions. Each runner invocation
+is independent; do not carry answer state between questions.
+
+The answers file is a JSON array of strings in question order. Selection scoring
+strips client-added `mcp__<server>__` prefixes and normalizes comma spacing;
+task scoring only trims outer whitespace. Reports include each expected and
+actual answer. Exit codes are 0 for all correct, 1 for any incorrect answer,
+and 2 for configuration, transport, or runner failures. `--timeout` defaults to
+60 seconds per question. Changing descriptions should be followed by a real
+model run; harness self-tests alone do not validate model behavior.
 
 ## Why a fresh seeded instance (not the public demo)
 

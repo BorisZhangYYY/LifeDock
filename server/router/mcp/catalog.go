@@ -36,6 +36,8 @@ var curatedOperationIDs = []string{
 	"ReminderService_UpdateReminderList",
 	"ReminderService_DeleteReminderList",
 	"ReminderService_ListReminders",
+	"ReminderService_ListReminderOccurrences",
+	"ReminderService_GetReminderStats",
 	"ReminderService_CreateReminder",
 	"ReminderService_UpdateReminder",
 	"ReminderService_DeleteReminder",
@@ -110,6 +112,9 @@ type argumentSchemaOverride struct {
 // strict for partial updates, while body: "*" schemas include fields already
 // supplied by the path.
 var requestBodySchemaOverrides = map[string]requestBodySchemaOverride{
+	"ReminderService_ListReminderOccurrences": {
+		requiredArguments: []string{"startDate", "endDate"},
+	},
 	"MemoService_CreateMemo": {
 		required: []string{"content"},
 	},
@@ -208,6 +213,14 @@ var requestBodySchemaOverrides = map[string]requestBodySchemaOverride{
 }
 
 var argumentSchemaOverrides = map[string]map[string]argumentSchemaOverride{
+	"ReminderService_ListReminderOccurrences": {
+		"startDate": {description: "Inclusive first scheduled date, YYYY-MM-DD. Use a bounded range for historical review."},
+		"endDate":   {description: "Inclusive last scheduled date, YYYY-MM-DD. Completed history remains after its reminder is deleted."},
+	},
+	"ReminderService_GetReminderStats": {
+		"startDate": {description: "Inclusive first scheduled date, YYYY-MM-DD."},
+		"endDate":   {description: "Inclusive last scheduled date, YYYY-MM-DD. Prefer this tool to listing every occurrence when only totals and rates are needed."},
+	},
 	"FinanceService_UpdateFinanceWallet": {
 		"updateMask": {
 			description: "Comma-separated proto field names in snake_case. Allowed fields are display_name, allow_negative_balance, and state.",
@@ -251,14 +264,21 @@ var argumentSchemaOverrides = map[string]map[string]argumentSchemaOverride{
 }
 
 var operationDescriptionOverrides = map[string]string{
+	"MemoService_ListMemos":                   "Search readable top-level memos with CEL filters. For example, use \"work\" in tags, or has_task_list && has_incomplete_tasks. Request a small pageSize and follow nextPageToken as pageToken. For daily memo and mood totals, prefer user_get_activity_summary.",
+	"UserService_GetUserStats":                "Read detailed current-user memo, tag, and private mood statistics, including individual timestamps. For a bounded daily activity and mood review, prefer user_get_activity_summary to avoid returning every record.",
+	"ShortcutService_ListShortcuts":           "Legacy compatibility alias for listing Saved Views. Prefer memo_view_list_memo_views for new workflows; this tool remains available to existing clients.",
+	"MemoViewService_ListMemoViews":           "List the current user's Saved Views and their reusable CEL filters. Prefer this tool over the legacy shortcut_list_shortcuts alias.",
+	"ReminderService_ListReminderOccurrences": "Read reminder completion and skipped-period history for a required inclusive startDate/endDate range (YYYY-MM-DD), at most 366 days. Includes retained history after completed reminders or lists are deleted. For totals and rates, prefer reminder_get_reminder_stats.",
+	"ReminderService_GetReminderStats":        "Read reminder totals and on-time, late, skipped, and final-completion rates for an inclusive startDate/endDate range (YYYY-MM-DD). Includes retained completion history after reminders or lists are deleted; do not reconstruct historical totals from the current reminder list.",
 	"MemoService_CreateMemo":                  "Create a memo. Set body.content, optional body.visibility, and optional body.moodLevel from 1 through 7; moodLevel records this memo's mood and does not configure the level's display emoji or color.",
 	"MemoService_UpdateMemo":                  "Update general fields on one existing memo, such as body.content, body.visibility, or body.pinned. For a mood-only change, prefer memo_set_memo_mood; use instance_update_memo_mood_display only for the instance-wide display emoji or color.",
 	"MemoService_SetMemoMood":                 "Set the mood recorded on one existing memo. Use body.moodLevel from 1 through 7, or 0 to clear the memo's mood. This changes only that memo; it does not change the instance-wide display emoji or color.",
 	"MemoService_SetMemoAttachments":          "Replace the memo's complete attachment set. Existing attachments omitted from body.attachments are permanently deleted, not merely unlinked.",
 	"AttachmentService_CreateAttachment":      "Upload an image or other file from base64 bytes. Set body.filename, body.type (MIME type), and body.content (base64 without a data-URL prefix). Set body.memo to an existing memos/{id} to attach it immediately; otherwise use memo_set_memo_attachments afterward. To embed an uploaded image in memo Markdown, use ![alt](/file/{returned attachment.name}/{filename}).",
+	"AttachmentService_ListAttachments":       "List attachments from memos the authenticated user can read, plus their own unlinked uploads. Filter by creator == \"users/{username}\" to match the linked memo's author (or the uploader for unlinked files), or by space == \"spaces/{id}\". Private and inaccessible Space memos remain excluded. Use memo_id == null for the user's unlinked uploads.",
 	"ReminderService_CreateReminder":          "Create a reminder. Use body.remindTime for an exact notification timestamp or body.dueDate for a date-only reminder; there is no details field.",
 	"FinanceService_CreateFinanceWallet":      "Create a private wallet. Set its opening balance with body.initialBalanceMinor; the current balance is output-only.",
-	"FinanceService_CreateFinanceTransaction": "Record an income, expense, or transfer. body.occurTime is required and must be an RFC 3339 timestamp.",
+	"FinanceService_CreateFinanceTransaction": "Record an income, expense, or transfer. body.amountMinor is an integer string in minor units (for CNY, 1234 means 12.34 yuan). body.occurTime is required and must be an RFC 3339 timestamp. Reuse requestId when retrying the same creation.",
 	"FinanceService_UpdateFinanceCategory":    "Update an income or expense category's display name, emoji, or archive state. Use body.emoji with updateMask=\"emoji\" to change the icon shown for the category; its type is immutable.",
 	"FinanceService_DeleteFinanceWallet":      "Delete a disabled wallet from management. Its transactions and cash-flow history remain available; the wallet cannot be restored.",
 	"FinanceService_UpdateFinanceTransaction": "Correct a ledger transaction and rebuild affected running-balance snapshots in chronological order.",
@@ -293,6 +313,7 @@ func validateOperationOverrides(registry map[string]*openAPIOperation) error {
 		{"requestBodySchemaOverrides", mapKeys(requestBodySchemaOverrides)},
 		{"argumentSchemaOverrides", mapKeys(argumentSchemaOverrides)},
 		{"operationDescriptionOverrides", mapKeys(operationDescriptionOverrides)},
+		{"operationInputExamples", mapKeys(operationInputExamples)},
 		{"requestBodySchemaRefinements", mapKeys(requestBodySchemaRefinements)},
 		{"idempotentOperationIDs", mapKeys(idempotentOperationIDs)},
 		{"destructiveOperationIDs", mapKeys(destructiveOperationIDs)},
@@ -352,6 +373,7 @@ func buildToolFromOperation(operation *openAPIOperation) (*sdkmcp.Tool, *registe
 			"operationId": operation.OperationID,
 			"method":      operation.Method,
 			"path":        operation.Path,
+			"category":    toolCategory(operation.OperationID),
 		},
 		Name:         name,
 		Title:        title,
@@ -359,6 +381,12 @@ func buildToolFromOperation(operation *openAPIOperation) (*sdkmcp.Tool, *registe
 		InputSchema:  inputSchema,
 		OutputSchema: outputSchemaForOperation(operation),
 		Annotations:  annotationsForOperation(operation, title),
+	}
+	if operation.OperationID == "ShortcutService_ListShortcuts" {
+		tool.Meta["deprecated"] = true
+	}
+	if examples := operationInputExamples[operation.OperationID]; len(examples) > 0 {
+		inputSchema["examples"] = examples
 	}
 
 	return tool, &registeredOperation{

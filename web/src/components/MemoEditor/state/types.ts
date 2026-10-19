@@ -3,13 +3,14 @@ import type { Location, MemoRelation } from "@/types/proto/api/v1/memo_service_p
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import type { LocalFile } from "../types/attachment";
 
-export type LoadingKey = "saving" | "uploading" | "loading";
+export type LoadingKey = "saving" | "uploading" | "loading" | "transcribing";
 export type ContentSource = "editor" | "external";
 
 export interface EditorState {
   content: string;
   contentSource: ContentSource;
   metadata: {
+    space?: string;
     visibility: Visibility;
     attachments: Attachment[];
     relations: MemoRelation[];
@@ -24,6 +25,7 @@ export interface EditorState {
       saving: boolean;
       uploading: boolean;
       loading: boolean;
+      transcribing?: boolean;
     };
   };
   timestamps: {

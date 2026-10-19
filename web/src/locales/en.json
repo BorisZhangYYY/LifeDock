@@ -134,11 +134,13 @@
       "resolve-image-uploads": "Resolve image uploads before saving",
       "save-in-progress": "Save in progress",
       "unsupported-attachment-image-url": "Unsupported attachment image URL: {{url}}",
-      "wait-for-upload": "Wait for upload to complete"
+      "wait-for-upload": "Wait for upload to complete",
+      "wait-for-transcription": "Wait for transcription before saving"
     },
     "unsupported-syntax-raw-mode": "This memo contains syntax the rich-text editor can't safely edit, so it opened in raw Markdown mode.",
     "no-changes-detected": "No changes detected",
-    "save": "Save"
+    "save": "Save",
+    "suggestions": "Suggestions"
   },
   "tooltip": {
     "upload-attachment": "Upload Attachment(s)",
@@ -336,6 +338,7 @@
       "theme-description": "Applies the selected theme immediately on this device."
     },
     "personal-features": {
+      "password-required-by-hiding": "Password verification is always required while Hide personal content is enabled.",
       "label": "Personal features",
       "description": "Choose life management features and content privacy settings.",
       "features-title": "Feature switches",
@@ -349,9 +352,9 @@
       "disable-all": "Disable all personal features",
       "all-disabled": "All personal features are disabled",
       "privacy-title": "Privacy",
-      "privacy-description": "Blur personal summaries and sensitive memos until you reveal them. This does not delete or encrypt their data.",
+      "privacy-description": "Hide personal content until you verify your account password. This does not encrypt the data.",
       "home-privacy": "Hide personal content",
-      "home-privacy-description": "Hide mood statistics, finances, reminders, and reminder-linked memos until revealed.",
+      "home-privacy-description": "Require your account password before viewing mood statistics, finances, reminders, and sensitive memos.",
       "privacy-visible": "Visible",
       "privacy-blurred": "Blurred",
       "privacy-collapsed": "Collapsed",
@@ -1549,7 +1552,10 @@
     "loading": "Loading spaces…",
     "name-placeholder": "e.g. Product",
     "spaces": "Spaces",
-    "switch": "Switch space"
+    "switch": "Switch space",
+    "add-to": "Add to Space",
+    "remove-from": "Remove from {{space}}",
+    "no-spaces": "No Spaces available"
   },
   "personal": {
     "records": "Records",
@@ -1599,5 +1605,13 @@
     "previous-period": "Previous period",
     "next-period": "Next period",
     "outcomes-range": "Outcomes in selected range"
+  },
+  "browse": {
+    "creator": "Creator",
+    "all": "All creators",
+    "mine": "My memos",
+    "choose": "Browse by creator",
+    "username": "Username",
+    "apply": "Browse"
   }
 }

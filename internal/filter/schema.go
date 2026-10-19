@@ -296,6 +296,18 @@ func NewSchema() Schema {
 // NewAttachmentSchema constructs the attachment filter schema and CEL environment.
 func NewAttachmentSchema() Schema {
 	fields := map[string]Field{
+		"creator": {
+			Name:   "creator",
+			Kind:   FieldKindScalar,
+			Type:   FieldTypeString,
+			Column: Column{Table: "attachment_creator", Name: "username"},
+			Expressions: map[DialectName]string{
+				DialectSQLite:   "('users/' || %s)",
+				DialectMySQL:    "CONCAT('users/', %s)",
+				DialectPostgres: "('users/' || %s)",
+			},
+			AllowedComparisonOps: map[ComparisonOperator]bool{CompareEq: true, CompareNeq: true},
+		},
 		"filename": {
 			Name:             "filename",
 			Kind:             FieldKindScalar,
@@ -354,6 +366,7 @@ func NewAttachmentSchema() Schema {
 
 	envOptions := []cel.EnvOption{
 		cel.Variable("filename", cel.StringType),
+		cel.Variable("creator", cel.StringType),
 		cel.Variable("mime_type", cel.StringType),
 		cel.Variable("create_time", cel.TimestampType),
 		cel.Variable("memo_id", cel.AnyType),

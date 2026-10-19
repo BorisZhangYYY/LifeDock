@@ -8,6 +8,7 @@ import {
   MemoRelation_Type,
   MemoRelationSchema,
   MemoSchema,
+  Visibility,
 } from "@/types/proto/api/v1/memo_service_pb";
 
 const clients = vi.hoisted(() => ({
@@ -128,5 +129,40 @@ describe("memo editor relation updates", () => {
 
     expect(result).toEqual({ memoName: parentName, hasChanges: false });
     expect(clients.updateMemo).not.toHaveBeenCalled();
+  });
+
+  it("saves a SPACE move with content, audience, mood, and relations in one update", async () => {
+    const memo = create(MemoSchema, {
+      name: "memos/move",
+      content: "Before",
+      space: "spaces/old",
+      visibility: Visibility.SPACE,
+      moodLevel: 6,
+      relations: [createReference("memos/reference")],
+    });
+    const state = createEditorState(memo);
+    state.content = "After";
+    state.metadata.space = "spaces/new";
+    clients.getMemo.mockResolvedValue(memo);
+    await memoService.save(state, { memoName: memo.name });
+    expect(clients.updateMemo).toHaveBeenCalledOnce();
+    const request = clients.updateMemo.mock.calls[0][0];
+    expect(request.updateMask.paths).toEqual(expect.arrayContaining(["content", "space", "visibility"]));
+    expect(request.memo).toMatchObject({ space: "spaces/new", visibility: Visibility.SPACE, content: "After" });
+    expect(state.metadata.moodLevel).toBe(6);
+    expect(state.metadata.relations).toEqual(memo.relations);
+  });
+
+  it("can withdraw a memo from a Space and replace SPACE visibility in the same save", async () => {
+    const memo = create(MemoSchema, { name: "memos/move", content: "Memo", space: "spaces/old", visibility: Visibility.SPACE });
+    const state = createEditorState(memo);
+    state.metadata.space = "";
+    state.metadata.visibility = Visibility.PRIVATE;
+    clients.getMemo.mockResolvedValue(memo);
+    await memoService.save(state, { memoName: memo.name });
+    expect(clients.updateMemo.mock.calls[0][0]).toMatchObject({
+      memo: { space: "", visibility: Visibility.PRIVATE },
+      updateMask: { paths: expect.arrayContaining(["space", "visibility"]) },
+    });
   });
 });

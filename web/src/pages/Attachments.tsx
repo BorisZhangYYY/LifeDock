@@ -19,6 +19,7 @@ import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
 import { useAttachmentLibrary, useUnusedAttachmentLibrary } from "@/hooks/useAttachmentLibrary";
 import { useBatchDeleteAttachments } from "@/hooks/useAttachmentQueries";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useDialog from "@/hooks/useDialog";
 import i18n from "@/i18n";
 import { combineCELFilters } from "@/lib/cel-filter";
@@ -67,7 +68,9 @@ const Attachments = () => {
   const t = useTranslate();
   const deleteUnusedAttachmentsDialog = useDialog();
   const { attachmentSection, setAttachmentSection } = useAppSidebar();
-  const { memoFilter, selectedSpaceName } = useSpaceContext();
+  const { memoFilter: spaceFilter, selectedSpaceName } = useSpaceContext();
+  const { creatorFilter, isOwn } = useBrowseScope();
+  const memoFilter = combineCELFilters(spaceFilter, creatorFilter);
   const [previewState, setPreviewState] = useState({ open: false, initialIndex: 0 });
   const { mutateAsync: batchDeleteAttachments, isPending: isDeletingUnused } = useBatchDeleteAttachments();
   const {
@@ -92,13 +95,13 @@ const Attachments = () => {
     isLoading: unusedIsLoading,
     refetch: refetchUnused,
     unusedItems: completeUnusedItems,
-  } = useUnusedAttachmentLibrary(i18n.language, memoFilter, attachmentSection === "unused" && !selectedSpaceName);
+  } = useUnusedAttachmentLibrary(i18n.language, memoFilter, attachmentSection === "unused" && !selectedSpaceName && isOwn);
 
   useEffect(() => {
-    if (selectedSpaceName && attachmentSection === "unused") {
+    if ((selectedSpaceName || !isOwn) && attachmentSection === "unused") {
       setAttachmentSection("all");
     }
-  }, [attachmentSection, selectedSpaceName, setAttachmentSection]);
+  }, [attachmentSection, isOwn, selectedSpaceName, setAttachmentSection]);
 
   const handlePreview = (itemId: string) => {
     const initialIndex = mediaPreviewItems.findIndex((item) => item.id === itemId);
@@ -106,6 +109,7 @@ const Attachments = () => {
   };
 
   const handleDeleteUnusedAttachments = async () => {
+    if (!isOwn || selectedSpaceName) return;
     try {
       const names = await listUnusedAttachmentNames(memoFilter, selectedSpaceName);
 

@@ -2,21 +2,22 @@ import type { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
-import type { Location, Visibility } from "@/types/proto/api/v1/memo_service_pb";
+import { type Location, Visibility } from "@/types/proto/api/v1/memo_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import { validationService } from "../services";
 import { useEditorContext, useEditorSelector } from "../state";
 import type { EditorToolbarProps } from "../types";
+import AudienceMenu from "./AudienceMenu";
 import InsertMenu from "./InsertMenu";
 import MoodSelector from "./MoodSelector";
 import ReminderSelector from "./ReminderSelector";
-import VisibilitySelector from "./VisibilitySelector";
 
 export const EditorToolbar: FC<EditorToolbarProps> = ({
   onSave,
   onCancel,
   memoName,
   space,
+  canChooseSpace,
   onAudioRecorderClick,
   reminders = [],
   linkedReminderNames = [],
@@ -51,14 +52,17 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
   const handleVisibilityChange = (next: Visibility) => {
     dispatch(actions.setMetadata({ visibility: next }));
   };
+  const handleSpaceChange = (next: string) => {
+    dispatch(actions.setMetadata({ space: next, ...(!next && visibility === Visibility.SPACE ? { visibility: Visibility.PRIVATE } : {}) }));
+  };
 
   const handleMoodChange = (next: number) => {
     dispatch(actions.setMetadata({ moodLevel: next }));
   };
 
   return (
-    <div className="w-full flex flex-row justify-between items-center mb-2">
-      <div className="flex flex-row justify-start items-center gap-1">
+    <div className="w-full flex flex-row flex-wrap justify-between items-center gap-2 mb-2">
+      <div className="min-w-0 flex flex-row flex-wrap justify-start items-center gap-1">
         <InsertMenu
           isUploading={isUploading}
           isSaving={isSaving}
@@ -69,7 +73,13 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
           viewToggles={viewToggles}
           onInsertImages={onInsertImages}
         />
-        <VisibilitySelector value={visibility} space={space} onChange={handleVisibilityChange} />
+        <AudienceMenu
+          value={visibility}
+          space={space}
+          onChange={handleVisibilityChange}
+          onSpaceChange={canChooseSpace ? handleSpaceChange : undefined}
+          disabled={isSaving}
+        />
         {moodEnabled && <MoodSelector moodLevel={moodLevel} onChange={handleMoodChange} />}
         {remindersEnabled && (
           <ReminderSelector
@@ -80,7 +90,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
         )}
       </div>
 
-      <div className="flex flex-row justify-end items-center gap-2">
+      <div className="ml-auto flex shrink-0 flex-row justify-end items-center gap-2">
         {onCancel && (
           <Button variant="ghost" onClick={onCancel} disabled={isSaving}>
             {t("common.cancel")}

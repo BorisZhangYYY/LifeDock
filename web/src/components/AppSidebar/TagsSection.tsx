@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { replaceFiltersByFactor, stringifyFilters, useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { useLocalStorage, useOverflowTitle } from "@/hooks";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
+import { buildBrowseSearch } from "@/lib/browse-scope";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 import TagTree from "../TagTree";
@@ -67,6 +69,7 @@ const FlatTagRow = ({ tag, amount, active, onClick }: FlatTagRowProps) => {
 const TagsSection = ({ tagCount, onSelect, navigationTarget, scope }: Props) => {
   const t = useTranslate();
   const navigate = useNavigate();
+  const browse = useBrowseScope();
   const { filters, setFilters, getFiltersByFactor, addFilter, removeFilter } = useMemoFilterContext();
   const [treeMode, setTreeMode] = useLocalStorage<boolean>("tag-view-as-tree", false);
   const activeTags = new Set(getFiltersByFactor("tagSearch").map((filter) => filter.value));
@@ -81,7 +84,7 @@ const TagsSection = ({ tagCount, onSelect, navigationTarget, scope }: Props) => 
     if (navigationTarget) {
       const nextFilters = replaceFiltersByFactor(filters, "tagSearch", [{ factor: "tagSearch", value: tag }]);
       setFilters(nextFilters);
-      navigate({ pathname: navigationTarget, search: `?filter=${stringifyFilters(nextFilters)}` });
+      navigate({ pathname: navigationTarget, search: buildBrowseSearch(`?filter=${stringifyFilters(nextFilters)}`, browse.creator) });
       onSelect?.();
       return;
     }

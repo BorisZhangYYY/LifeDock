@@ -101,6 +101,8 @@ export const buildMemoFilter = ({
       conditions.push(filter.value);
     } else if (filter.factor === "tagSearch") {
       conditions.push(`tag in [${escapeFilterValue(filter.value)}]`);
+    } else if (filter.factor === "visibility" && ["PRIVATE", "SPACE", "PROTECTED", "PUBLIC"].includes(filter.value)) {
+      conditions.push(`visibility == ${escapeFilterValue(filter.value)}`);
     } else if (filter.factor === "pinned") {
       if (includePinned) {
         conditions.push(`pinned`);

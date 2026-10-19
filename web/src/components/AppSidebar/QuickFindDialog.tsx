@@ -9,8 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { getFilterSearch, isSearchFilter, type MemoFilter, useMemoFilterContext } from "@/contexts/MemoFilterContext";
 import { useSpaceContext } from "@/contexts/SpaceContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { useMemoViews } from "@/hooks/useUserQueries";
+import { buildBrowseSearch } from "@/lib/browse-scope";
 import { BUILTIN_TASKS_VIEW_ID, getMemoViewId, isMemoScopeRoute } from "@/lib/memo-views";
 import { extractSpaceUidFromName, formatSpaceUidForDisplay } from "@/lib/space-display";
 import { cn } from "@/lib/utils";
@@ -82,6 +84,7 @@ const QuickFindDialog = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = useCurrentUser();
+  const browse = useBrowseScope();
   const { data: memoViews = [] } = useMemoViews(currentUser?.name);
   const { filters, setFilters, setMemoView, memoView } = useMemoFilterContext();
   const { clearSelectedSpace, duplicateSpaceTitles, selectedSpace, selectedSpaceName } = useSpaceContext();
@@ -128,7 +131,12 @@ const QuickFindDialog = () => {
 
     if (submission.destination) {
       setMemoView(undefined);
-      navigate(submission.destination);
+      const destination = new URL(submission.destination, window.location.origin);
+      navigate(
+        routePolicy.searchScope === "remembered-collection" || routePolicy.searchScope === "profile"
+          ? { pathname: destination.pathname, search: buildBrowseSearch(destination.search, browse.creator) }
+          : submission.destination,
+      );
     }
 
     setQuickFindOpen(false);
