@@ -58,9 +58,9 @@ func (a Adapter) SyncMemo(ctx context.Context, tx runner, memoID int32, deleting
 		_, err := tx.ExecContext(ctx, "DELETE FROM memo_mood_history WHERE memo_id = "+a.placeholder(), memoID)
 		return err
 	}
-	var deletedTs any
+	var deletedSec any
 	if deleting {
-		deletedTs = time.Now().Unix()
+		deletedSec = time.Now().Unix()
 	}
 	switch a.Dialect {
 	case "mysql":
@@ -69,21 +69,21 @@ func (a Adapter) SyncMemo(ctx context.Context, tx runner, memoID int32, deleting
 			VALUES (?, ?, ?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE memo_uid = VALUES(memo_uid), creator_id = VALUES(creator_id),
 			created_ts = VALUES(created_ts), mood_level = VALUES(mood_level), deleted_ts = VALUES(deleted_ts)`,
-			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedTs)
+			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedSec)
 	case "postgres":
 		_, err = tx.ExecContext(ctx, `INSERT INTO memo_mood_history
 			(memo_id, memo_uid, creator_id, created_ts, mood_level, deleted_ts)
 			VALUES ($1, $2, $3, $4, $5, $6)
 			ON CONFLICT (memo_id) DO UPDATE SET memo_uid = EXCLUDED.memo_uid, creator_id = EXCLUDED.creator_id,
 			created_ts = EXCLUDED.created_ts, mood_level = EXCLUDED.mood_level, deleted_ts = EXCLUDED.deleted_ts`,
-			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedTs)
+			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedSec)
 	default:
 		_, err = tx.ExecContext(ctx, `INSERT INTO memo_mood_history
 			(memo_id, memo_uid, creator_id, created_ts, mood_level, deleted_ts)
 			VALUES (?, ?, ?, ?, ?, ?)
 			ON CONFLICT (memo_id) DO UPDATE SET memo_uid = excluded.memo_uid, creator_id = excluded.creator_id,
 			created_ts = excluded.created_ts, mood_level = excluded.mood_level, deleted_ts = excluded.deleted_ts`,
-			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedTs)
+			memoID, uid, creatorID, createdTs, memoPayload.MoodLevel, deletedSec)
 	}
 	return err
 }

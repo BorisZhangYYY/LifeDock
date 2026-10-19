@@ -79,8 +79,10 @@ Local external-service limitations observed during verification:
   validation. Local DNS resolution failed. A temporary Go test overlay substitutes
   a fixed public IP in that test only, allowing its original assertions and the
   remaining server suite to run without changing repository sources.
-- Broad Go lint also reports a pre-existing epoch-variable naming issue in
-  `store/db/moodhistory/moodhistory.go`; lint of the changed packages passes.
+
+Release preparation also corrects a pre-existing epoch-variable naming issue in
+`store/db/moodhistory/moodhistory.go`; full-repository Go lint passes with the
+configured Go 1.27 and golangci-lint v2.13.1 toolchain.
 
 Browser acceptance also covered suggestions, audio insertion and pending-save
 blocking, shared creator/Space navigation, and saving placement/audience/content
