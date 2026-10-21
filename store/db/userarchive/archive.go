@@ -90,66 +90,73 @@ func (a Adapter) Export(ctx context.Context, userID int32) (*store.UserArchiveDa
 		return nil, err
 	}
 	defer tx.Rollback()
-	data := &store.UserArchiveData{Version: 1, Tables: map[string][]store.UserArchiveRow{}, SourceUserID: userID, SenderUsernames: map[string]string{}}
+	data := &store.UserArchiveData{Version: 1, Tables: map[string][]store.UserArchiveRow{}, SourceUserID: userID}
 	for _, spec := range tables() {
-		selectColumns := a.columns(spec.columns)
-		if a.Dialect == "mysql" && spec.name == "notifications" {
-			selectColumns = strings.Replace(selectColumns, "`created_ts`", "UNIX_TIMESTAMP(`created_ts`)", 1)
-		}
-		orderColumn := strings.Split(spec.columns, ",")[0]
-		rows, err := tx.QueryContext(ctx, a.bind("SELECT "+selectColumns+" FROM "+a.quote(spec.table)+" WHERE "+a.quote(spec.owner)+" = ?"+spec.filter+" ORDER BY "+a.quote(orderColumn)), userID)
+		records, err := a.exportTable(ctx, tx, spec, userID)
 		if err != nil {
 			return nil, err
 		}
-		columns := strings.Split(spec.columns, ",")
-		data.Tables[spec.name] = []store.UserArchiveRow{}
-		for rows.Next() {
-			values := make([]any, len(columns))
-			targets := make([]any, len(columns))
-			for n := range values {
-				targets[n] = &values[n]
-			}
-			if err := rows.Scan(targets...); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			row := store.UserArchiveRow{}
-			for n, column := range columns {
-				if raw, ok := values[n].([]byte); ok {
-					values[n] = string(raw)
-				}
-				row[column] = values[n]
-			}
-			if spec.name == "settings" && !allowedSetting(row["key"]) {
-				continue
-			}
-			data.Tables[spec.name] = append(data.Tables[spec.name], row)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
+		data.Tables[spec.name] = records
 	}
-	rows, err := tx.QueryContext(ctx, a.bind("SELECT DISTINCT u.id,u.username FROM "+a.quote("user")+" u JOIN inbox i ON i.sender_id = u.id WHERE i.receiver_id = ?"), userID)
-	if err != nil {
-		return nil, err
-	}
-	for rows.Next() {
-		var id int64
-		var username string
-		if err := rows.Scan(&id, &username); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		data.SenderUsernames[strconv.FormatInt(id, 10)] = username
-	}
-	err = rows.Err()
-	rows.Close()
+	data.SenderUsernames, err = a.exportSenders(ctx, tx, userID)
 	if err != nil {
 		return nil, err
 	}
 	return data, tx.Commit()
+}
+
+func (a Adapter) exportTable(ctx context.Context, tx *sql.Tx, spec tableSpec, userID int32) ([]store.UserArchiveRow, error) {
+	selectColumns := a.columns(spec.columns)
+	if a.Dialect == "mysql" && spec.name == "notifications" {
+		selectColumns = strings.Replace(selectColumns, "`created_ts`", "UNIX_TIMESTAMP(`created_ts`)", 1)
+	}
+	columns := strings.Split(spec.columns, ",")
+	rows, err := tx.QueryContext(ctx, a.bind("SELECT "+selectColumns+" FROM "+a.quote(spec.table)+" WHERE "+a.quote(spec.owner)+" = ?"+spec.filter+" ORDER BY "+a.quote(columns[0])), userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	records := []store.UserArchiveRow{}
+	for rows.Next() {
+		values := make([]any, len(columns))
+		targets := make([]any, len(columns))
+		for n := range values {
+			targets[n] = &values[n]
+		}
+		if err := rows.Scan(targets...); err != nil {
+			return nil, err
+		}
+		row := store.UserArchiveRow{}
+		for n, column := range columns {
+			if raw, ok := values[n].([]byte); ok {
+				values[n] = string(raw)
+			}
+			row[column] = values[n]
+		}
+		if spec.name == "settings" && !allowedSetting(row["key"]) {
+			continue
+		}
+		records = append(records, row)
+	}
+	return records, rows.Err()
+}
+
+func (a Adapter) exportSenders(ctx context.Context, tx *sql.Tx, userID int32) (map[string]string, error) {
+	rows, err := tx.QueryContext(ctx, a.bind("SELECT DISTINCT u.id,u.username FROM "+a.quote("user")+" u JOIN inbox i ON i.sender_id = u.id WHERE i.receiver_id = ?"), userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	senders := map[string]string{}
+	for rows.Next() {
+		var id int64
+		var username string
+		if err := rows.Scan(&id, &username); err != nil {
+			return nil, err
+		}
+		senders[strconv.FormatInt(id, 10)] = username
+	}
+	return senders, rows.Err()
 }
 
 func number(value any) (int64, error) {
@@ -191,6 +198,9 @@ func Validate(data *store.UserArchiveData) error {
 				default:
 					return errors.New("column must be scalar")
 				}
+			}
+			if status, exists := row["row_status"]; exists && status != string(store.Normal) && status != string(store.Archived) {
+				return errors.Errorf("invalid row status in %s", spec.name)
 			}
 			if v, ok := row["id"]; ok {
 				id, err := number(v)

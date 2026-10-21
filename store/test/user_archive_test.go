@@ -112,8 +112,19 @@ func TestUserArchiveRoundTripPersonalData(t *testing.T) {
 	wallets, err = ts.ListFinanceWallets(ctx, &store.FindFinanceWallet{CreatorID: &target.ID, IncludeDeleted: true})
 	require.NoError(t, err)
 	require.Len(t, wallets, 2)
-	// A failed restore must not erase the existing collection.
+	// Invalid lifecycle values are rejected consistently across all databases.
+	originalStatus := snapshot.Tables["wallets"][0]["row_status"]
 	snapshot.Tables["wallets"][0]["row_status"] = "INVALID"
+	_, err = ts.ImportUserArchiveData(ctx, target.ID, snapshot, "REPLACE", nil)
+	require.Error(t, err)
+	snapshot.Tables["wallets"][0]["row_status"] = originalStatus
+	// A uniqueness failure after replacement has started must roll back the collection.
+	duplicateWallet := store.UserArchiveRow{}
+	for key, value := range snapshot.Tables["wallets"][0] {
+		duplicateWallet[key] = value
+	}
+	duplicateWallet["id"] = json.Number("2147483647")
+	snapshot.Tables["wallets"] = append(snapshot.Tables["wallets"], duplicateWallet)
 	_, err = ts.ImportUserArchiveData(ctx, target.ID, snapshot, "REPLACE", nil)
 	require.Error(t, err)
 	wallets, err = ts.ListFinanceWallets(ctx, &store.FindFinanceWallet{CreatorID: &target.ID, IncludeDeleted: true})

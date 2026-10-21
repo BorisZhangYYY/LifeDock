@@ -154,7 +154,7 @@ func validateMemo(memo *Memo) ([]Warning, error) {
 }
 
 func validateAttachments(attachments []Attachment) error {
-	fail := func(format string, args ...any) error { return errors.Errorf(format, args...) }
+	fail := errors.Errorf
 	seenAttachmentUIDs := make(map[string]struct{}, len(attachments))
 	for index := range attachments {
 		attachment := &attachments[index]
