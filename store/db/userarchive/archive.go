@@ -229,6 +229,8 @@ func Validate(data *store.UserArchiveData) error {
 					message = &storepb.MemoViewsUserSetting{}
 				case "WEBHOOKS":
 					message = &storepb.WebhooksUserSetting{}
+				default:
+					return errors.New("unsupported user setting")
 				}
 				if err := protojson.Unmarshal([]byte(value), message); err != nil {
 					return errors.Wrap(err, "invalid user preferences")
@@ -251,7 +253,6 @@ func Validate(data *store.UserArchiveData) error {
 					}
 				}
 			}
-
 		}
 	}
 	for name := range data.Tables {
