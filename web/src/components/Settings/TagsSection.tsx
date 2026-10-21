@@ -15,7 +15,6 @@ import { buildUserSettingName } from "@/lib/resource-names";
 import { isValidTagPattern } from "@/lib/tag";
 import { cn } from "@/lib/utils";
 import {
-  UserSetting_GeneralSetting_PersonalFeaturePrivacy,
   UserSetting_Key,
   UserSetting_TagMetadataSchema,
   UserSetting_TagsSettingSchema,
@@ -53,8 +52,7 @@ const toLocalTagMeta = (meta: {
 const TagsSection = () => {
   const t = useTranslate();
   const { currentUser, userTagsSetting, refetchSettings } = useAuth();
-  const { privacyMode, requirePasswordForPrivateContent } = usePersonalFeatures();
-  const privacyEnabled = privacyMode !== UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE;
+  const { requirePasswordForPrivateContent } = usePersonalFeatures();
   const { mutateAsync: updateUserSetting } = useUpdateUserSetting();
   const { mutateAsync: updateGeneralSetting, isPending: updatingGeneralSetting } = useUpdateUserGeneralSetting(currentUser?.name);
   const { data: tagCounts = {} } = useTagCounts(true);
@@ -284,18 +282,10 @@ const TagsSection = () => {
 
       <SettingGroup title={t("setting.tags.unlock-method")} description={t("setting.tags.password-unlock-description")} showSeparator>
         <SettingList>
-          <SettingListItem
-            icon={<ShieldCheckIcon className="size-4" />}
-            label={t("setting.tags.require-password")}
-            description={t(
-              privacyEnabled
-                ? "setting.personal-features.password-required-by-hiding"
-                : "setting.personal-features.password-unlock-description",
-            )}
-          >
+          <SettingListItem icon={<ShieldCheckIcon className="size-4" />} label={t("setting.tags.require-password")}>
             <Switch
               checked={requirePasswordForPrivateContent}
-              disabled={updatingGeneralSetting || privacyEnabled}
+              disabled={updatingGeneralSetting}
               onCheckedChange={(enabled) =>
                 void updateGeneralSetting(
                   { generalSetting: { requirePasswordForPrivateContent: enabled }, updateMask: ["require_password_for_private_content"] },

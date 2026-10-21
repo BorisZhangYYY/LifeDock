@@ -463,6 +463,19 @@ func convertInstanceSettingFromRaw(instanceSettingRaw *InstanceSetting) (*storep
 
 // PublicMemoEnabled reports whether PUBLIC memo visibility is enabled by the fork policy.
 func (s *Store) PublicMemoEnabled(ctx context.Context) (bool, error) {
+	accessSetting, err := s.GetInstanceAccessSetting(ctx)
+	if err != nil {
+		return false, err
+	}
+	if accessSetting.AccessMode != storepb.InstanceAccessMode_INSTANCE_ACCESS_MODE_PUBLIC {
+		return false, nil
+	}
+	return s.publicMemoVisibilityEnabled(ctx)
+}
+
+// publicMemoVisibilityEnabled reads the legacy visibility switch independently
+// so first-start initialization can resolve installations that predate ACCESS.
+func (s *Store) publicMemoVisibilityEnabled(ctx context.Context) (bool, error) {
 	setting, err := s.GetInstanceMemoRelatedSetting(ctx)
 	if err != nil {
 		return false, err

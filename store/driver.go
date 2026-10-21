@@ -28,6 +28,10 @@ type Driver interface {
 	DeleteAttachmentsWithPolicy(ctx context.Context, policy *AttachmentDeletionPolicy, attachmentIDs []int32) error
 	ApplyMemoMutation(ctx context.Context, mutation *MemoMutation) error
 
+	// User archive methods apply the same scoped, transactional restore across all drivers.
+	ExportUserArchiveData(context.Context, int32) (*UserArchiveData, error)
+	ImportUserArchiveData(context.Context, int32, *UserArchiveData, string, map[string]int32) (*UserArchiveResult, error)
+
 	// Finance model related methods.
 	CreateFinanceWallet(ctx context.Context, create *FinanceWallet) (*FinanceWallet, error)
 	ListFinanceWallets(ctx context.Context, find *FindFinanceWallet) ([]*FinanceWallet, error)

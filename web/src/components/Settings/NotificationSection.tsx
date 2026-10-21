@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { isEqual } from "lodash-es";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import type { ChangeEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "react-hot-toast";
@@ -75,13 +76,14 @@ const NotificationSection = () => {
   const normalizedOriginalSetting = useMemo(() => normalizeNotificationSetting(originalSetting), [originalSetting]);
   const [notificationSetting, setNotificationSetting] = useState<InstanceSetting_NotificationSetting>(normalizedOriginalSetting);
   const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   useEffect(() => {
     setNotificationSetting(normalizedOriginalSetting);
+    setShowSmtpPassword(false);
   }, [normalizedOriginalSetting]);
 
   const emailSetting = notificationSetting.email ?? defaultEmailSetting();
-  const hasExistingEmailSetting = isEmailSettingConfigured(originalSetting.email);
   const requirementLabel = (requirement: Requirement) => t(`setting.notification.requirement-${requirement}`);
   const fieldLabel = (label: string, requirement: Requirement) => (
     <FieldLabel label={label} requirement={requirement} requirementLabel={requirementLabel(requirement)} />
@@ -223,20 +225,29 @@ const NotificationSection = () => {
 
         <SettingRow
           label={fieldLabel(t("setting.notification.smtp-password"), "gmail")}
-          description={
-            hasExistingEmailSetting
-              ? t("setting.notification.smtp-password-preserve-description")
-              : t("setting.notification.smtp-password-description")
-          }
+          description={t("setting.notification.smtp-password-description")}
         >
-          <Input
-            className="w-full sm:w-80"
-            type="password"
-            value={emailSetting.smtpPassword}
-            placeholder={hasExistingEmailSetting ? t("setting.notification.smtp-password-placeholder-existing") : "••••••••••••"}
-            autoComplete="new-password"
-            onChange={(e) => updateEmailSetting({ smtpPassword: e.target.value })}
-          />
+          <div className="relative w-full sm:w-80">
+            <Input
+              className="pr-10"
+              type={showSmtpPassword ? "text" : "password"}
+              aria-label={t("setting.notification.smtp-password")}
+              value={emailSetting.smtpPassword}
+              autoComplete="new-password"
+              onChange={(e) => updateEmailSetting({ smtpPassword: e.target.value })}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+              aria-label={t(showSmtpPassword ? "setting.notification.hide-password" : "setting.notification.show-password")}
+              aria-pressed={showSmtpPassword}
+              onClick={() => setShowSmtpPassword((visible) => !visible)}
+            >
+              {showSmtpPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+            </Button>
+          </div>
         </SettingRow>
 
         <SettingRow

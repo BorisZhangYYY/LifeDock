@@ -1,9 +1,8 @@
-import { BellIcon, EyeOffIcon, HeartIcon, ShieldCheckIcon, WalletCardsIcon } from "lucide-react";
+import { BellIcon, EyeOffIcon, HeartIcon, WalletCardsIcon } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
-import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useUpdateUserGeneralSetting } from "@/hooks/useUserQueries";
 import { type UserSetting_GeneralSetting, UserSetting_GeneralSetting_PersonalFeaturePrivacy } from "@/types/proto/api/v1/user_service_pb";
 import { useTranslate } from "@/utils/i18n";
@@ -14,7 +13,6 @@ import SettingSection from "./SettingSection";
 const PersonalFeaturesSection = () => {
   const t = useTranslate();
   const { currentUser, userGeneralSetting, refetchSettings } = useAuth();
-  const { requirePasswordForPrivateContent } = usePersonalFeatures();
   const { mutateAsync: update, isPending } = useUpdateUserGeneralSetting(currentUser?.name);
 
   const save = async (generalSetting: Partial<UserSetting_GeneralSetting>, updateMask: string[]) => {
@@ -111,23 +109,6 @@ const PersonalFeaturesSection = () => {
                   },
                   ["personal_feature_privacy"],
                 )
-              }
-            />
-          </SettingListItem>
-          <SettingListItem
-            icon={<ShieldCheckIcon className="size-4" />}
-            label={t("setting.personal-features.password-unlock")}
-            description={t(
-              privacyEnabled
-                ? "setting.personal-features.password-required-by-hiding"
-                : "setting.personal-features.password-unlock-description",
-            )}
-          >
-            <Switch
-              checked={requirePasswordForPrivateContent}
-              disabled={isPending || privacyEnabled}
-              onCheckedChange={(enabled) =>
-                void save({ requirePasswordForPrivateContent: enabled }, ["require_password_for_private_content"])
               }
             />
           </SettingListItem>

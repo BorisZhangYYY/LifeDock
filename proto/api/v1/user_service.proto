@@ -72,7 +72,8 @@ service UserService {
     option (google.api.method_signature) = "name";
   }
 
-  // ExportMemos writes every memo the user created, with comments, archived
+  // ExportMemos writes user preferences and personal modules alongside every
+  // memo the user created, with comments, archived
   // memos, and attachment files, as a Memo Archive (a ZIP file, see
   // docs/design/memo-archive-format.md). Only the user may export their own
   // memos. The body is the archive; content_type is its media type.
@@ -561,6 +562,11 @@ message MemoImportPlan {
 
   // Deviations the archive reader corrected while validating.
   repeated MemoImportIssue warnings = 9;
+
+  // Personal, profile and preference records in the archive.
+  int32 personal_records = 10;
+  // Current personal, profile and preference records at the destination.
+  int32 existing_personal_records = 11;
 }
 
 // MemoImportReport is the outcome of an import.
@@ -577,6 +583,12 @@ message MemoImportReport {
 
   // One entry per failed memo, with the reason.
   repeated MemoImportIssue failures = 6;
+  // Personal records successfully restored by this import.
+  int32 personal_records = 7;
+  int32 personal_created = 8;
+  int32 personal_updated = 9;
+  int32 personal_skipped = 10;
+  int32 personal_failed = 11;
 }
 
 message GetUserStatsRequest {

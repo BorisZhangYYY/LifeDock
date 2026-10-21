@@ -336,12 +336,12 @@ func convertInstanceNotificationSettingFromStore(setting *storepb.InstanceNotifi
 			SmtpHost:     setting.Email.SmtpHost,
 			SmtpPort:     setting.Email.SmtpPort,
 			SmtpUsername: setting.Email.SmtpUsername,
-			// SmtpPassword is write-only: never returned in responses.
-			FromEmail: setting.Email.FromEmail,
-			FromName:  setting.Email.FromName,
-			ReplyTo:   setting.Email.ReplyTo,
-			UseTls:    setting.Email.UseTls,
-			UseSsl:    setting.Email.UseSsl,
+			SmtpPassword: setting.Email.SmtpPassword,
+			FromEmail:    setting.Email.FromEmail,
+			FromName:     setting.Email.FromName,
+			ReplyTo:      setting.Email.ReplyTo,
+			UseTls:       setting.Email.UseTls,
+			UseSsl:       setting.Email.UseSsl,
 		}
 	}
 	return notificationSetting

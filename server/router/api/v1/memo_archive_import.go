@@ -21,6 +21,7 @@ import (
 	storepb "github.com/usememos/memos/proto/gen/store"
 	"github.com/usememos/memos/server/runner/memopayload"
 	"github.com/usememos/memos/store"
+	"github.com/usememos/memos/store/db/userarchive"
 )
 
 // PlanMemoArchiveImport classifies every record of an archive against the
@@ -28,6 +29,10 @@ import (
 func (s *APIV1Service) PlanMemoArchiveImport(ctx context.Context, user *store.User, archive *memoarchive.Archive) (*v1pb.MemoImportPlan, error) {
 	if user == nil || archive == nil {
 		return nil, errors.New("user and archive are required")
+	}
+	personal, err := readPersonalArchive(archive)
+	if err != nil {
+		return nil, err
 	}
 	exportTime, err := memoarchive.ParseTime(archive.Manifest.ExportTime)
 	if err != nil {
@@ -49,6 +54,7 @@ func (s *APIV1Service) PlanMemoArchiveImport(ctx context.Context, user *store.Us
 			}
 		}
 	}
+	plan.Attachments += int32(len(archive.UnlinkedAttachments))
 	existing, err := s.findMemosByUID(ctx, archive, true)
 	if err != nil {
 		return nil, err
@@ -62,6 +68,14 @@ func (s *APIV1Service) PlanMemoArchiveImport(ctx context.Context, user *store.Us
 		default:
 			plan.Renamed++
 		}
+	}
+	if personal != nil {
+		plan.PersonalRecords = personal.Count()
+		current, err := s.Store.ExportUserArchiveData(ctx, user.ID)
+		if err != nil {
+			return nil, err
+		}
+		plan.ExistingPersonalRecords = current.Count()
 	}
 	return plan, nil
 }
@@ -132,6 +146,13 @@ func (s *APIV1Service) ImportMemoArchive(ctx context.Context, user *store.User, 
 	if user == nil || archive == nil {
 		return nil, errors.New("user and archive are required")
 	}
+	personal, err := readPersonalArchive(archive)
+	if err != nil {
+		return nil, err
+	}
+	if policy != v1pb.ImportMemosRequest_CONFLICT_POLICY_UNSPECIFIED && policy != v1pb.ImportMemosRequest_SKIP && policy != v1pb.ImportMemosRequest_REPLACE && policy != v1pb.ImportMemosRequest_DUPLICATE {
+		return nil, errors.New("invalid import conflict policy")
+	}
 	if policy == v1pb.ImportMemosRequest_CONFLICT_POLICY_UNSPECIFIED {
 		policy = v1pb.ImportMemosRequest_SKIP
 	}
@@ -175,6 +196,29 @@ func (s *APIV1Service) ImportMemoArchive(ctx context.Context, user *store.User, 
 		}
 		if err := importer.applyRelations(written); err != nil {
 			importer.warn(written.record.UID, "relations were not applied: "+err.Error())
+		}
+	}
+	for index := range archive.UnlinkedAttachments {
+		entry := &archive.UnlinkedAttachments[index]
+		if _, err := importer.importAttachment(entry); err != nil {
+			importer.report.PersonalFailed++
+			importer.report.Failures = append(importer.report.Failures, &v1pb.MemoImportIssue{Message: "Attachment " + entry.UID + ": " + err.Error()})
+		}
+	}
+	if personal != nil {
+		memoIDs := map[string]int32{}
+		for uid, memo := range importer.resolved {
+			memoIDs[uid] = memo.ID
+		}
+		result, err := s.Store.ImportUserArchiveData(ctx, user.ID, personal, policy.String(), memoIDs)
+		if err != nil {
+			importer.report.PersonalFailed += personal.Count()
+			importer.report.Failures = append(importer.report.Failures, &v1pb.MemoImportIssue{Message: "Personal data was not restored: " + err.Error()})
+		} else {
+			importer.report.PersonalCreated = result.Created
+			importer.report.PersonalUpdated = result.Updated
+			importer.report.PersonalSkipped = result.Skipped
+			importer.report.PersonalRecords = result.Created + result.Updated
 		}
 	}
 	if importer.report.Created > 0 || importer.report.Updated > 0 {
@@ -608,4 +652,18 @@ func (i *memoArchiveImporter) applyRelations(written writtenMemo) error {
 		return nil
 	}
 	return i.service.applyMemoMutation(i.ctx, memo, nil, nil, nil, &relations)
+}
+
+func readPersonalArchive(archive *memoarchive.Archive) (*store.UserArchiveData, error) {
+	if len(archive.UserData) == 0 {
+		return nil, nil
+	}
+	data, err := store.DecodeUserArchiveData(archive.UserData)
+	if err != nil {
+		return nil, err
+	}
+	if err := userarchive.Validate(data); err != nil {
+		return nil, err
+	}
+	return data, nil
 }

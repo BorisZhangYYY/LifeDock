@@ -33,6 +33,10 @@ const (
 type Archive struct {
 	Manifest *Manifest
 	Memos    []*Memo
+	// UserData holds the optional versioned personal snapshot.
+	UserData json.RawMessage
+	// UnlinkedAttachments are owned files without an exported memo binding.
+	UnlinkedAttachments []Attachment
 	// Warnings lists every soft deviation the reader corrected.
 	Warnings []Warning
 
@@ -75,6 +79,38 @@ func Read(r io.ReaderAt, size int64) (*Archive, error) {
 		return nil, err
 	}
 	archive.Manifest = manifest
+	if _, exists := archive.entries[UserDataEntry]; exists || manifest.UserData {
+		raw, err := archive.readEntry(UserDataEntry, maxContentBytes)
+		if err != nil {
+			return nil, err
+		}
+		if !json.Valid(raw) {
+			return nil, errors.New("invalid user data JSON")
+		}
+		archive.UserData = raw
+	}
+	if _, exists := archive.entries[UnlinkedAttachmentsEntry]; manifest.UserData && !exists {
+		return nil, errors.New("unlinked attachment records are missing")
+	}
+	if _, exists := archive.entries[UnlinkedAttachmentsEntry]; exists {
+		raw, err := archive.readEntry(UnlinkedAttachmentsEntry, maxContentBytes)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(raw, &archive.UnlinkedAttachments); err != nil {
+			return nil, err
+		}
+		if err := validateAttachments(archive.UnlinkedAttachments); err != nil {
+			return nil, err
+		}
+		for _, entry := range archive.UnlinkedAttachments {
+			if entry.Path != "" {
+				if _, exists := archive.entries[entry.Path]; !exists {
+					return nil, errors.New("unlinked attachment file is missing")
+				}
+			}
+		}
+	}
 	if err := archive.readMemos(); err != nil {
 		return nil, err
 	}

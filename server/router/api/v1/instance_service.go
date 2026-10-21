@@ -367,7 +367,7 @@ func (s *APIV1Service) UpdateInstanceSetting(ctx context.Context, request *v1pb.
 		updateSetting.GetGeneralSetting().InstanceUrl = existing.InstanceUrl
 	}
 
-	// Preserve write-only credential fields when the caller sends an empty value.
+	// Preserve credentials for older clients that omit the saved value.
 	// An empty string means "no change", not "clear the credential".
 	switch updateSetting.Key {
 	case storepb.InstanceSettingKey_NOTIFICATION:

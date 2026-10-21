@@ -1,5 +1,6 @@
 import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { Code, ConnectError } from "@connectrpc/connect";
+import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import { DownloadIcon, UploadIcon } from "lucide-react";
 import { useRef, useState } from "react";
@@ -7,6 +8,8 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { userServiceClient } from "@/connect";
+import { useAuth } from "@/contexts/AuthContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import { getErrorMessage } from "@/lib/error";
 import { exportMemos, importStagedMemoArchive, type StagedMemoArchive, stageMemoArchive } from "@/lib/memo-archive";
@@ -57,6 +60,8 @@ const IssueList = ({ issues, tone }: { issues: MemoImportIssue[]; tone: "warning
 const MemoArchiveSection = () => {
   const t = useTranslate();
   const user = useCurrentUser();
+  const queryClient = useQueryClient();
+  const { refetchSettings, setCurrentUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -96,7 +101,20 @@ const MemoArchiveSection = () => {
     try {
       const report = await importStagedMemoArchive(user.name, stage.staged, stage.policy);
       setStage({ kind: "done", report });
-      toast.success(t("setting.memo-archive.import-success", { created: report.created, updated: report.updated }));
+      await Promise.allSettled([
+        queryClient.invalidateQueries(),
+        refetchSettings(),
+        userServiceClient.getUser({ name: user.name }).then(setCurrentUser),
+      ]);
+      if (report.failed + report.personalFailed > 0)
+        toast.error(t("setting.memo-archive.import-partial", { count: report.failed + report.personalFailed }));
+      else
+        toast.success(
+          t("setting.memo-archive.import-success", {
+            created: report.created + report.personalCreated,
+            updated: report.updated + report.personalUpdated,
+          }),
+        );
     } catch (error) {
       toast.error(getErrorMessage(error, t("setting.memo-archive.import-failed")));
       if (ConnectError.from(error).code === Code.NotFound) {
@@ -154,15 +172,19 @@ const MemoArchiveSection = () => {
                 }`}
               />
               <StatRow label={t("setting.memo-archive.review-memos")} value={String(stage.staged.plan.memos)} />
+              <StatRow label={t("setting.memo-archive.review-personal")} value={String(stage.staged.plan.personalRecords)} />
               <StatRow label={t("setting.memo-archive.review-attachments")} value={String(stage.staged.plan.attachments)} />
               <StatRow label={t("setting.memo-archive.review-new")} value={String(stage.staged.plan.new + stage.staged.plan.renamed)} />
               <StatRow label={t("setting.memo-archive.review-existing")} value={String(stage.staged.plan.existing)} />
             </SettingList>
 
-            {stage.staged.plan.existing > 0 && (
+            {(stage.staged.plan.existing > 0 ||
+              (stage.staged.plan.personalRecords > 0 && stage.staged.plan.existingPersonalRecords > 0)) && (
               <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
                 <div className="text-sm font-medium">
-                  {t("setting.memo-archive.policy-question", { count: stage.staged.plan.existing })}
+                  {t("setting.memo-archive.policy-question", {
+                    count: stage.staged.plan.existing + stage.staged.plan.existingPersonalRecords,
+                  })}
                 </div>
                 <RadioGroup
                   value={String(stage.policy)}
@@ -185,6 +207,9 @@ const MemoArchiveSection = () => {
               </div>
             )}
 
+            {stage.staged.plan.personalRecords > 0 && (
+              <p className="text-xs text-muted-foreground">{t("setting.memo-archive.personal-policy")}</p>
+            )}
             <IssueList issues={stage.staged.plan.warnings} tone="warning" />
 
             <div className="flex items-center justify-end gap-2">
@@ -192,7 +217,9 @@ const MemoArchiveSection = () => {
                 {t("common.cancel")}
               </Button>
               <Button size="sm" disabled={busy} onClick={handleImport}>
-                {busy ? t("setting.memo-archive.importing") : t("setting.memo-archive.import-confirm", { count: stage.staged.plan.memos })}
+                {busy
+                  ? t("setting.memo-archive.importing")
+                  : t("setting.memo-archive.import-confirm", { count: stage.staged.plan.memos + stage.staged.plan.personalRecords })}
               </Button>
             </div>
           </div>
@@ -201,10 +228,19 @@ const MemoArchiveSection = () => {
         {stage.kind === "done" && (
           <div className="flex flex-col gap-3">
             <SettingList>
-              <StatRow label={t("setting.memo-archive.report-created")} value={String(stage.report.created)} />
-              <StatRow label={t("setting.memo-archive.report-updated")} value={String(stage.report.updated)} />
-              <StatRow label={t("setting.memo-archive.report-skipped")} value={String(stage.report.skipped)} />
-              <StatRow label={t("setting.memo-archive.report-failed")} value={String(stage.report.failed)} />
+              <StatRow
+                label={t("setting.memo-archive.report-created")}
+                value={String(stage.report.created + stage.report.personalCreated)}
+              />
+              <StatRow
+                label={t("setting.memo-archive.report-updated")}
+                value={String(stage.report.updated + stage.report.personalUpdated)}
+              />
+              <StatRow
+                label={t("setting.memo-archive.report-skipped")}
+                value={String(stage.report.skipped + stage.report.personalSkipped)}
+              />
+              <StatRow label={t("setting.memo-archive.report-failed")} value={String(stage.report.failed + stage.report.personalFailed)} />
             </SettingList>
             <IssueList issues={stage.report.failures} tone="failure" />
             <IssueList issues={stage.report.warnings} tone="warning" />

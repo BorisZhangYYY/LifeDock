@@ -71,7 +71,8 @@ const InstanceSection = () => {
     setInstanceGeneralSetting(originalGeneralSetting);
   }, [originalGeneralSetting]);
 
-  const originalPublicAccessEnabled = isPublicMemoEnabled(memoRelatedSetting.allowedVisibilities);
+  const originalPublicAccessEnabled =
+    originalAccessSetting.accessMode === InstanceAccessMode.PUBLIC && isPublicMemoEnabled(memoRelatedSetting.allowedVisibilities);
   const [publicAccessEnabled, setPublicAccessEnabled] = useState(originalPublicAccessEnabled);
   useEffect(() => setPublicAccessEnabled(originalPublicAccessEnabled), [originalPublicAccessEnabled]);
 
@@ -102,10 +103,6 @@ const InstanceSection = () => {
     );
   };
 
-  const updateAccessMode = (accessMode: InstanceAccessMode) => {
-    setInstanceAccessSetting(create(InstanceSetting_AccessSettingSchema, { accessMode }));
-  };
-
   const handleSaveSettings = async () => {
     if (instanceURLInvalid) {
       toast.error(t("setting.instance.instance-url-invalid"));
@@ -125,7 +122,7 @@ const InstanceSection = () => {
           },
         }),
         errorContext: "Update public visibility",
-        showSuccessToast: false,
+        showSuccessToast: isEqual(instanceGeneralSetting, originalGeneralSetting) && isEqual(instanceAccessSetting, originalAccessSetting),
       });
       if (!saved) return;
     }
@@ -219,18 +216,15 @@ const InstanceSection = () => {
             <Switch
               aria-label={t("setting.instance.public-access")}
               checked={publicAccessEnabled}
-              onCheckedChange={setPublicAccessEnabled}
-            />
-          </SettingListItem>
-          <SettingListItem
-            label={t("setting.instance.allow-public-access")}
-            description={t("setting.instance.allow-public-access-description")}
-          >
-            <Switch
-              aria-label={t("setting.instance.allow-public-access")}
               disabled={profile.demo}
-              checked={instanceAccessSetting.accessMode === InstanceAccessMode.PUBLIC}
-              onCheckedChange={(checked) => updateAccessMode(checked ? InstanceAccessMode.PUBLIC : InstanceAccessMode.PRIVATE)}
+              onCheckedChange={(enabled) => {
+                setPublicAccessEnabled(enabled);
+                setInstanceAccessSetting(
+                  create(InstanceSetting_AccessSettingSchema, {
+                    accessMode: enabled ? InstanceAccessMode.PUBLIC : InstanceAccessMode.PRIVATE,
+                  }),
+                );
+              }}
             />
           </SettingListItem>
 

@@ -138,6 +138,9 @@ func (s *APIV1Service) finishMemoImport(ctx context.Context, user *store.User, u
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "invalid memo archive: %v", err)
 	}
+	if _, err := readPersonalArchive(archive); err != nil {
+		return status.Errorf(codes.InvalidArgument, "invalid personal data: %v", err)
+	}
 	if request.ValidateOnly {
 		plan, err := s.PlanMemoArchiveImport(ctx, user, archive)
 		if err != nil {

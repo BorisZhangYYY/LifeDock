@@ -273,14 +273,15 @@ func TestGetInstanceSetting(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "permission denied")
 
-		// Admin request succeeds and does NOT expose SmtpPassword.
+		// Notification credentials are visible only to the administrator.
+		_, err = ts.Store.UpsertInstanceSetting(ctx, &storepb.InstanceSetting{Key: storepb.InstanceSettingKey_NOTIFICATION, Value: &storepb.InstanceSetting_NotificationSetting{NotificationSetting: &storepb.InstanceNotificationSetting{Email: &storepb.InstanceNotificationSetting_EmailSetting{SmtpPassword: "secret"}}}})
+		require.NoError(t, err)
 		resp, err := ts.Service.GetInstanceSetting(adminCtx, req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 		require.Equal(t, "instance/settings/NOTIFICATION", resp.Name)
 		require.NotNil(t, resp.GetNotificationSetting())
-		require.Empty(t, resp.GetNotificationSetting().GetEmail().GetSmtpPassword(),
-			"SmtpPassword must never be returned in responses")
+		require.Equal(t, "secret", resp.GetNotificationSetting().GetEmail().GetSmtpPassword())
 	})
 
 	t.Run("GetInstanceSetting - AI setting requires authenticated user", func(t *testing.T) {
@@ -676,7 +677,7 @@ func TestUpdateInstanceSetting(t *testing.T) {
 		require.True(t, resp.GetTagsSetting().GetTags()["spoiler"].GetBlurContent())
 	})
 
-	t.Run("UpdateInstanceSetting - notification setting password is write-only", func(t *testing.T) {
+	t.Run("UpdateInstanceSetting - notification setting password is readable by admins", func(t *testing.T) {
 		ts := NewTestService(t)
 		defer ts.Cleanup()
 
@@ -709,9 +710,8 @@ func TestUpdateInstanceSetting(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, resp.GetNotificationSetting().GetEmail().GetEnabled())
 		require.Equal(t, "smtp.example.com", resp.GetNotificationSetting().GetEmail().GetSmtpHost())
-		// Password must not be returned even in the update response.
-		require.Empty(t, resp.GetNotificationSetting().GetEmail().GetSmtpPassword(),
-			"SmtpPassword must never be returned in responses")
+		// An administrator can inspect the saved password in the update response.
+		require.Equal(t, "secret", resp.GetNotificationSetting().GetEmail().GetSmtpPassword())
 	})
 
 	t.Run("UpdateInstanceSetting - empty password preserves existing credential", func(t *testing.T) {

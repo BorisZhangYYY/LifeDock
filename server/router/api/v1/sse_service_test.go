@@ -28,6 +28,8 @@ func newIntegrationService(t *testing.T) *APIV1Service {
 	t.Helper()
 	ctx := context.Background()
 	st := teststore.NewTestingStore(ctx, t)
+	_, err := st.UpsertInstanceSetting(ctx, &storepb.InstanceSetting{Key: storepb.InstanceSettingKey_ACCESS, Value: &storepb.InstanceSetting_AccessSetting{AccessSetting: &storepb.InstanceAccessSetting{AccessMode: storepb.InstanceAccessMode_INSTANCE_ACCESS_MODE_PUBLIC}}})
+	require.NoError(t, err)
 	t.Cleanup(func() { st.Close() })
 	p := &profile.Profile{Demo: true, Data: t.TempDir(), Driver: "sqlite", DSN: ":memory:"}
 	return NewAPIV1Service("test-secret", p, st)

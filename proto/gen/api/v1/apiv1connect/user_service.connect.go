@@ -133,7 +133,8 @@ type UserServiceClient interface {
 	ListAllUserStats(context.Context, *connect.Request[v1.ListAllUserStatsRequest]) (*connect.Response[v1.ListAllUserStatsResponse], error)
 	// GetUserStats returns statistics for a specific user.
 	GetUserStats(context.Context, *connect.Request[v1.GetUserStatsRequest]) (*connect.Response[v1.UserStats], error)
-	// ExportMemos writes every memo the user created, with comments, archived
+	// ExportMemos writes user preferences and personal modules alongside every
+	// memo the user created, with comments, archived
 	// memos, and attachment files, as a Memo Archive (a ZIP file, see
 	// docs/design/memo-archive-format.md). Only the user may export their own
 	// memos. The body is the archive; content_type is its media type.
@@ -561,7 +562,8 @@ type UserServiceHandler interface {
 	ListAllUserStats(context.Context, *connect.Request[v1.ListAllUserStatsRequest]) (*connect.Response[v1.ListAllUserStatsResponse], error)
 	// GetUserStats returns statistics for a specific user.
 	GetUserStats(context.Context, *connect.Request[v1.GetUserStatsRequest]) (*connect.Response[v1.UserStats], error)
-	// ExportMemos writes every memo the user created, with comments, archived
+	// ExportMemos writes user preferences and personal modules alongside every
+	// memo the user created, with comments, archived
 	// memos, and attachment files, as a Memo Archive (a ZIP file, see
 	// docs/design/memo-archive-format.md). Only the user may export their own
 	// memos. The body is the archive; content_type is its media type.

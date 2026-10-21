@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo, useRef
 import { instanceServiceClient } from "@/connect";
 import { useAccessSetting, useUpdateInstanceSetting } from "@/hooks/useInstanceQueries";
 import {
+  InstanceAccessMode,
   InstanceProfile,
   InstanceProfileSchema,
   InstanceSetting,
@@ -90,10 +91,16 @@ export function InstanceProvider({ children }: { children: ReactNode }) {
   const memoRelatedSetting = useMemo((): InstanceSetting_MemoRelatedSetting => {
     const setting = state.settings.find((s) => s.name === `${instanceSettingNamePrefix}MEMO_RELATED`);
     if (setting?.value.case === "memoRelatedSetting") {
-      return setting.value.value;
+      return create(InstanceSetting_MemoRelatedSettingSchema, {
+        ...setting.value.value,
+        allowedVisibilities:
+          accessSetting.accessMode === InstanceAccessMode.PUBLIC ? setting.value.value.allowedVisibilities : ["PRIVATE", "PROTECTED"],
+      });
     }
-    return create(InstanceSetting_MemoRelatedSettingSchema, {});
-  }, [state.settings]);
+    return create(InstanceSetting_MemoRelatedSettingSchema, {
+      allowedVisibilities: accessSetting.accessMode === InstanceAccessMode.PUBLIC ? [] : ["PRIVATE", "PROTECTED"],
+    });
+  }, [state.settings, accessSetting.accessMode]);
 
   const storageSetting = useMemo((): InstanceSetting_StorageSetting => {
     const setting = state.settings.find((s) => s.name === `${instanceSettingNamePrefix}STORAGE`);

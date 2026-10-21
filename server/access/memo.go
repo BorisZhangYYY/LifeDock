@@ -73,6 +73,9 @@ func CheckMemoReadContext(ctx MemoReadContext) MemoReadDecision {
 	viewerActive := ctx.Viewer != nil && ctx.Viewer.RowStatus == store.Normal
 	viewerIsAuthor := viewerActive && ctx.Viewer.ID == memo.CreatorID
 	if memo.Visibility == store.Public && ctx.PublicDisabled && !viewerIsAuthor {
+		if !viewerActive && !ctx.AllowAnonymous {
+			return MemoReadDecision{Denial: MemoReadDenialUnauthenticated}
+		}
 		return MemoReadDecision{Denial: MemoReadDenialNotFound}
 	}
 	if memo.RowStatus == store.Archived && !viewerIsAuthor {

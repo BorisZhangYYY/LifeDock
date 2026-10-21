@@ -9,7 +9,7 @@ const (
 	// Format is the value of the manifest's format member.
 	Format = "memos-archive"
 	// FormatVersion is the newest version this package writes.
-	FormatVersion = "1.1"
+	FormatVersion = "1.2"
 	// FormatMajor is the major version this package reads.
 	FormatMajor = 1
 	// MediaType is the HTTP Content-Type of an export. It is deliberately not
@@ -20,6 +20,10 @@ const (
 
 	// ManifestEntry holds the archive-level record and identifies the format.
 	ManifestEntry = "manifest.json"
+	// UserDataEntry holds the optional user-scoped personal snapshot.
+	UserDataEntry = "user-data.json"
+	// UnlinkedAttachmentsEntry lists owned attachment files outside memo records.
+	UnlinkedAttachmentsEntry = "unlinked-attachments.json"
 	// MemosDir holds one record and one content file per memo.
 	MemosDir = "memos/"
 	// AttachmentsDir holds attachment bytes under attachments/<uid>/<name>.
@@ -40,6 +44,8 @@ type Manifest struct {
 	ExportTime    string    `json:"exportTime"`
 	Scope         Scope     `json:"scope"`
 	Counts        *Counts   `json:"counts,omitempty"`
+	// UserData marks snapshots whose personal data entry must be present.
+	UserData bool `json:"userData,omitempty"`
 }
 
 // Generator names the software that wrote the archive.

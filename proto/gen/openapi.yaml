@@ -4093,7 +4093,8 @@ paths:
             tags:
                 - UserService
             description: |-
-                ExportMemos writes every memo the user created, with comments, archived
+                ExportMemos writes user preferences and personal modules alongside every
+                 memo the user created, with comments, archived
                  memos, and attachment files, as a Memo Archive (a ZIP file, see
                  docs/design/memo-archive-format.md). Only the user may export their own
                  memos. The body is the archive; content_type is its media type.
@@ -5758,6 +5759,14 @@ components:
                     items:
                         $ref: '#/components/schemas/MemoImportIssue'
                     description: Deviations the archive reader corrected while validating.
+                personalRecords:
+                    type: integer
+                    description: Personal, profile and preference records in the archive.
+                    format: int32
+                existingPersonalRecords:
+                    type: integer
+                    description: Current personal, profile and preference records at the destination.
+                    format: int32
             description: MemoImportPlan describes what importing a staged archive would do.
         MemoImportReport:
             type: object
@@ -5783,6 +5792,22 @@ components:
                     items:
                         $ref: '#/components/schemas/MemoImportIssue'
                     description: One entry per failed memo, with the reason.
+                personalRecords:
+                    type: integer
+                    description: Personal records successfully restored by this import.
+                    format: int32
+                personalCreated:
+                    type: integer
+                    format: int32
+                personalUpdated:
+                    type: integer
+                    format: int32
+                personalSkipped:
+                    type: integer
+                    format: int32
+                personalFailed:
+                    type: integer
+                    format: int32
             description: MemoImportReport is the outcome of an import.
         MemoMoodDisplay:
             type: object
@@ -5947,8 +5972,8 @@ components:
                 smtpUsername:
                     type: string
                 smtpPassword:
-                    writeOnly: true
                     type: string
+                    description: Returned only to administrators, along with the other notification settings.
                 fromEmail:
                     type: string
                 fromName:

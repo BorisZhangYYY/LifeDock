@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import InstanceSection from "@/components/Settings/InstanceSection";
-import { InstanceAccessMode } from "@/types/proto/api/v1/instance_service_pb";
+import { InstanceAccessMode, InstanceSetting_Key } from "@/types/proto/api/v1/instance_service_pb";
 
 const instance = vi.hoisted(() => ({
   accessSetting: { accessMode: 1 },
@@ -49,14 +49,14 @@ describe("<InstanceSection> access setting", () => {
   it("saves public access through the dedicated ACCESS setting", async () => {
     render(<InstanceSection />);
 
-    fireEvent.click(screen.getByRole("switch", { name: "setting.instance.allow-public-access" }));
+    fireEvent.click(screen.getByRole("switch", { name: "setting.instance.public-access" }));
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
-    await waitFor(() => expect(instance.updateSetting).toHaveBeenCalledTimes(1));
-    const setting = instance.updateSetting.mock.calls[0][0];
+    await waitFor(() => expect(instance.updateSetting).toHaveBeenCalledTimes(2));
+    const setting = instance.updateSetting.mock.calls[1][0];
     expect(setting.name).toBe("instance/settings/ACCESS");
     expect(setting.value.case).toBe("accessSetting");
     expect(setting.value.value.accessMode).toBe(InstanceAccessMode.PUBLIC);
-    expect(instance.fetchSetting).not.toHaveBeenCalled();
+    expect(instance.fetchSetting).toHaveBeenCalledExactlyOnceWith(InstanceSetting_Key.MEMO_RELATED);
   });
 });

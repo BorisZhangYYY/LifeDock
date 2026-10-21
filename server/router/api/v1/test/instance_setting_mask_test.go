@@ -67,7 +67,7 @@ func TestUpdateInstanceSettingMask(t *testing.T) {
 	require.Equal(t, codes.InvalidArgument, status.Code(err))
 }
 
-func TestUpdateInstanceSettingMaskPreservesWriteOnlyPassword(t *testing.T) {
+func TestUpdateInstanceSettingMaskPreservesAdminPassword(t *testing.T) {
 	ctx := context.Background()
 	ts := NewTestService(t)
 	defer ts.Cleanup()
@@ -95,7 +95,7 @@ func TestUpdateInstanceSettingMaskPreservesWriteOnlyPassword(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.Equal(t, "After", updated.GetNotificationSetting().GetEmail().FromName)
-	require.Empty(t, updated.GetNotificationSetting().GetEmail().SmtpPassword)
+	require.Equal(t, "keep-secret", updated.GetNotificationSetting().GetEmail().SmtpPassword)
 	stored, err := ts.Store.GetInstanceNotificationSetting(ctx)
 	require.NoError(t, err)
 	require.Equal(t, "keep-secret", stored.GetEmail().SmtpPassword)
