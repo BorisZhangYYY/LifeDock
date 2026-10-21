@@ -152,7 +152,7 @@ func (s *Store) initializeInstanceAccessSetting(ctx context.Context) error {
 	if general.InstanceUrl != nil {
 		legacyURL = general.GetInstanceUrl()
 	}
-	publicEnabled, err := s.PublicMemoEnabled(ctx)
+	publicEnabled, err := s.publicMemoVisibilityEnabled(ctx)
 	if err != nil {
 		return err
 	}

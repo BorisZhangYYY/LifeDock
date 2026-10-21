@@ -163,7 +163,7 @@ func TestExportMemoArchive(t *testing.T) {
 
 	archive := exportArchive(t, ts, fixture.user)
 	require.Equal(t, memoarchive.ScopeKindUser, archive.Manifest.Scope.Kind)
-	require.Equal(t, "1.1", archive.Manifest.FormatVersion)
+	require.Equal(t, "1.2", archive.Manifest.FormatVersion)
 	require.Equal(t, "exporter", archive.Manifest.Scope.User.Username)
 	require.Equal(t, &memoarchive.Counts{Memos: 5, Attachments: 1}, archive.Manifest.Counts)
 	require.Empty(t, archive.Warnings)

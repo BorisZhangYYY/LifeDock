@@ -6,21 +6,18 @@ vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ currentUser: { name
 vi.mock("@/hooks/usePersonalFeatures", () => ({
   default: () => ({ remindersEnabled: true, privacyMode: 1, requirePasswordForPrivateContent: true }),
 }));
-vi.mock("@/hooks/useReminderQueries", () => ({
-  useReminders: (_parent: string, options: { view: number }) => ({
-    data: options.view === 3 ? [{ name: "reminders/1", memo: "memos/linked" }] : [],
-  }),
-}));
-
 const Consumer = () => {
   const privacy = usePrivacySession();
   return (
     <div>
-      <span data-testid="linked">{String(privacy.isReminderLinkedMemo("memos/linked"))}</span>
+      <span data-testid="personal-unlocked">{String(privacy.unlocked)}</span>
       <span data-testid="linked-unlocked">{String(privacy.isMemoUnlocked("memos/linked"))}</span>
       <span data-testid="other-unlocked">{String(privacy.isMemoUnlocked("memos/other"))}</span>
       <button type="button" onClick={privacy.unlockAll}>
         unlock all
+      </button>
+      <button type="button" onClick={() => privacy.unlockMemo("memos/linked")}>
+        unlock memo
       </button>
       <button type="button" onClick={() => privacy.lockMemo("memos/linked")}>
         lock linked memo
@@ -33,25 +30,23 @@ const Consumer = () => {
 };
 
 describe("PrivacySessionProvider", () => {
-  it("shares one unlock while allowing a memo to be re-locked on its own", () => {
+  it("keeps dashboard and individual memo unlocks independent", () => {
     render(
       <PrivacySessionProvider>
         <Consumer />
       </PrivacySessionProvider>,
     );
-
-    expect(screen.getByTestId("linked")).toHaveTextContent("true");
-    expect(screen.getByTestId("linked-unlocked")).toHaveTextContent("false");
-
-    fireEvent.click(screen.getByRole("button", { name: "unlock all" }));
+    fireEvent.click(screen.getByRole("button", { name: "unlock memo" }));
+    expect(screen.getByTestId("personal-unlocked")).toHaveTextContent("false");
     expect(screen.getByTestId("linked-unlocked")).toHaveTextContent("true");
-    expect(screen.getByTestId("other-unlocked")).toHaveTextContent("true");
-
-    fireEvent.click(screen.getByRole("button", { name: "lock linked memo" }));
-    expect(screen.getByTestId("linked-unlocked")).toHaveTextContent("false");
-    expect(screen.getByTestId("other-unlocked")).toHaveTextContent("true");
-
-    fireEvent.click(screen.getByRole("button", { name: "lock all" }));
     expect(screen.getByTestId("other-unlocked")).toHaveTextContent("false");
+    fireEvent.click(screen.getByRole("button", { name: "lock linked memo" }));
+    fireEvent.click(screen.getByRole("button", { name: "unlock all" }));
+    expect(screen.getByTestId("personal-unlocked")).toHaveTextContent("true");
+    expect(screen.getByTestId("linked-unlocked")).toHaveTextContent("false");
+    fireEvent.click(screen.getByRole("button", { name: "unlock memo" }));
+    fireEvent.click(screen.getByRole("button", { name: "lock all" }));
+    expect(screen.getByTestId("personal-unlocked")).toHaveTextContent("false");
+    expect(screen.getByTestId("linked-unlocked")).toHaveTextContent("true");
   });
 });

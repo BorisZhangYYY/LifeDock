@@ -7,14 +7,14 @@ import MemoView from "@/components/MemoView/MemoView";
 import { useMemoViewContext } from "@/components/MemoView/MemoViewContext";
 import { MemoSchema } from "@/types/proto/api/v1/memo_service_pb";
 
-const mocks = vi.hoisted(() => ({ verify: vi.fn(), loadEditor: vi.fn() }));
+const mocks = vi.hoisted(() => ({ verify: vi.fn(), loadEditor: vi.fn(), tagBlur: true, password: true }));
 vi.mock("@/connect", () => ({ authServiceClient: { verifyPassword: mocks.verify } }));
 vi.mock("@/utils/i18n", () => ({ useTranslate: () => (key: string) => key }));
 vi.mock("@/hooks/useCurrentUser", () => ({ default: () => ({ name: "users/test", role: 1 }) }));
 vi.mock("@/contexts/AuthContext", () => ({
   useAuth: () => ({
-    userGeneralSetting: { personalFeaturePrivacy: 1, requirePasswordForPrivateContent: false },
-    userTagsSetting: undefined,
+    userGeneralSetting: { personalFeaturePrivacy: 1, requirePasswordForPrivateContent: mocks.password },
+    userTagsSetting: { tags: { sensitive: { blurContent: mocks.tagBlur } } },
   }),
 }));
 vi.mock("@/contexts/InstanceContext", () => ({ useInstance: () => ({ memoRelatedSetting: {} }) }));
@@ -67,7 +67,7 @@ const renderMemo = (path = "/", onReminderSelect?: (name: string) => void) =>
   render(
     <MemoryRouter initialEntries={[path]}>
       <MemoView
-        memo={create(MemoSchema, { name: "memos/private", creator: "users/test", content: "Sensitive text" })}
+        memo={create(MemoSchema, { name: "memos/private", creator: "users/test", content: "Sensitive text", tags: ["sensitive"] })}
         onReminderSelect={onReminderSelect}
       />
     </MemoryRouter>,
@@ -79,6 +79,8 @@ const verify = async () => {
 };
 
 beforeEach(() => {
+  mocks.tagBlur = true;
+  mocks.password = true;
   mocks.verify.mockReset();
   mocks.verify.mockResolvedValue({});
   mocks.loadEditor.mockReset();
@@ -86,6 +88,21 @@ beforeEach(() => {
 });
 
 describe("sensitive memo entry", () => {
+  it("does not password-protect untagged reminder memos when dashboard privacy is enabled", () => {
+    mocks.tagBlur = false;
+    const onReminderSelect = vi.fn();
+    renderMemo("/", onReminderSelect);
+    fireEvent.click(screen.getByRole("button", { name: "Open linked reminder" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(onReminderSelect).toHaveBeenCalledWith("reminders/private");
+  });
+  it("allows click-to-reveal for tagged memos independently of dashboard privacy", () => {
+    mocks.password = false;
+    renderMemo();
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sensitive content" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Revealed")).toBeInTheDocument();
+  });
   it("prompts automatically in detail and keeps cancellation locked", () => {
     renderMemo("/memos/private");
     expect(screen.getByRole("dialog")).toBeInTheDocument();

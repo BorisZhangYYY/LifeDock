@@ -6,12 +6,12 @@ import { UserSetting_GeneralSetting_PersonalFeaturePrivacy as Privacy } from "@/
 const setting = vi.hoisted(() => ({ personalFeaturePrivacy: 0, requirePasswordForPrivateContent: false }));
 vi.mock("@/contexts/AuthContext", () => ({ useAuth: () => ({ userGeneralSetting: setting }) }));
 
-describe("personal privacy password policy", () => {
+describe("memo password independence from dashboard privacy", () => {
   it.each([
     [Privacy.VISIBLE, false, false],
     [Privacy.VISIBLE, true, true],
-    [Privacy.BLURRED, false, true],
-    [Privacy.COLLAPSED, false, true],
+    [Privacy.BLURRED, false, false],
+    [Privacy.COLLAPSED, false, false],
   ])("resolves privacy %s and the saved password choice %s to %s", (privacy, password, expected) => {
     setting.personalFeaturePrivacy = privacy;
     setting.requirePasswordForPrivateContent = password;

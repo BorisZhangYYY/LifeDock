@@ -12,7 +12,15 @@ Normative schemas: [`memo-archive/1.0/manifest.schema.json`](memo-archive/1.0/ma
 
 ## Fork 1.1 extension
 
-This fork writes `formatVersion: "1.1"` and includes `moodLevel` (an integer from 0 to 7) in every Memo record. Zero explicitly means no mood. Older 1.0 archives omit this field: creating a Memo from one gives it no mood, while replacing an existing Memo preserves its current mood. A 1.1 archive replaces the existing mood, including when its value is zero. Readers that know only 1.0 may ignore this optional field, so importing into an unmodified upstream instance does not preserve mood. Finance, reminders, and personal settings remain outside Memo Archive.
+Version 1.1 writes `formatVersion: "1.1"` and includes `moodLevel` (an integer from 0 to 7) in every Memo record. Zero explicitly means no mood. Older 1.0 archives omit this field: creating a Memo from one gives it no mood, while replacing an existing Memo preserves its current mood. A 1.1 archive replaces the existing mood, including when its value is zero. Readers that know only 1.0 may ignore this optional field, so importing into an unmodified upstream instance does not preserve mood.
+
+## Fork 1.2 extension
+
+LifeDock writes `formatVersion: "1.2"` with an optional `userData: true` manifest marker. When set, `user-data.json` and `unlinked-attachments.json` are required. This entry contains a version 1 user snapshot: profile fields, general settings, tags, persona, memo views, webhooks, finance wallets (including deleted wallets), categories, the complete ledger, reminder lists, recurring reminders, completion occurrences, deleted memo mood history, and notification history. Passwords, login tokens, external identities and shared-space membership permissions are excluded. Identifiers in this snapshot are source-local and are remapped during import; the destination user always comes from the authenticated request.
+
+`unlinked-attachments.json` lists owned attachments not included in memo records, using the same attachment schema and `attachments/` file layout. Its bytes are included in the ZIP, along with ordinary memo attachments.
+
+Personal modules are restored as one collection in a database transaction. `SKIP` retains an existing collection; `REPLACE` replaces the destination collection; `DUPLICATE` appends a collection with new identifiers and distinct wallet/category/list names. Existing profile fields and preferences are overwritten only with `REPLACE`. Memos retain their existing per-record conflict policy. Personal results are reported separately from memo counts. A personal restore failure rolls back that collection and is shown in the import report. Old 1.0/1.1 archives have no personal snapshot and retain memo-only behavior. Older readers may ignore these extra entries and therefore restore only memos.
 
 ## Summary
 

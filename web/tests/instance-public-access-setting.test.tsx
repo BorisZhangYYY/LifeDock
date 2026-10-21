@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import InstanceSection from "@/components/Settings/InstanceSection";
 import {
+  InstanceAccessMode,
   InstanceSetting_GeneralSettingSchema,
   InstanceSetting_Key,
   InstanceSetting_MemoRelatedSettingSchema,
@@ -14,7 +15,7 @@ const { listIdentityProvidersMock, saveInstanceSettingMock } = vi.hoisted(() => 
 }));
 
 const mockInstance = {
-  accessSetting: { accessMode: 2 },
+  accessSetting: { accessMode: InstanceAccessMode.PUBLIC },
   generalSetting: create(InstanceSetting_GeneralSettingSchema, {}),
   memoRelatedSetting: create(InstanceSetting_MemoRelatedSettingSchema, {}),
   profile: { demo: false, instanceUrl: "https://memos.example.com" },
@@ -48,6 +49,7 @@ describe("<InstanceSection> public access setting", () => {
     saveInstanceSettingMock.mockResolvedValue(true);
     listIdentityProvidersMock.mockReset();
     listIdentityProvidersMock.mockResolvedValue({ identityProviders: [] });
+    mockInstance.accessSetting = { accessMode: InstanceAccessMode.PUBLIC };
     mockInstance.generalSetting = create(InstanceSetting_GeneralSettingSchema, {});
     mockInstance.memoRelatedSetting = create(InstanceSetting_MemoRelatedSettingSchema, {});
     mockInstance.profile = { demo: false, instanceUrl: "https://memos.example.com" };
@@ -58,11 +60,13 @@ describe("<InstanceSection> public access setting", () => {
 
     const publicAccessSwitch = screen.getByRole("switch", { name: "setting.instance.public-access" });
     expect(publicAccessSwitch).toBeChecked();
+    expect(screen.queryByRole("switch", { name: "setting.instance.allow-public-access" })).not.toBeInTheDocument();
 
     fireEvent.click(publicAccessSwitch);
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
-    await waitFor(() => expect(saveInstanceSettingMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(saveInstanceSettingMock).toHaveBeenCalledTimes(2));
+    expect(saveInstanceSettingMock.mock.calls[1][0].setting.value.value.accessMode).toBe(InstanceAccessMode.PRIVATE);
     const request = saveInstanceSettingMock.mock.calls[0][0];
     expect(request.key).toBe(InstanceSetting_Key.MEMO_RELATED);
     expect(request.setting.value.value.allowedVisibilities).toEqual(["PRIVATE", "PROTECTED"]);
@@ -135,7 +139,7 @@ describe("<InstanceSection> public access setting", () => {
     fireEvent.click(screen.getByRole("switch", { name: "setting.instance.public-access" }));
     fireEvent.click(screen.getByRole("button", { name: "common.save" }));
 
-    await waitFor(() => expect(saveInstanceSettingMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(saveInstanceSettingMock).toHaveBeenCalledTimes(3));
     expect(saveInstanceSettingMock.mock.calls[0][0].key).toBe(InstanceSetting_Key.MEMO_RELATED);
     expect(saveInstanceSettingMock.mock.calls[1][0].key).toBe(InstanceSetting_Key.GENERAL);
   });

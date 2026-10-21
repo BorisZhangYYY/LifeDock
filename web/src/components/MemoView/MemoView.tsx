@@ -15,7 +15,6 @@ import { getMoodColor } from "@/lib/mood";
 import { findTagMetadata } from "@/lib/tag";
 import { cn } from "@/lib/utils";
 import { State } from "@/types/proto/api/v1/common_pb";
-import { UserSetting_GeneralSetting_PersonalFeaturePrivacy } from "@/types/proto/api/v1/user_service_pb";
 import { useTranslate } from "@/utils/i18n";
 import { lazyWithReload } from "@/utils/lazy";
 import { isSuperUser } from "@/utils/user";
@@ -53,7 +52,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
 
   const currentUser = useCurrentUser();
   const { userTagsSetting } = useAuth();
-  const { moodEnabled, remindersEnabled, privacyMode, requirePasswordForPrivateContent } = usePersonalFeatures();
+  const { moodEnabled, requirePasswordForPrivateContent } = usePersonalFeatures();
   const privacySession = usePrivacySession();
   const { memoRelatedSetting } = useInstance();
   const creator = useResolvedUser(memoData.creator, { enabled: Boolean(showCreator || props.shareImageDialogOpen) });
@@ -77,11 +76,7 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
   // Blur content when any tag has blur_content enabled in the current user's tag settings.
   const [locallyRevealed, setLocallyRevealed] = useState(false);
   const tagBlurred = memoData.tags?.some((tag) => userTagsSetting && findTagMetadata(tag, userTagsSetting)?.blurContent) ?? false;
-  const reminderBlurred =
-    remindersEnabled &&
-    privacyMode !== UserSetting_GeneralSetting_PersonalFeaturePrivacy.VISIBLE &&
-    ((props.linkedReminders?.length ?? 0) > 0 || privacySession.isReminderLinkedMemo(memoData.name));
-  const blurred = tagBlurred || reminderBlurred;
+  const blurred = tagBlurred;
   const passwordProtected = blurred && requirePasswordForPrivateContent;
   const showBlurredContent = passwordProtected ? privacySession.isMemoUnlocked(memoData.name) : locallyRevealed;
   const toggleBlurVisibility = useCallback(() => {

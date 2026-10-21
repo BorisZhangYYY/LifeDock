@@ -2,9 +2,11 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"maps"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -33,7 +35,7 @@ type memoArchiveExport struct {
 
 // ExportMemoArchive writes a Memo Archive holding every memo the user
 // created, including comments and archived memos, and the attachments linked
-// to them. Nothing another user created is included.
+// to them, plus the owner's personal modules, preferences and unlinked files.
 func (s *APIV1Service) ExportMemoArchive(ctx context.Context, user *store.User, w io.Writer) error {
 	if user == nil {
 		return errors.New("user is required")
@@ -43,6 +45,35 @@ func (s *APIV1Service) ExportMemoArchive(ctx context.Context, user *store.User, 
 		return err
 	}
 
+	personal, err := s.Store.ExportUserArchiveData(ctx, user.ID)
+	if err != nil {
+		return errors.Wrap(err, "failed to export personal data")
+	}
+	personal.MemoUIDs = map[string]string{}
+	for _, memo := range export.memos {
+		personal.MemoUIDs[strconv.FormatInt(int64(memo.ID), 10)] = memo.UID
+	}
+	rawPersonal, err := json.Marshal(personal)
+	if err != nil {
+		return err
+	}
+
+	exportedAttachments := map[string]bool{}
+	for _, attachments := range export.attachmentsByID {
+		for _, attachment := range attachments {
+			exportedAttachments[attachment.UID] = true
+		}
+	}
+	ownedAttachments, err := s.Store.ListAttachments(ctx, &store.FindAttachment{CreatorID: &user.ID, SkipDefaultLimit: true})
+	if err != nil {
+		return err
+	}
+	unlinkedCount := 0
+	for _, attachment := range ownedAttachments {
+		if !exportedAttachments[attachment.UID] {
+			unlinkedCount++
+		}
+	}
 	exportTime := time.Now().UTC().Truncate(time.Second)
 	writer := memoarchive.NewWriter(w, exportTime)
 	if err := writer.WriteManifest(&memoarchive.Manifest{
@@ -52,11 +83,26 @@ func (s *APIV1Service) ExportMemoArchive(ctx context.Context, user *store.User, 
 			Kind: memoarchive.ScopeKindUser,
 			User: &memoarchive.ScopeUser{Username: user.Username, DisplayName: user.Nickname},
 		},
-		Counts: &memoarchive.Counts{Memos: len(export.memos), Attachments: export.attachmentsCount},
+		Counts:   &memoarchive.Counts{Memos: len(export.memos), Attachments: export.attachmentsCount + unlinkedCount},
+		UserData: true,
 	}); err != nil {
 		return err
 	}
 
+	unlinked := []memoarchive.Attachment{}
+	for _, attachment := range ownedAttachments {
+		if exportedAttachments[attachment.UID] {
+			continue
+		}
+		entry, err := s.buildArchiveAttachment(ctx, writer, attachment)
+		if err != nil {
+			return err
+		}
+		unlinked = append(unlinked, *entry)
+	}
+	if err := writer.WriteUnlinkedAttachments(unlinked); err != nil {
+		return err
+	}
 	for _, memo := range export.memos {
 		record, err := s.buildMemoArchiveRecord(ctx, writer, user, export, memo)
 		if err != nil {
@@ -65,6 +111,9 @@ func (s *APIV1Service) ExportMemoArchive(ctx context.Context, user *store.User, 
 		if err := writer.WriteMemo(record, []byte(memo.Content)); err != nil {
 			return err
 		}
+	}
+	if err := writer.WriteUserData(rawPersonal); err != nil {
+		return err
 	}
 	return writer.Close()
 }
@@ -212,37 +261,45 @@ func (s *APIV1Service) buildMemoArchiveRecord(ctx context.Context, writer *memoa
 		})
 	}
 	for _, attachment := range export.attachmentsByID[memo.ID] {
-		entry := memoarchive.Attachment{
-			UID:        attachment.UID,
-			Filename:   attachment.Filename,
-			Type:       attachment.Type,
-			Size:       attachment.Size,
-			CreateTime: memoarchive.FormatTime(attachment.CreatedTs),
+		entry, err := s.buildArchiveAttachment(ctx, writer, attachment)
+		if err != nil {
+			return nil, err
 		}
-		if metadata := convertMediaMetadataFromStore(attachment.Payload.GetMediaMetadata()); metadata != nil {
-			raw, err := protojson.Marshal(metadata)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to encode media metadata of attachment %s", attachment.UID)
-			}
-			entry.MediaMetadata = raw
-		}
-		if attachment.StorageType == storepb.AttachmentStorageType_EXTERNAL {
-			entry.ExternalLink = attachment.Reference
-		} else {
-			content, err := s.openAttachmentContent(ctx, attachment)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to read attachment %s", attachment.UID)
-			}
-			entry.Path = memoarchive.AttachmentPath(attachment.UID, attachment.Filename)
-			digest, size, err := writer.WriteAttachment(entry.Path, content)
-			_ = content.Close()
-			if err != nil {
-				return nil, err
-			}
-			entry.SHA256 = digest
-			entry.Size = size
-		}
-		record.Attachments = append(record.Attachments, entry)
+		record.Attachments = append(record.Attachments, *entry)
 	}
 	return record, nil
+}
+
+func (s *APIV1Service) buildArchiveAttachment(ctx context.Context, writer *memoarchive.Writer, attachment *store.Attachment) (*memoarchive.Attachment, error) {
+	entry := memoarchive.Attachment{
+		UID:        attachment.UID,
+		Filename:   attachment.Filename,
+		Type:       attachment.Type,
+		Size:       attachment.Size,
+		CreateTime: memoarchive.FormatTime(attachment.CreatedTs),
+	}
+	if metadata := convertMediaMetadataFromStore(attachment.Payload.GetMediaMetadata()); metadata != nil {
+		raw, err := protojson.Marshal(metadata)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to encode media metadata of attachment %s", attachment.UID)
+		}
+		entry.MediaMetadata = raw
+	}
+	if attachment.StorageType == storepb.AttachmentStorageType_EXTERNAL {
+		entry.ExternalLink = attachment.Reference
+	} else {
+		content, err := s.openAttachmentContent(ctx, attachment)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to read attachment %s", attachment.UID)
+		}
+		entry.Path = memoarchive.AttachmentPath(attachment.UID, attachment.Filename)
+		digest, size, err := writer.WriteAttachment(entry.Path, content)
+		_ = content.Close()
+		if err != nil {
+			return nil, err
+		}
+		entry.SHA256 = digest
+		entry.Size = size
+	}
+	return &entry, nil
 }

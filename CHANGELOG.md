@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.36.3](https://github.com/BorisZhangYYY/memos/compare/v0.36.2...v0.36.3) (2026-10-21)
+
+### Summary
+
+This release separates personal-dashboard privacy from tagged Memo protection,
+adds complete user-data backups, and simplifies public access and SMTP settings.
+
+### Features and fixes
+
+* **Independent privacy controls:** keep one privacy switch for personal dashboards
+  and pages. Configure password verification for blurred Memos separately in Tags;
+  unlocking a dashboard or a Memo no longer unlocks the other.
+* **User-data backups:** export archive format 1.2 with profile and preferences,
+  tag rules, persona, saved views, webhooks, reminder lists and completion history,
+  finance wallets and transactions, deleted Memo mood history, notification history,
+  and owned attachments outside Memo records. Continue importing 1.0/1.1 archives.
+* **Import review and recovery:** show personal record counts and conflict handling
+  before import. Restore personal collections transactionally with remapped IDs,
+  preserving exact monetary amounts, deleted-wallet history, and reminder links.
+  Report personal restore failures separately and refresh restored settings.
+* **Public access:** replace the two overlapping switches with one control for
+  PUBLIC Memo visibility and anonymous Explore access. Private instances reject
+  PUBLIC visibility and direct visitors to sign in. Preserve legacy access-mode
+  initialization when upgrading an existing installation.
+* **SMTP credentials:** show the saved password masked by default, with an inset
+  eye button to reveal or hide it. Administrators can inspect and replace the
+  saved credential; ordinary users and anonymous requests remain denied.
+* Remove the duplicate explanation beneath the tagged-Memo password switch.
+
+### Upgrade notes
+
+* No new database migrations or dependencies are required.
+* User-data backups exclude account passwords, login tokens, external identities,
+  and shared-space membership permissions. Keep backup files private: they contain
+  personal data and may include webhook signing secrets.
+* Personal modules are restored as a collection: Keep retains an existing
+  collection, Replace restores the backed-up collection, and Duplicate appends
+  an independent copy. Existing profile and preferences are overwritten only
+  with Replace. Memo conflicts retain their per-record policy.
+* Dashboard and tagged-Memo privacy remain frontend display protection, without
+  changing data encryption or sharing permissions. SMTP passwords are now
+  returned by administrator-only notification-setting endpoints.
+
 ## [0.36.2](https://github.com/BorisZhangYYY/memos/compare/v0.36.1...v0.36.2) (2026-10-19)
 
 ### Summary

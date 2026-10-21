@@ -72,7 +72,8 @@ type UserServiceClient interface {
 	ListAllUserStats(ctx context.Context, in *ListAllUserStatsRequest, opts ...grpc.CallOption) (*ListAllUserStatsResponse, error)
 	// GetUserStats returns statistics for a specific user.
 	GetUserStats(ctx context.Context, in *GetUserStatsRequest, opts ...grpc.CallOption) (*UserStats, error)
-	// ExportMemos writes every memo the user created, with comments, archived
+	// ExportMemos writes user preferences and personal modules alongside every
+	// memo the user created, with comments, archived
 	// memos, and attachment files, as a Memo Archive (a ZIP file, see
 	// docs/design/memo-archive-format.md). Only the user may export their own
 	// memos. The body is the archive; content_type is its media type.
@@ -436,7 +437,8 @@ type UserServiceServer interface {
 	ListAllUserStats(context.Context, *ListAllUserStatsRequest) (*ListAllUserStatsResponse, error)
 	// GetUserStats returns statistics for a specific user.
 	GetUserStats(context.Context, *GetUserStatsRequest) (*UserStats, error)
-	// ExportMemos writes every memo the user created, with comments, archived
+	// ExportMemos writes user preferences and personal modules alongside every
+	// memo the user created, with comments, archived
 	// memos, and attachment files, as a Memo Archive (a ZIP file, see
 	// docs/design/memo-archive-format.md). Only the user may export their own
 	// memos. The body is the archive; content_type is its media type.

@@ -451,7 +451,7 @@ func TestStartupPrivateInstanceGatewayPolicy(t *testing.T) {
 		"/api/v1/memos/startup-private-public?updateMask=visibility", token, map[string]any{
 			"visibility": "PUBLIC",
 		})
-	require.Equal(t, http.StatusOK, status, "should be able to make the memo public: %s", body)
+	require.Equal(t, http.StatusBadRequest, status, "private instances reject PUBLIC visibility: %s", body)
 
 	status, _ = inst.do(t, http.MethodGet, "/api/v1/memos", "", nil)
 	require.Equal(t, http.StatusUnauthorized, status,

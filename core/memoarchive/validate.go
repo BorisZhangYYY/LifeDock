@@ -142,45 +142,8 @@ func validateMemo(memo *Memo) ([]Warning, error) {
 	}
 	memo.Relations = relations
 
-	seenAttachmentUIDs := make(map[string]struct{}, len(memo.Attachments))
-	for index := range memo.Attachments {
-		attachment := &memo.Attachments[index]
-		if err := ValidateUID(attachment.UID); err != nil {
-			return nil, fail("attachment: %v", err)
-		}
-		if _, dup := seenAttachmentUIDs[attachment.UID]; dup {
-			return nil, fail("attachment %s is listed twice", attachment.UID)
-		}
-		seenAttachmentUIDs[attachment.UID] = struct{}{}
-		if attachment.Filename == "" {
-			return nil, fail("attachment %s: filename is required", attachment.UID)
-		}
-		if !mediaTypePattern.MatchString(attachment.Type) {
-			return nil, fail("attachment %s: type %q is not a media type", attachment.UID, attachment.Type)
-		}
-		if attachment.Size < 0 {
-			return nil, fail("attachment %s: size must not be negative", attachment.UID)
-		}
-		if _, err := ParseTime(attachment.CreateTime); err != nil {
-			return nil, fail("attachment %s: createTime is invalid: %v", attachment.UID, err)
-		}
-		switch {
-		case attachment.Path != "" && attachment.ExternalLink != "":
-			return nil, fail("attachment %s: path and externalLink are mutually exclusive", attachment.UID)
-		case attachment.Path != "":
-			if err := ValidateEntryName(attachment.Path); err != nil {
-				return nil, fail("attachment %s: path: %v", attachment.UID, err)
-			}
-			if !strings.HasPrefix(attachment.Path, AttachmentsDir) {
-				return nil, fail("attachment %s: path must be under %s", attachment.UID, AttachmentsDir)
-			}
-			if !sha256Pattern.MatchString(attachment.SHA256) {
-				return nil, fail("attachment %s: sha256 is required with path", attachment.UID)
-			}
-		case attachment.ExternalLink != "":
-		default:
-			return nil, fail("attachment %s: one of path or externalLink is required", attachment.UID)
-		}
+	if err := validateAttachments(memo.Attachments); err != nil {
+		return nil, err
 	}
 	for _, reaction := range memo.Reactions {
 		if reaction.ReactionType == "" || reaction.Creator == "" {
@@ -188,4 +151,49 @@ func validateMemo(memo *Memo) ([]Warning, error) {
 		}
 	}
 	return warnings, nil
+}
+
+func validateAttachments(attachments []Attachment) error {
+	fail := func(format string, args ...any) error { return errors.Errorf(format, args...) }
+	seenAttachmentUIDs := make(map[string]struct{}, len(attachments))
+	for index := range attachments {
+		attachment := &attachments[index]
+		if err := ValidateUID(attachment.UID); err != nil {
+			return fail("attachment: %v", err)
+		}
+		if _, dup := seenAttachmentUIDs[attachment.UID]; dup {
+			return fail("attachment %s is listed twice", attachment.UID)
+		}
+		seenAttachmentUIDs[attachment.UID] = struct{}{}
+		if attachment.Filename == "" {
+			return fail("attachment %s: filename is required", attachment.UID)
+		}
+		if !mediaTypePattern.MatchString(attachment.Type) {
+			return fail("attachment %s: type %q is not a media type", attachment.UID, attachment.Type)
+		}
+		if attachment.Size < 0 {
+			return fail("attachment %s: size must not be negative", attachment.UID)
+		}
+		if _, err := ParseTime(attachment.CreateTime); err != nil {
+			return fail("attachment %s: createTime is invalid: %v", attachment.UID, err)
+		}
+		switch {
+		case attachment.Path != "" && attachment.ExternalLink != "":
+			return fail("attachment %s: path and externalLink are mutually exclusive", attachment.UID)
+		case attachment.Path != "":
+			if err := ValidateEntryName(attachment.Path); err != nil {
+				return fail("attachment %s: path: %v", attachment.UID, err)
+			}
+			if !strings.HasPrefix(attachment.Path, AttachmentsDir) {
+				return fail("attachment %s: path must be under %s", attachment.UID, AttachmentsDir)
+			}
+			if !sha256Pattern.MatchString(attachment.SHA256) {
+				return fail("attachment %s: sha256 is required with path", attachment.UID)
+			}
+		case attachment.ExternalLink != "":
+		default:
+			return fail("attachment %s: one of path or externalLink is required", attachment.UID)
+		}
+	}
+	return nil
 }

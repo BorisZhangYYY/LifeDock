@@ -808,9 +808,9 @@
       "disable-all": "一键禁用全部个人功能",
       "all-disabled": "已禁用全部个人功能",
       "privacy-title": "隐私保护",
-      "privacy-description": "隐藏个人内容，验证账户密码后显示。内容不会加密。",
-      "home-privacy": "隐藏个人内容",
-      "home-privacy-description": "进入心情、收支、提醒事项及敏感 Memo 前，先验证账户密码。",
+      "privacy-description": "保护看板和个人区域的内容，验证账户密码后显示。Memo 的模糊与密码在标签设置中独立配置。",
+      "home-privacy": "保护个人看板",
+      "home-privacy-description": "查看个人看板、心情、收支和提醒事项前验证账户密码，不影响 Memo。",
       "privacy-visible": "直接显示",
       "privacy-blurred": "默认模糊",
       "privacy-collapsed": "默认折叠",
@@ -846,10 +846,10 @@
       "no-members-found": "没有找到会员"
     },
     "memo-archive": {
-      "description": "通过一个归档文件，在 Memos 实例之间迁移备忘录和附件。",
+      "description": "备份和迁移当前用户的 Memo、附件、个人模块及设置。",
       "export-action": "导出",
-      "export-description": "将你创建的备忘录、评论、已归档备忘录和附件下载为 ZIP 归档。",
-      "export-detail": "每条备忘录包含 Markdown 文件和 JSON 记录。",
+      "export-description": "导出 Memo、评论、归档、附件，以及提醒清单与完成历史、收支账户与流水、心情历史、个人资料和设置。",
+      "export-detail": "生成 ZIP 备份。账号密码、登录令牌及共享空间成员权限不参与迁移。",
       "export-failed": "导出失败。",
       "export-label": "下载归档",
       "export-success": "归档文件正在下载。",
@@ -857,18 +857,18 @@
       "exporting": "正在导出…",
       "import-action": "选择文件",
       "import-another": "导入其他归档",
-      "import-confirm": "导入 {{count}} 条备忘录",
-      "import-description": "从此实例或其他 Memos 实例导入归档。相同标识的备忘录不会被重复创建。",
+      "import-confirm": "导入 {{count}} 条记录",
+      "import-description": "支持用户完整备份及旧版 Memo 归档。导入前可预览内容并选择冲突处理方式。",
       "import-detail": "选择 memos-archive-*.zip 文件。",
       "import-failed": "导入失败。",
       "import-label": "上传归档",
-      "import-success": "已新建 {{created}} 条并更新 {{updated}} 条备忘录。",
+      "import-success": "已新建 {{created}} 条并更新 {{updated}} 条记录。",
       "import-title": "导入",
       "importing": "正在导入…",
       "label": "导出与导入",
       "policy-duplicate": "创建副本",
       "policy-duplicate-description": "保留现有备忘录，并把归档内容另存为新备忘录。",
-      "policy-question": "其中 {{count}} 条备忘录已在你的账号中。如何处理？",
+      "policy-question": "目标账号已有 {{count}} 条记录，如何处理？",
       "policy-replace": "用归档内容替换",
       "policy-replace-description": "用归档内容覆盖现有正文和设置。",
       "policy-skip": "保留现有内容",
@@ -884,7 +884,10 @@
       "review-exported": "导出者",
       "review-file": "文件",
       "review-memos": "归档中的备忘录",
-      "review-new": "将新建"
+      "review-new": "将新建",
+      "import-partial": "导入结束，{{count}} 条记录未能恢复，请查看失败详情。",
+      "review-personal": "个人模块与设置记录",
+      "personal-policy": "个人模块按整组处理：保留现有内容时，若已有个人模块数据则跳过该组；替换时恢复备份中的全部个人模块；创建副本时追加独立副本。资料和设置仅在选择替换时覆盖。"
     },
     "my-account": {
       "label": "我的账号"
@@ -1172,7 +1175,7 @@
       "instance-url-invalid": "请输入不含账号信息、查询参数或片段的完整 HTTP(S) 地址。",
       "instance-url": "实例 URL",
       "monday": "周一",
-      "public-access-description": "配置 Instance URL 后，允许未登录访客打开“发现”页和 Public Memo。关闭后，现有 Public Memo 将只对创建者可见。",
+      "public-access-description": "开启后允许设置公开 Memo，并向未登录访客开放发现页。关闭后仅可选择工作区或私有可见性，访客将跳转登录页。",
       "public-access-instance-url-required": "当前未配置 Instance URL，因此即使开启此选项，匿名访问仍会保持关闭。",
       "public-access": "允许公开访问",
       "saturday": "周六",
@@ -1288,7 +1291,9 @@
       "use-ssl": "使用 SSL/TLS",
       "use-ssl-description": "使用隐式 TLS，通常搭配 465 端口。若在 587 端口使用 STARTTLS 请关闭此选项。",
       "use-tls": "使用 STARTTLS",
-      "use-tls-description": "通过 STARTTLS 升级 SMTP 连接；请根据邮件服务商的连接要求设置。"
+      "use-tls-description": "通过 STARTTLS 升级 SMTP 连接；请根据邮件服务商的连接要求设置。",
+      "show-password": "显示密码",
+      "hide-password": "隐藏密码"
     },
     "resource-stats": {
       "database": {

@@ -352,9 +352,9 @@
       "disable-all": "Disable all personal features",
       "all-disabled": "All personal features are disabled",
       "privacy-title": "Privacy",
-      "privacy-description": "Hide personal content until you verify your account password. This does not encrypt the data.",
-      "home-privacy": "Hide personal content",
-      "home-privacy-description": "Require your account password before viewing mood statistics, finances, reminders, and sensitive memos.",
+      "privacy-description": "Hide personal dashboards until you verify your account password. Configure memo blur and passwords separately in Tags.",
+      "home-privacy": "Protect personal dashboards",
+      "home-privacy-description": "Verify your account password before viewing personal dashboards, moods, finance and reminders. Memo privacy is configured separately.",
       "privacy-visible": "Visible",
       "privacy-blurred": "Blurred",
       "privacy-collapsed": "Collapsed",
@@ -436,10 +436,10 @@
       "no-webhooks-found": "No webhooks found."
     },
     "memo-archive": {
-      "description": "Move your memos and attachments between Memos instances with a single archive file.",
+      "description": "Back up and migrate your memos, attachments, personal modules and preferences.",
       "export-action": "Export",
-      "export-description": "Download every memo you created, including comments, archived memos, and attachment files, as a Memo Archive.",
-      "export-detail": "A ZIP file with one Markdown file and one JSON record per memo.",
+      "export-description": "Export memos, comments, archives, attachments, reminders and completion history, finance accounts and transactions, mood history, profile and preferences.",
+      "export-detail": "Download a ZIP backup. Account passwords, login tokens and shared-space memberships are excluded.",
       "export-failed": "Export failed.",
       "export-label": "Download archive",
       "export-success": "Your archive is downloading.",
@@ -447,18 +447,18 @@
       "exporting": "Exporting…",
       "import-action": "Choose file",
       "import-another": "Import another archive",
-      "import-confirm": "Import {{count}} memos",
-      "import-description": "Import a Memo Archive from this or another Memos instance. Memos keep their identifiers, so importing the same archive twice does not create duplicates.",
+      "import-confirm": "Import {{count}} records",
+      "import-description": "Import complete user backups or older memo archives. Review the contents and conflict policy before importing.",
       "import-detail": "Select a memos-archive-*.zip file.",
       "import-failed": "Import failed.",
       "import-label": "Upload archive",
-      "import-success": "Imported {{created}} new and updated {{updated}} memos.",
+      "import-success": "Created {{created}} and updated {{updated}} records.",
       "import-title": "Import",
       "importing": "Importing…",
       "label": "Export & Import",
       "policy-duplicate": "Create a copy",
       "policy-duplicate-description": "Keep the existing memos and add the archive versions as new memos.",
-      "policy-question": "{{count}} of these memos already exist in your account. What should happen to them?",
+      "policy-question": "The destination account has {{count}} existing records. How should they be handled?",
       "policy-replace": "Replace with the archive",
       "policy-replace-description": "Overwrite their content and settings with the archive.",
       "policy-skip": "Keep mine",
@@ -474,7 +474,10 @@
       "review-exported": "Exported by",
       "review-file": "File",
       "review-memos": "Memos in archive",
-      "review-new": "Will be created"
+      "review-new": "Will be created",
+      "import-partial": "Import finished with {{count}} failed records. Review the failure details.",
+      "review-personal": "Personal and preference records",
+      "personal-policy": "Personal modules are restored as a collection: Keep skips the collection when personal data exists; Replace restores the backed-up collection; Duplicate appends a separate copy. Existing profile and preferences are overwritten only with Replace."
     },
     "my-account": {
       "label": "My Account"
@@ -526,7 +529,7 @@
     },
     "instance": {
       "public-access-instance-url-required": "No Instance URL is configured, so anonymous access remains closed even while this switch is on.",
-      "public-access-description": "Allow signed-out visitors to open Explore and Public memos when an Instance URL is configured. Turning this off hides existing Public memos from everyone except their creators.",
+      "public-access-description": "Allow public memos and anonymous Explore browsing. When off, only workspace and private visibility are available, and visitors are redirected to sign in.",
       "disallow-user-registration-description": "Prevent new users from creating accounts from the sign-up page.",
       "allow-public-access": "Allow public access",
       "instance-url-invalid": "Enter an absolute HTTP(S) URL without credentials, a query, or a fragment.",
@@ -716,7 +719,9 @@
       "smtp-password-placeholder-existing": "Leave blank to keep current password",
       "test-email-sending": "Sending test email...",
       "smtp-username-description": "Authentication username required by your email service, usually a full email address.",
-      "from-name": "From name"
+      "from-name": "From name",
+      "show-password": "Show password",
+      "hide-password": "Hide password"
     },
     "sso": {
       "identifier-filter": "Identifier Filter",

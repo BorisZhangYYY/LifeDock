@@ -23,21 +23,11 @@ const maxBatchGetLinkMetadata = 10
 
 // resolveAllowedVisibilities translates the legacy allowlist into the simplified
 // public-access policy. PRIVATE and PROTECTED are always available; PUBLIC is
-// available when the allowlist is empty or explicitly contains PUBLIC.
+// available only when anonymous access and the legacy visibility policy both allow it.
 func (s *APIV1Service) resolveAllowedVisibilities(ctx context.Context) ([]store.Visibility, error) {
-	setting, err := s.Store.GetInstanceMemoRelatedSetting(ctx)
+	publicEnabled, err := s.Store.PublicMemoEnabled(ctx)
 	if err != nil {
 		return nil, err
-	}
-	if setting == nil || len(setting.AllowedVisibilities) == 0 {
-		return []store.Visibility{store.SpaceAudience, store.Private, store.Protected, store.Public}, nil
-	}
-	publicEnabled := false
-	for _, value := range setting.AllowedVisibilities {
-		if store.Visibility(value) == store.Public {
-			publicEnabled = true
-			break
-		}
 	}
 	allowed := []store.Visibility{store.SpaceAudience, store.Private, store.Protected}
 	if publicEnabled {

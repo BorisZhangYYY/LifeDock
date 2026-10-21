@@ -107,6 +107,22 @@ func (w *Writer) WriteAttachment(path string, content io.Reader) (string, int64,
 	return hex.EncodeToString(digest.Sum(nil)), size, nil
 }
 
+// WriteUnlinkedAttachments writes the records for owned files outside memo records.
+func (w *Writer) WriteUnlinkedAttachments(attachments []Attachment) error {
+	if err := validateAttachments(attachments); err != nil {
+		return err
+	}
+	return w.writeJSON(UnlinkedAttachmentsEntry, attachments)
+}
+
+// WriteUserData writes the optional versioned personal snapshot.
+func (w *Writer) WriteUserData(data json.RawMessage) error {
+	if !json.Valid(data) {
+		return errors.New("invalid user data JSON")
+	}
+	return w.writeJSON(UserDataEntry, data)
+}
+
 // Close finishes the central directory. The archive is unusable until Close
 // returns nil.
 func (w *Writer) Close() error {

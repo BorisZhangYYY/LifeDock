@@ -1579,9 +1579,13 @@ type MemoImportPlan struct {
 	// Memos whose UID another account holds; they are imported under fresh UIDs.
 	Renamed int32 `protobuf:"varint,8,opt,name=renamed,proto3" json:"renamed,omitempty"`
 	// Deviations the archive reader corrected while validating.
-	Warnings      []*MemoImportIssue `protobuf:"bytes,9,rep,name=warnings,proto3" json:"warnings,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Warnings []*MemoImportIssue `protobuf:"bytes,9,rep,name=warnings,proto3" json:"warnings,omitempty"`
+	// Personal, profile and preference records in the archive.
+	PersonalRecords int32 `protobuf:"varint,10,opt,name=personal_records,json=personalRecords,proto3" json:"personal_records,omitempty"`
+	// Current personal, profile and preference records at the destination.
+	ExistingPersonalRecords int32 `protobuf:"varint,11,opt,name=existing_personal_records,json=existingPersonalRecords,proto3" json:"existing_personal_records,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *MemoImportPlan) Reset() {
@@ -1677,6 +1681,20 @@ func (x *MemoImportPlan) GetWarnings() []*MemoImportIssue {
 	return nil
 }
 
+func (x *MemoImportPlan) GetPersonalRecords() int32 {
+	if x != nil {
+		return x.PersonalRecords
+	}
+	return 0
+}
+
+func (x *MemoImportPlan) GetExistingPersonalRecords() int32 {
+	if x != nil {
+		return x.ExistingPersonalRecords
+	}
+	return 0
+}
+
 // MemoImportReport is the outcome of an import.
 type MemoImportReport struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
@@ -1686,9 +1704,15 @@ type MemoImportReport struct {
 	Failed   int32                  `protobuf:"varint,4,opt,name=failed,proto3" json:"failed,omitempty"`
 	Warnings []*MemoImportIssue     `protobuf:"bytes,5,rep,name=warnings,proto3" json:"warnings,omitempty"`
 	// One entry per failed memo, with the reason.
-	Failures      []*MemoImportIssue `protobuf:"bytes,6,rep,name=failures,proto3" json:"failures,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Failures []*MemoImportIssue `protobuf:"bytes,6,rep,name=failures,proto3" json:"failures,omitempty"`
+	// Personal records successfully restored by this import.
+	PersonalRecords int32 `protobuf:"varint,7,opt,name=personal_records,json=personalRecords,proto3" json:"personal_records,omitempty"`
+	PersonalCreated int32 `protobuf:"varint,8,opt,name=personal_created,json=personalCreated,proto3" json:"personal_created,omitempty"`
+	PersonalUpdated int32 `protobuf:"varint,9,opt,name=personal_updated,json=personalUpdated,proto3" json:"personal_updated,omitempty"`
+	PersonalSkipped int32 `protobuf:"varint,10,opt,name=personal_skipped,json=personalSkipped,proto3" json:"personal_skipped,omitempty"`
+	PersonalFailed  int32 `protobuf:"varint,11,opt,name=personal_failed,json=personalFailed,proto3" json:"personal_failed,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MemoImportReport) Reset() {
@@ -1761,6 +1785,41 @@ func (x *MemoImportReport) GetFailures() []*MemoImportIssue {
 		return x.Failures
 	}
 	return nil
+}
+
+func (x *MemoImportReport) GetPersonalRecords() int32 {
+	if x != nil {
+		return x.PersonalRecords
+	}
+	return 0
+}
+
+func (x *MemoImportReport) GetPersonalCreated() int32 {
+	if x != nil {
+		return x.PersonalCreated
+	}
+	return 0
+}
+
+func (x *MemoImportReport) GetPersonalUpdated() int32 {
+	if x != nil {
+		return x.PersonalUpdated
+	}
+	return 0
+}
+
+func (x *MemoImportReport) GetPersonalSkipped() int32 {
+	if x != nil {
+		return x.PersonalSkipped
+	}
+	return 0
+}
+
+func (x *MemoImportReport) GetPersonalFailed() int32 {
+	if x != nil {
+		return x.PersonalFailed
+	}
+	return 0
 }
 
 type GetUserStatsRequest struct {
@@ -4644,7 +4703,7 @@ const file_api_v1_user_service_proto_rawDesc = "" +
 	"\x06result\"?\n" +
 	"\x0fMemoImportIssue\x12\x12\n" +
 	"\x04memo\x18\x01 \x01(\tR\x04memo\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"\xc2\x02\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"\xa9\x03\n" +
 	"\x0eMemoImportPlan\x12;\n" +
 	"\vexport_time\x18\x01 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"exportTime\x12\x1a\n" +
@@ -4655,14 +4714,23 @@ const file_api_v1_user_service_proto_rawDesc = "" +
 	"\x03new\x18\x06 \x01(\x05R\x03new\x12\x1a\n" +
 	"\bexisting\x18\a \x01(\x05R\bexisting\x12\x18\n" +
 	"\arenamed\x18\b \x01(\x05R\arenamed\x129\n" +
-	"\bwarnings\x18\t \x03(\v2\x1d.memos.api.v1.MemoImportIssueR\bwarnings\"\xee\x01\n" +
+	"\bwarnings\x18\t \x03(\v2\x1d.memos.api.v1.MemoImportIssueR\bwarnings\x12)\n" +
+	"\x10personal_records\x18\n" +
+	" \x01(\x05R\x0fpersonalRecords\x12:\n" +
+	"\x19existing_personal_records\x18\v \x01(\x05R\x17existingPersonalRecords\"\xc3\x03\n" +
 	"\x10MemoImportReport\x12\x18\n" +
 	"\acreated\x18\x01 \x01(\x05R\acreated\x12\x18\n" +
 	"\aupdated\x18\x02 \x01(\x05R\aupdated\x12\x18\n" +
 	"\askipped\x18\x03 \x01(\x05R\askipped\x12\x16\n" +
 	"\x06failed\x18\x04 \x01(\x05R\x06failed\x129\n" +
 	"\bwarnings\x18\x05 \x03(\v2\x1d.memos.api.v1.MemoImportIssueR\bwarnings\x129\n" +
-	"\bfailures\x18\x06 \x03(\v2\x1d.memos.api.v1.MemoImportIssueR\bfailures\"z\n" +
+	"\bfailures\x18\x06 \x03(\v2\x1d.memos.api.v1.MemoImportIssueR\bfailures\x12)\n" +
+	"\x10personal_records\x18\a \x01(\x05R\x0fpersonalRecords\x12)\n" +
+	"\x10personal_created\x18\b \x01(\x05R\x0fpersonalCreated\x12)\n" +
+	"\x10personal_updated\x18\t \x01(\x05R\x0fpersonalUpdated\x12)\n" +
+	"\x10personal_skipped\x18\n" +
+	" \x01(\x05R\x0fpersonalSkipped\x12'\n" +
+	"\x0fpersonal_failed\x18\v \x01(\x05R\x0epersonalFailed\"z\n" +
 	"\x13GetUserStatsRequest\x12-\n" +
 	"\x04name\x18\x01 \x01(\tB\x19\xe0A\x02\xfaA\x13\n" +
 	"\x11memos.api.v1/UserR\x04name\x12\x1b\n" +
