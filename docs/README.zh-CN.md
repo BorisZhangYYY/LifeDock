@@ -7,7 +7,7 @@ LIfeDock 是一款开源、可自行部署的个人生活管理应用，基于 [
 
 你可以用它随手记下想法、回顾心情变化、整理日常收支，也可以把笔记中的计划变成提醒。数据存放在你自己的服务器上，由你掌控。
 
-[安装与部署](fork-deploy.md) · [下载版本](https://github.com/BorisZhangYYY/memos/releases) · [问题反馈](https://github.com/BorisZhangYYY/memos/issues)
+[安装与部署](fork-deploy.md) · [下载版本](https://github.com/BorisZhangYYY/LifeDock/releases) · [问题反馈](https://github.com/BorisZhangYYY/LifeDock/issues)
 
 [English](../README.md) · 简体中文
 
@@ -77,7 +77,7 @@ docker run -d \
 
 ### 二进制与源码部署
 
-从 [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases) 下载对应平台的可执行文件，或从本仓库源码构建。
+从 [GitHub Releases](https://github.com/BorisZhangYYY/LifeDock/releases) 下载对应平台的可执行文件，或从本仓库源码构建。
 
 完整安装步骤、升级方式、数据目录说明和 MCP 客户端配置，请参阅[安装与部署指南](fork-deploy.md)。
 
@@ -89,7 +89,7 @@ docker run -d \
 
 ## 反馈与贡献
 
-欢迎通过本仓库的 [Issues](https://github.com/BorisZhangYYY/memos/issues) 提交问题与功能建议，也欢迎通过 [Pull Request](https://github.com/BorisZhangYYY/memos/pulls) 改进代码、文档和翻译。
+欢迎通过本仓库的 [Issues](https://github.com/BorisZhangYYY/LifeDock/issues) 提交问题与功能建议，也欢迎通过 [Pull Request](https://github.com/BorisZhangYYY/LifeDock/pulls) 改进代码、文档和翻译。
 
 ## 致谢与许可证
 

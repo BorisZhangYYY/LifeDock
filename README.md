@@ -7,7 +7,7 @@ It keeps Memos' lightweight, Markdown-native approach to quick capture, while br
 
 Capture an idea, reflect on how you feel, track everyday spending, or turn a plan in your notes into a reminder. Your data lives on your own server, under your control.
 
-[Deployment guide](docs/fork-deploy.md) · [Releases](https://github.com/BorisZhangYYY/memos/releases) · [Report an issue](https://github.com/BorisZhangYYY/memos/issues)
+[Deployment guide](docs/fork-deploy.md) · [Releases](https://github.com/BorisZhangYYY/LifeDock/releases) · [Report an issue](https://github.com/BorisZhangYYY/LifeDock/issues)
 
 English · [简体中文](docs/README.zh-CN.md)
 
@@ -77,7 +77,7 @@ Open <http://localhost:5230> and create your first account to get started. The f
 
 ### Binaries and building from source
 
-Download a binary for your platform from [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases), or build from this repository's source.
+Download a binary for your platform from [GitHub Releases](https://github.com/BorisZhangYYY/LifeDock/releases), or build from this repository's source.
 
 For complete installation steps, upgrades, data directory details, and MCP client configuration, see the [deployment guide](docs/fork-deploy.md).
 
@@ -89,7 +89,7 @@ Preview record counts before importing, then choose to keep existing data, repla
 
 ## Feedback and contributions
 
-Bug reports and feature ideas are welcome in this repository's [Issues](https://github.com/BorisZhangYYY/memos/issues). You can also improve the code, documentation, or translations through a [pull request](https://github.com/BorisZhangYYY/memos/pulls).
+Bug reports and feature ideas are welcome in this repository's [Issues](https://github.com/BorisZhangYYY/LifeDock/issues). You can also improve the code, documentation, or translations through a [pull request](https://github.com/BorisZhangYYY/LifeDock/pulls).
 
 ## Acknowledgments and license
 
