@@ -264,7 +264,7 @@ var argumentSchemaOverrides = map[string]map[string]argumentSchemaOverride{
 }
 
 var operationDescriptionOverrides = map[string]string{
-	"MemoService_ListMemos":                   "Search readable top-level memos with CEL filters. For example, use \"work\" in tags, or has_task_list && has_incomplete_tasks. Request a small pageSize and follow nextPageToken as pageToken. For daily memo and mood totals, prefer user_get_activity_summary.",
+	"MemoService_ListMemos":                   "Search readable top-level memos with CEL filters. For example, use \"work\" in tags, has_task_list && has_incomplete_tasks, has_attachments, or has_image. has_image matches Markdown images and attached image files. Request a small pageSize and follow nextPageToken as pageToken. For daily memo and mood totals, prefer user_get_activity_summary.",
 	"UserService_GetUserStats":                "Read detailed current-user memo, tag, and private mood statistics, including individual timestamps. For a bounded daily activity and mood review, prefer user_get_activity_summary to avoid returning every record.",
 	"ShortcutService_ListShortcuts":           "Legacy compatibility alias for listing Saved Views. Prefer memo_view_list_memo_views for new workflows; this tool remains available to existing clients.",
 	"MemoViewService_ListMemoViews":           "List the current user's Saved Views and their reusable CEL filters. Prefer this tool over the legacy shortcut_list_shortcuts alias.",

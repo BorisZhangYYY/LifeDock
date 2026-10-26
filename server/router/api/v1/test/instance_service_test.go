@@ -55,7 +55,7 @@ func TestGetInstanceProfile(t *testing.T) {
 
 		// Call GetInstanceProfile directly
 		req := &v1pb.GetInstanceProfileRequest{}
-		resp, err := ts.Service.GetInstanceProfile(ctx, req)
+		resp, err := ts.Service.GetInstanceProfile(ts.CreateUserContext(ctx, hostUser.ID), req)
 
 		// Verify response
 		require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestGetInstanceProfile(t *testing.T) {
 		require.NotNil(t, regularUser)
 
 		req := &v1pb.GetInstanceProfileRequest{}
-		resp, err := ts.Service.GetInstanceProfile(ctx, req)
+		resp, err := ts.Service.GetInstanceProfile(ts.CreateUserContext(ctx, regularUser.ID), req)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
 
@@ -94,6 +94,46 @@ func TestGetInstanceProfile(t *testing.T) {
 		require.Nil(t, resp.Admin)
 		require.False(t, resp.NeedsSetup)
 	})
+}
+
+func TestGetInstanceProfileHidesAdminFromAnonymousCallers(t *testing.T) {
+	ctx := context.Background()
+	ts := NewTestService(t)
+	defer ts.Cleanup()
+	admin, err := ts.CreateHostUser(ctx, "admin")
+	require.NoError(t, err)
+	viewer, err := ts.CreateRegularUser(ctx, "viewer")
+	require.NoError(t, err)
+
+	for _, mode := range []storepb.InstanceAccessMode{
+		storepb.InstanceAccessMode_INSTANCE_ACCESS_MODE_PUBLIC,
+		storepb.InstanceAccessMode_INSTANCE_ACCESS_MODE_PRIVATE,
+	} {
+		_, err = ts.Store.UpsertInstanceSetting(ctx, &storepb.InstanceSetting{
+			Key:   storepb.InstanceSettingKey_ACCESS,
+			Value: &storepb.InstanceSetting_AccessSetting{AccessSetting: &storepb.InstanceAccessSetting{AccessMode: mode}},
+		})
+		require.NoError(t, err)
+		// Alternate viewers to ensure the cached admin cannot leak across requests.
+		for _, viewerID := range []int32{0, admin.ID, 0, viewer.ID, 0} {
+			viewerCtx := ctx
+			if viewerID != 0 {
+				viewerCtx = ts.CreateUserContext(ctx, viewerID)
+			}
+			profile, err := ts.Service.GetInstanceProfile(viewerCtx, &v1pb.GetInstanceProfileRequest{})
+			require.NoError(t, err)
+			require.False(t, profile.NeedsSetup)
+			if viewerID == 0 {
+				require.Nil(t, profile.Admin)
+			} else {
+				require.NotNil(t, profile.Admin)
+				require.Equal(t, admin.Username, profile.Admin.Username)
+				if viewerID == viewer.ID {
+					require.Empty(t, profile.Admin.Email)
+				}
+			}
+		}
+	}
 }
 
 func TestGetInstanceProfile_Concurrency(t *testing.T) {
@@ -105,8 +145,9 @@ func TestGetInstanceProfile_Concurrency(t *testing.T) {
 		defer ts.Cleanup()
 
 		// Create a host user
-		_, err := ts.CreateHostUser(ctx, "admin")
+		hostUser, err := ts.CreateHostUser(ctx, "admin")
 		require.NoError(t, err)
+		userCtx := ts.CreateUserContext(ctx, hostUser.ID)
 
 		// Make concurrent requests
 		numGoroutines := 10
@@ -116,7 +157,7 @@ func TestGetInstanceProfile_Concurrency(t *testing.T) {
 		for i := 0; i < numGoroutines; i++ {
 			go func() {
 				req := &v1pb.GetInstanceProfileRequest{}
-				resp, err := ts.Service.GetInstanceProfile(ctx, req)
+				resp, err := ts.Service.GetInstanceProfile(userCtx, req)
 				if err != nil {
 					errors <- err
 					return

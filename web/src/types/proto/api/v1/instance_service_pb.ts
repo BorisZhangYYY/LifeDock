@@ -51,6 +51,7 @@ export type InstanceProfile = Message<"memos.api.v1.InstanceProfile"> & {
 
   /**
    * The first administrator who set up this instance, for display purposes.
+   * Only set for signed-in callers; anonymous requests never receive it.
    * May be null on an instance that has lost all admins; use needs_setup to
    * determine whether initial setup is actually required.
    *

@@ -1,10 +1,14 @@
+import type { Position, SelectionJSON } from "@usememos/editor";
 import type { UploadAnchorDescriptor } from "../Editor/uploadAnchors";
 import type { ActiveFormatState, EditorCommandContext, EditorCommandId } from "../formatting/commands";
+
+export type EditorPosition = Position;
+export type EditorCursor = SelectionJSON | number;
 
 /**
  * The contract the memo editor (Editor) implements. Everything outside the
  * editor implementation talks markdown through this interface and never reaches
- * for the editor's internal CodeMirror/DOM APIs.
+ * for the editor's internal APIs.
  */
 export interface EditorController {
   focus(): void;
@@ -14,18 +18,19 @@ export interface EditorController {
   /** Current document as a markdown string (the only storage format). */
   getMarkdown(): string;
   getTags(): string[];
+  toggleTaskList?(): boolean;
   hasChecklist(): boolean;
   insertTag(tag: string): boolean;
   /** Replace the whole document from a markdown string. */
   setMarkdown(markdown: string): void;
   /** Insert markdown at the cursor as its own block. */
   insertMarkdown(markdown: string): void;
-  createUploadAnchor(descriptor: UploadAnchorDescriptor, position?: number): void;
+  createUploadAnchor(descriptor: UploadAnchorDescriptor, position?: EditorPosition | null): void;
   updateUploadAnchor(descriptor: UploadAnchorDescriptor): void;
   resolveUploadAnchor(id: string, markdown: string): void;
   cancelUploadAnchor(id: string): void;
-  getCursor(): number;
-  setCursor(position: number): void;
+  getCursor(): EditorCursor;
+  setCursor(position: EditorCursor): void;
   scrollToCursor(): void;
   /** Select the entire document (used by tests and select-all flows). */
   selectAll(): void;

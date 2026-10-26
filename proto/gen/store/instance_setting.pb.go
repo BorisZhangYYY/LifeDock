@@ -498,8 +498,11 @@ type InstanceBasicSetting struct {
 	SecretKey string `protobuf:"bytes,1,opt,name=secret_key,json=secretKey,proto3" json:"secret_key,omitempty"`
 	// The current schema version of database.
 	SchemaVersion string `protobuf:"bytes,2,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// The memopayload.Version every memo's content-derived payload has been
+	// rebuilt to. A lower value makes the server rebuild them in the background.
+	PayloadVersion int32 `protobuf:"varint,3,opt,name=payload_version,json=payloadVersion,proto3" json:"payload_version,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *InstanceBasicSetting) Reset() {
@@ -544,6 +547,13 @@ func (x *InstanceBasicSetting) GetSchemaVersion() string {
 		return x.SchemaVersion
 	}
 	return ""
+}
+
+func (x *InstanceBasicSetting) GetPayloadVersion() int32 {
+	if x != nil {
+		return x.PayloadVersion
+	}
+	return 0
 }
 
 type InstanceGeneralSetting struct {
@@ -1644,11 +1654,12 @@ const file_store_instance_setting_proto_rawDesc = "" +
 	"\n" +
 	"ai_setting\x18\b \x01(\v2\x1e.memos.store.InstanceAISettingH\x00R\taiSetting\x12K\n" +
 	"\x0eaccess_setting\x18\t \x01(\v2\".memos.store.InstanceAccessSettingH\x00R\raccessSettingB\a\n" +
-	"\x05value\"\\\n" +
+	"\x05value\"\x85\x01\n" +
 	"\x14InstanceBasicSetting\x12\x1d\n" +
 	"\n" +
 	"secret_key\x18\x01 \x01(\tR\tsecretKey\x12%\n" +
-	"\x0eschema_version\x18\x02 \x01(\tR\rschemaVersion\"\x8f\x04\n" +
+	"\x0eschema_version\x18\x02 \x01(\tR\rschemaVersion\x12'\n" +
+	"\x0fpayload_version\x18\x03 \x01(\x05R\x0epayloadVersion\"\x8f\x04\n" +
 	"\x16InstanceGeneralSetting\x12<\n" +
 	"\x1adisallow_user_registration\x18\x02 \x01(\bR\x18disallowUserRegistration\x124\n" +
 	"\x16disallow_password_auth\x18\x03 \x01(\bR\x14disallowPasswordAuth\x12+\n" +

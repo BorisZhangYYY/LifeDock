@@ -30,6 +30,16 @@ vi.mock("@/hooks/useMemoQueries", () => ({ useUpdateMemo: () => ({ mutateAsync: 
 vi.mock("@/utils/i18n", () => ({ useTranslate: () => (key: string) => key }));
 
 describe("MemoDetailSidebar", () => {
+  it("hides the outline until blurred content is revealed and hides it again on relock", () => {
+    const memo = create(MemoSchema, { name: "memos/private", content: "# Secret\n\n## More secrets" });
+    const view = render(<MemoDetailSidebar memo={memo} contentHidden />);
+    expect(screen.queryByTestId("outline")).not.toBeInTheDocument();
+    view.rerender(<MemoDetailSidebar memo={memo} contentHidden={false} />);
+    expect(screen.getByTestId("outline")).toHaveTextContent("2");
+    view.rerender(<MemoDetailSidebar memo={memo} contentHidden />);
+    expect(screen.queryByTestId("outline")).not.toBeInTheDocument();
+  });
+
   beforeEach(() => {
     copyToClipboard.mockReset();
     updateMemo.mockReset();

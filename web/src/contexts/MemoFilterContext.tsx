@@ -13,7 +13,9 @@ export type FilterFactor =
   | "property.hasTaskList"
   | "property.hasCode"
   | "moodLevel"
-  | "property.hasLocation";
+  | "property.hasLocation"
+  | "hasAttachments"
+  | "hasImage";
 
 export interface MemoFilter {
   factor: FilterFactor;

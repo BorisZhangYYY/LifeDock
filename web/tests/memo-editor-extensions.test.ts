@@ -1,73 +1,29 @@
-import { EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { Editor } from "@usememos/editor";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildEditorExtensions } from "@/components/MemoEditor/Editor/extensions";
 
-describe("MemoEditor CodeMirror extensions", () => {
-  const views: EditorView[] = [];
-
-  afterEach(() => {
-    for (const view of views.splice(0)) {
-      view.destroy();
-    }
-    document.body.replaceChildren();
-  });
-
-  it("uses the native selection and CodeMirror placeholder without enabling multi-cursor selection", () => {
-    const parent = document.body.appendChild(document.createElement("div"));
-    const state = EditorState.create({
-      doc: "",
-      extensions: buildEditorExtensions({
-        placeholder: "Any thoughts...",
-        onChange: vi.fn(),
-        onFiles: vi.fn(),
-        onUpdate: vi.fn(),
-        onSubmit: vi.fn(),
-        getTags: () => [],
-      }),
-    });
-    const view = new EditorView({ state, parent });
-    views.push(view);
-
-    expect(view.state.facet(EditorState.allowMultipleSelections)).toBe(false);
-    expect(view.dom.querySelector(".cm-selectionLayer")).toBeNull();
-    expect(view.dom.querySelector(".cm-cursorLayer")).toBeNull();
-    expect(view.contentDOM).toHaveAttribute("aria-placeholder", "Any thoughts...");
-    expect(view.dom.querySelector(".cm-placeholder")).toHaveTextContent("Any thoughts...");
-  });
-
+const editors: Editor[] = [];
+afterEach(() => editors.splice(0).forEach((editor) => editor.destroy()));
+describe("MemoEditor upstream extensions", () => {
   it.each([
     ["paste", "clipboardData"],
     ["drop", "dataTransfer"],
-  ] as const)("intercepts files on %s before CodeMirror inserts their contents", (eventType, transferProperty) => {
+  ] as const)("handles files on %s without inserting their text", (type, property) => {
     const onFiles = vi.fn();
-    const parent = document.body.appendChild(document.createElement("div"));
-    const view = new EditorView({
-      state: EditorState.create({
-        doc: "memo",
-        extensions: buildEditorExtensions({
-          placeholder: "",
-          onChange: vi.fn(),
-          onFiles,
-          onUpdate: vi.fn(),
-          onSubmit: vi.fn(),
-          getTags: () => [],
-        }),
-      }),
-      parent,
+    const editor = new Editor({
+      element: document.body.appendChild(document.createElement("div")),
+      content: "memo",
+      extensions: buildEditorExtensions({ getTags: () => [], onFiles, emojiLabel: "Emoji" }),
     });
-    views.push(view);
-    view.dispatch({ selection: { anchor: 2 } });
-    const file = new File(["must not become memo content"], "attachment.txt", { type: "text/plain" });
-    const transfer =
-      eventType === "paste" ? { items: [{ kind: "file", getAsFile: () => file }], files: [file] } : { files: [file], types: ["Files"] };
-    const event = new Event(eventType, { bubbles: true, cancelable: true });
-    Object.defineProperty(event, transferProperty, { value: transfer });
-
-    view.contentDOM.dispatchEvent(event);
-
-    expect(onFiles).toHaveBeenCalledWith([file], eventType === "paste" ? { source: "paste" } : { source: "drop", position: 0 });
+    editors.push(editor);
+    const file = new File(["must not become content"], "attachment.txt", { type: "text/plain" });
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, property, {
+      value: { files: [file], items: [{ kind: "file", getAsFile: () => file }], types: ["Files"], getData: () => "" },
+    });
+    editor.root.dispatchEvent(event);
+    expect(onFiles).toHaveBeenCalledWith([file], type === "paste" ? { source: "paste" } : { source: "drop", position: null });
     expect(event.defaultPrevented).toBe(true);
-    expect(view.state.doc.toString()).toBe("memo");
+    expect(editor.getMarkdown()).toBe("memo");
   });
 });

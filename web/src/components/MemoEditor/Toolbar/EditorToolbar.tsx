@@ -23,6 +23,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
   linkedReminderNames = [],
   onLinkedReminderNamesChange,
   viewToggles,
+  sourceMode,
   onInsertImages,
 }) => {
   const t = useTranslate();
@@ -64,6 +65,7 @@ export const EditorToolbar: FC<EditorToolbarProps> = ({
     <div className="w-full flex flex-row flex-wrap justify-between items-center gap-2 mb-2">
       <div className="min-w-0 flex flex-row flex-wrap justify-start items-center gap-1">
         <InsertMenu
+          sourceMode={sourceMode}
           isUploading={isUploading}
           isSaving={isSaving}
           location={location}

@@ -137,6 +137,37 @@ func TestFrontendService_MissingAssetDoesNotFallbackToIndex(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, rec.Code)
 }
 
+func TestFrontendService_HiddenPathsDoNotFallbackToIndex(t *testing.T) {
+	ctx := context.Background()
+	testStore := teststore.NewTestingStore(ctx, t)
+	e := echo.New()
+	NewFrontendService(&profile.Profile{}, testStore).Serve(ctx, e)
+
+	for _, requestPath := range []string{
+		"/.well-known/oauth-protected-resource",
+		"/.well-known/oauth-protected-resource/mcp",
+		"/.well-known/oauth-authorization-server",
+		"/.git/config", "/.git/", "/u/.hidden", "/u/.hidden/profile",
+		"/%2egit/config", "/assets/missing.js",
+	} {
+		t.Run(requestPath, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, requestPath, nil))
+			require.Equal(t, http.StatusNotFound, rec.Code)
+			require.NotContains(t, rec.Header().Get(echo.HeaderContentType), "text/html")
+		})
+	}
+
+	// Registered metadata routes must still be served by their own handler.
+	e.GET("/.well-known/test-metadata", func(c *echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/.well-known/test-metadata", nil))
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Header().Get(echo.HeaderContentType), "application/json")
+}
+
 func TestFrontendService_SkipsDynamicRoutes(t *testing.T) {
 	ctx := context.Background()
 	testStore := teststore.NewTestingStore(ctx, t)

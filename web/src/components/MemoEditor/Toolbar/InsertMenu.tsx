@@ -1,6 +1,7 @@
 import { uniqBy } from "lodash-es";
 import {
   CheckIcon,
+  CodeXmlIcon,
   ImageIcon,
   LinkIcon,
   LoaderIcon,
@@ -149,6 +150,13 @@ const InsertMenu = (props: InsertMenuProps) => {
               {item.label}
             </DropdownMenuItem>
           ))}
+          {props.sourceMode && (
+            <DropdownMenuItem onClick={props.sourceMode.onToggle}>
+              <CodeXmlIcon className="w-4 h-4" />
+              {t("editor.markdown-mode")}
+              {props.sourceMode.isSourceMode && <CheckIcon className="w-4 h-4 ml-auto" />}
+            </DropdownMenuItem>
+          )}
           {/* View toggles: focus mode + formatting-toolbar visibility. Absent
               when a host owns the editor's presentation — neither applies there. */}
           {viewToggles && (

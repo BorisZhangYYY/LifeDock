@@ -18,6 +18,8 @@ export interface MemoViewProps {
   parentScope?: MemoOriginScope;
   shareImageDialogOpen?: boolean;
   onShareImageDialogOpenChange?: (open: boolean) => void;
+  showBlurredContent?: boolean;
+  onShowBlurredContentChange?: (show: boolean) => void;
   linkedReminders?: Reminder[];
   onReminderSelect?: (reminderName: string) => void;
   linkingReminderTitle?: string;

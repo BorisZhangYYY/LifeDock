@@ -1,81 +1,47 @@
-import { markdown } from "@codemirror/lang-markdown";
-import { EditorSelection, EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import { GFM } from "@lezer/markdown";
-import { describe, expect, it } from "vitest";
+import { Editor } from "@usememos/editor";
+import { afterEach, describe, expect, it } from "vitest";
 import { createFormattingController } from "@/components/MemoEditor/Editor/formatting";
 
-function setup(doc: string, from: number, to: number) {
-  const view = new EditorView({
-    state: EditorState.create({ doc, extensions: [markdown({ extensions: [GFM] })], selection: EditorSelection.range(from, to) }),
-  });
-  return { view, f: createFormattingController(view, new Set()) };
+const editors: Editor[] = [];
+function setup(content: string, from = 0, to = from) {
+  const element = document.body.appendChild(document.createElement("div"));
+  const editor = new Editor({ element, content, markdown: { breaks: true, setext: false } });
+  editors.push(editor);
+  editor.setSelection({ anchor: { block: 0, offset: from }, focus: { block: 0, offset: to } });
+  return { editor, f: createFormattingController(() => editor) };
 }
+afterEach(() => editors.splice(0).forEach((editor) => editor.destroy()));
 
 describe("formatting controller", () => {
-  it("wraps selection in bold and reports active", () => {
-    const { view, f } = setup("hello world", 0, 5);
+  it("bolds selected text and reports the active format", () => {
+    const { editor, f } = setup("hello world", 0, 5);
     f.run("bold");
-    expect(view.state.doc.toString()).toBe("**hello** world");
-    view.dispatch({ selection: { anchor: 3 } });
+    expect(editor.getMarkdown()).toBe("**hello** world");
     expect(f.getActiveFormats().bold).toBe(true);
-  });
-
-  it("prefixes a heading and reports its level", () => {
-    const { view, f } = setup("Title", 0, 0);
-    f.run("heading1");
-    expect(view.state.doc.toString()).toBe("# Title");
-    view.dispatch({ selection: { anchor: 3 } });
-    expect(f.getActiveFormats().headingLevel).toBe(1);
-  });
-
-  it("toggles a bullet list line", () => {
-    const { view, f } = setup("item", 0, 0);
-    f.run("bulletList");
-    expect(view.state.doc.toString()).toBe("- item");
-    f.run("bulletList");
-    expect(view.state.doc.toString()).toBe("item");
-  });
-
-  it("unbolds when already bold", () => {
-    const { view, f } = setup("**hello** world", 4, 4); // cursor inside bold
     f.run("bold");
-    expect(view.state.doc.toString()).toBe("hello world");
+    expect(editor.getMarkdown()).toBe("hello world");
   });
-
-  it("unwraps italic when already italic", () => {
-    const { view, f } = setup("*hi* there", 2, 2);
-    f.run("italic");
-    expect(view.state.doc.toString()).toBe("hi there");
+  it("sets heading levels and returns to paragraph", () => {
+    const { editor, f } = setup("Title");
+    f.run("heading2");
+    expect(editor.getMarkdown()).toBe("## Title");
+    expect(f.getActiveFormats().headingLevel).toBe(2);
+    f.run("paragraph");
+    expect(editor.getMarkdown()).toBe("Title");
   });
-
-  it("unwraps inline code when already code", () => {
-    const { view, f } = setup("`code` here", 3, 3);
-    f.run("code");
-    expect(view.state.doc.toString()).toBe("code here");
+  it.each(["bulletList", "orderedList", "taskList"] as const)("toggles %s without losing text", (command) => {
+    const { editor, f } = setup("item");
+    f.run(command);
+    expect(f.getActiveFormats()[command]).toBe(true);
+    expect(editor.getMarkdown()).toContain("item");
+    f.run(command);
+    expect(editor.getMarkdown()).toBe("item");
   });
-
-  it("toggles strikethrough and reports it active", () => {
-    const { view, f } = setup("obsolete text", 0, 8);
-
-    f.run("strikethrough");
-
-    expect(view.state.doc.toString()).toBe("~~obsolete~~ text");
-    expect(f.getActiveFormats().strikethrough).toBe(true);
-
-    f.run("strikethrough");
-    expect(view.state.doc.toString()).toBe("obsolete text");
-  });
-
-  it("toggles a fenced code block and reports it active", () => {
-    const { view, f } = setup("first\nsecond", 0, 12);
-
-    f.run("codeBlock");
-
-    expect(view.state.doc.toString()).toBe("```\nfirst\nsecond\n```");
-    expect(f.getActiveFormats().codeBlock).toBe(true);
-
-    f.run("codeBlock");
-    expect(view.state.doc.toString()).toBe("first\nsecond");
+  it.each(["italic", "strikethrough", "code", "codeBlock"] as const)("toggles %s", (command) => {
+    const { editor, f } = setup("text", 0, 4);
+    f.run(command);
+    expect(f.getActiveFormats()[command]).toBe(true);
+    f.run(command);
+    expect(editor.getMarkdown()).toBe("text");
   });
 });

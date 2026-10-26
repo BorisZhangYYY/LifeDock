@@ -96,14 +96,16 @@ func TestUserEmailVisibility(t *testing.T) {
 		require.Equal(t, user.Email, got.User.Email)
 	})
 
-	t.Run("GetInstanceProfile redacts admin email for anonymous callers", func(t *testing.T) {
+	t.Run("GetInstanceProfile redacts admin email for other users", func(t *testing.T) {
 		ts := NewTestService(t)
 		defer ts.Cleanup()
 
 		admin, err := ts.CreateHostUser(ctx, "admin")
 		require.NoError(t, err)
 
-		got, err := ts.Service.GetInstanceProfile(ctx, &apiv1.GetInstanceProfileRequest{})
+		viewer, err := ts.CreateRegularUser(ctx, "viewer")
+		require.NoError(t, err)
+		got, err := ts.Service.GetInstanceProfile(ts.CreateUserContext(ctx, viewer.ID), &apiv1.GetInstanceProfileRequest{})
 		require.NoError(t, err)
 		require.NotNil(t, got)
 		require.NotNil(t, got.Admin)

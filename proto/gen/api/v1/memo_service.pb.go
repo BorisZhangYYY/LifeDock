@@ -568,7 +568,9 @@ type ListMemosRequest struct {
 	//	space (string resource name or null when the memo has no space),
 	//	tags (list<string>; match with `"work" in tags`, not `tag == "work"`),
 	//	has_task_list / has_link / has_code / has_incomplete_tasks (bool),
-	//	has_location (bool; true when the memo has a location attached).
+	//	has_location (bool; true when the memo has a location attached),
+	//	has_attachments (bool; true when a file is attached),
+	//	has_image (bool; true for Markdown images or attached image files).
 	//
 	// Note: the time fields here are created_ts / updated_ts, which differ from
 	// the create_time / update_time names used by order_by.
@@ -2259,9 +2261,11 @@ type Memo_Property struct {
 	HasCode            bool                   `protobuf:"varint,3,opt,name=has_code,json=hasCode,proto3" json:"has_code,omitempty"`
 	HasIncompleteTasks bool                   `protobuf:"varint,4,opt,name=has_incomplete_tasks,json=hasIncompleteTasks,proto3" json:"has_incomplete_tasks,omitempty"`
 	// The title extracted from the first H1 heading, if present.
-	Title         string `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Title string `protobuf:"bytes,5,opt,name=title,proto3" json:"title,omitempty"`
+	// Whether the content contains a Markdown image.
+	HasInlineImage bool `protobuf:"varint,6,opt,name=has_inline_image,json=hasInlineImage,proto3" json:"has_inline_image,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Memo_Property) Reset() {
@@ -2327,6 +2331,13 @@ func (x *Memo_Property) GetTitle() string {
 		return x.Title
 	}
 	return ""
+}
+
+func (x *Memo_Property) GetHasInlineImage() bool {
+	if x != nil {
+		return x.HasInlineImage
+	}
+	return false
 }
 
 // Memo reference in relations.
@@ -2398,7 +2409,7 @@ const file_api_v1_memo_service_proto_rawDesc = "" +
 	"\vcreate_time\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
 	"createTime:X\xeaAU\n" +
 	"\x15memos.api.v1/Reaction\x12!memos/{memo}/reactions/{reaction}\x1a\x04name*\treactions2\breactionJ\x04\b\x03\x10\x04R\n" +
-	"content_id\"\x9e\t\n" +
+	"content_id\"\xc8\t\n" +
 	"\x04Memo\x12\x17\n" +
 	"\x04name\x18\x01 \x01(\tB\x03\xe0A\bR\x04name\x12.\n" +
 	"\x05state\x18\x02 \x01(\x0e2\x13.memos.api.v1.StateB\x03\xe0A\x02R\x05state\x123\n" +
@@ -2426,13 +2437,14 @@ const file_api_v1_memo_service_proto_rawDesc = "" +
 	"\n" +
 	"mood_level\x18\x13 \x01(\x05R\tmoodLevel\x125\n" +
 	"\x05space\x18\x14 \x01(\tB\x1a\xe0A\x01\xfaA\x14\n" +
-	"\x12memos.api.v1/SpaceH\x02R\x05space\x88\x01\x01\x1a\xac\x01\n" +
+	"\x12memos.api.v1/SpaceH\x02R\x05space\x88\x01\x01\x1a\xd6\x01\n" +
 	"\bProperty\x12\x19\n" +
 	"\bhas_link\x18\x01 \x01(\bR\ahasLink\x12\"\n" +
 	"\rhas_task_list\x18\x02 \x01(\bR\vhasTaskList\x12\x19\n" +
 	"\bhas_code\x18\x03 \x01(\bR\ahasCode\x120\n" +
 	"\x14has_incomplete_tasks\x18\x04 \x01(\bR\x12hasIncompleteTasks\x12\x14\n" +
-	"\x05title\x18\x05 \x01(\tR\x05title:7\xeaA4\n" +
+	"\x05title\x18\x05 \x01(\tR\x05title\x12(\n" +
+	"\x10has_inline_image\x18\x06 \x01(\bR\x0ehasInlineImage:7\xeaA4\n" +
 	"\x11memos.api.v1/Memo\x12\fmemos/{memo}\x1a\x04name*\x05memos2\x04memoB\t\n" +
 	"\a_parentB\v\n" +
 	"\t_locationB\b\n" +

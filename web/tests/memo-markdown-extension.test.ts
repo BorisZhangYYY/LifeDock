@@ -1,8 +1,6 @@
-import { markdown } from "@codemirror/lang-markdown";
-import { EditorState } from "@codemirror/state";
 import { parser as markdownParser } from "@lezer/markdown";
 import { describe, expect, it } from "vitest";
-import { findMarkdownTagMatches } from "@/components/MemoEditor/Editor/markdownTagRanges";
+import { collectTags, parseMemoMarkdown } from "@/lib/memo-markdown";
 import { memoMarkdownExtensions } from "@/utils/memo-markdown-extension";
 
 const sourceParser = markdownParser.configure(memoMarkdownExtensions);
@@ -37,8 +35,7 @@ rent insurance - my of`;
     expect(inlineMath("$20,000 and $30,000")).toEqual([]);
 
     const source = "$20,000 #budget and $30,000";
-    const state = EditorState.create({ doc: source, extensions: [markdown({ extensions: memoMarkdownExtensions })] });
-    expect(findMarkdownTagMatches(state, 0, source.length).map((match) => match.value)).toEqual(["budget"]);
+    expect(collectTags(parseMemoMarkdown(source).blocks)).toEqual(["budget"]);
   });
 
   it("applies Pandoc-style boundaries to single-dollar inline math", () => {
@@ -57,9 +54,8 @@ rent insurance - my of`;
 
   it("keeps valid and multi-dollar math opaque", () => {
     const source = "$x$ and $#hidden$ and $$#also-hidden$$, then #visible";
-    const state = EditorState.create({ doc: source, extensions: [markdown({ extensions: memoMarkdownExtensions })] });
 
     expect(inlineMath(source)).toEqual(["$x$", "$#hidden$", "$$#also-hidden$$"]);
-    expect(findMarkdownTagMatches(state, 0, source.length).map((match) => match.value)).toEqual(["visible"]);
+    expect(collectTags(parseMemoMarkdown(source).blocks)).toEqual(["visible"]);
   });
 });

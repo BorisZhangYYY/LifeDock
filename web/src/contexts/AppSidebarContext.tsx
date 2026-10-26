@@ -12,6 +12,7 @@ export interface MemoDetailSidebarDescriptor {
   from?: string;
   fromScope?: MemoOriginScope;
   readonly?: boolean;
+  contentHidden?: boolean;
   onShareImageOpen?: () => void;
 }
 

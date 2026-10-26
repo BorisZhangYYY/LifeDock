@@ -137,6 +137,9 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	if v := find.ID; v != nil {
 		where, args = append(where, "`memo`.`id` = ?"), append(args, *v)
 	}
+	if v := find.AfterID; v != nil {
+		where, args = append(where, "`memo`.`id` > ?"), append(args, *v)
+	}
 	if len(find.IDList) > 0 {
 		placeholders := make([]string, 0, len(find.IDList))
 		for range find.IDList {
@@ -207,6 +210,9 @@ func (d *DB) ListMemos(ctx context.Context, find *store.FindMemo) ([]*store.Memo
 	}
 	// Add id as final tie-breaker
 	orderBy = append(orderBy, "`id` DESC")
+	if find.OrderByID {
+		orderBy = []string{"`id` ASC"}
+	}
 	fields := []string{
 		"`memo`.`id` AS `id`",
 		"`memo`.`uid` AS `uid`",
@@ -339,6 +345,23 @@ func (d *DB) DeleteMemo(ctx context.Context, delete *store.DeleteMemo) error {
 	}
 	if err := tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed to commit memo delete transaction")
+	}
+	return nil
+}
+
+// RefreshMemoDerivedPayload sets the payload's tags and property while the
+// content is unchanged; JSON_SET keeps every other payload key. The content
+// comparison is binary so a case-insensitive collation cannot match an edit.
+func (d *DB) RefreshMemoDerivedPayload(ctx context.Context, refresh *store.RefreshMemoDerivedPayload) error {
+	tags, property, err := refresh.JSON()
+	if err != nil {
+		return err
+	}
+	if _, err := d.db.ExecContext(ctx,
+		"UPDATE `memo` SET `payload` = JSON_SET(COALESCE(`payload`, JSON_OBJECT()), '$.tags', CAST(? AS JSON), '$.property', CAST(? AS JSON)) WHERE `id` = ? AND CAST(`content` AS BINARY) = CAST(? AS BINARY)",
+		tags, property, refresh.ID, refresh.Content,
+	); err != nil {
+		return errors.Wrap(err, "failed to refresh memo payload")
 	}
 	return nil
 }

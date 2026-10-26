@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { EditorContent } from "@/components/MemoEditor/components/EditorContent";
@@ -29,15 +29,15 @@ function renderEditor(content: string, filter = '"验收" in tags && has_task_li
 }
 
 describe("editor context suggestions", () => {
-  it("applies tags, checklists, and visibility explicitly, preserving text and hiding fulfilled suggestions", () => {
+  it("applies tags, checklists, and visibility explicitly, preserving text and hiding fulfilled suggestions", async () => {
     const ref = renderEditor("Review the release");
     act(() => ref.current?.setCursor(100));
     fireEvent.click(screen.getByRole("button", { name: "common.add #验收" }));
     expect(ref.current?.getMarkdown()).toContain("Review the release #验收");
-    expect(screen.queryByRole("button", { name: "common.add #验收" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "common.add #验收" })).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "editor.format.task-list" }));
     expect(ref.current?.getMarkdown()).toMatch(/- \[ \] Review the release/);
-    expect(screen.queryByRole("button", { name: "editor.format.task-list" })).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("button", { name: "editor.format.task-list" })).not.toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "memo.visibility.protected" }));
     expect(screen.getByTestId("visibility")).toHaveTextContent(String(Visibility.PROTECTED));
     expect(screen.queryByRole("group", { name: "editor.suggestions" })).not.toBeInTheDocument();

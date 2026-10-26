@@ -302,6 +302,8 @@ message Memo {
     bool has_incomplete_tasks = 4;
     // The title extracted from the first H1 heading, if present.
     string title = 5;
+    // Whether the content contains a Markdown image.
+    bool has_inline_image = 6;
   }
 }
 
@@ -358,7 +360,9 @@ message ListMemosRequest {
   //   space (string resource name or null when the memo has no space),
   //   tags (list<string>; match with `"work" in tags`, not `tag == "work"`),
   //   has_task_list / has_link / has_code / has_incomplete_tasks (bool),
-  //   has_location (bool; true when the memo has a location attached).
+  //   has_location (bool; true when the memo has a location attached),
+  //   has_attachments (bool; true when a file is attached),
+  //   has_image (bool; true for Markdown images or attached image files).
   // Note: the time fields here are created_ts / updated_ts, which differ from
   // the create_time / update_time names used by order_by.
   // Examples:

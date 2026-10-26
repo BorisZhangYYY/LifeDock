@@ -319,6 +319,7 @@ type InstanceProfile struct {
 	// Instance URL is the URL of the instance.
 	InstanceUrl string `protobuf:"bytes,6,opt,name=instance_url,json=instanceUrl,proto3" json:"instance_url,omitempty"`
 	// The first administrator who set up this instance, for display purposes.
+	// Only set for signed-in callers; anonymous requests never receive it.
 	// May be null on an instance that has lost all admins; use needs_setup to
 	// determine whether initial setup is actually required.
 	Admin *User `protobuf:"bytes,7,opt,name=admin,proto3" json:"admin,omitempty"`

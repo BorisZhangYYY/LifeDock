@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.36.4](https://github.com/BorisZhangYYY/memos/compare/v0.36.3...v0.36.4) (2026-10-26)
+
+### Summary
+
+This release adopts the upstream editor, adds attachment and image filters and
+Bilibili embeds, and fixes privacy, filtering, and dialog behavior.
+
+### Features
+
+* **Upstream editor:** replace the CodeMirror input engine with
+  `@usememos/editor@26.10.27`. Write in rich text or switch to Markdown from the
+  Add menu, preserving content and undo history. Keep drafts, tag completion,
+  upload placeholders and retries, transcription, mood, reminders, timestamps,
+  and Space/visibility controls.
+* **Attachment and image filters:** add Has attachments and Has images to Quick
+  Find. Combine them with existing conditions and retain them in URLs. Expose
+  `has_attachments` and `has_image` in Saved Views, MCP, and API filters across
+  SQLite, MySQL, and PostgreSQL. Match actual attachment bindings and Markdown
+  images while excluding image syntax inside code.
+* **Bilibili embeds:** render trusted HTTPS Bilibili player iframes in Memos.
+  Normalize protocol-relative player URLs, default to no autoplay, and use a
+  responsive video aspect ratio when no size is supplied.
+
+### Fixes
+
+* Omit administrator details from anonymous instance profiles while preserving
+  setup detection and existing email visibility for signed-in users.
+* Return 404 for unknown hidden paths, including MCP discovery URLs under
+  `/.well-known`, instead of serving the SPA homepage.
+* Hide the detail sidebar outline with blurred Memo content, synchronize
+  reveal/relock state, and avoid exposing blurred parent Memo snippets.
+* Fold constant filter expressions before rendering SQL and validate parameter
+  counts and PostgreSQL numbering, preventing stale bind arguments.
+* Restore default dialog focus on opening and return focus on closing.
+
+### Upgrade notes
+
+* No relational database schema migration is required. The first upgraded startup
+  rebuilds Memo-derived image properties in background batches. Existing inline
+  images become searchable as rebuilding completes. Mood, location, and update
+  timestamps are preserved; an interrupted rebuild retries on the next startup.
+* The editor remembers its rich-text/Markdown preference on each device. Existing
+  published Memos continue to use the current reading renderer.
+* Tagged-Memo blurring remains frontend display protection; these fixes do not
+  change Memo sharing permissions or encryption.
+
 ## [0.36.3](https://github.com/BorisZhangYYY/memos/compare/v0.36.2...v0.36.3) (2026-10-21)
 
 ### Summary

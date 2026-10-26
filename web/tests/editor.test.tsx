@@ -87,7 +87,7 @@ describe("Editor", () => {
       contentIsExternal: true,
     };
     const { container, rerender } = render(<Editor {...props} initialContent="" />);
-    const content = container.querySelector<HTMLElement>(".cm-content");
+    const content = container.querySelector<HTMLElement>(".mbe-root");
     expect(content).not.toBeNull();
 
     fireEvent.compositionStart(content!);
@@ -116,7 +116,7 @@ describe("Editor", () => {
     };
     const { container } = render(<Editor {...props} />);
 
-    const content = container.querySelector(".cm-content");
+    const content = container.querySelector(".mbe-root");
     expect(content).toHaveAttribute("autocorrect", "on");
     expect(content).toHaveAttribute("autocapitalize", "on");
     expect(content).toHaveAttribute("spellcheck", "true");
@@ -132,12 +132,12 @@ describe("Editor", () => {
     };
     const { container, rerender } = render(<Editor {...props} placeholder="Any thoughts?" />);
 
-    expect(container.querySelector(".cm-content")).toHaveAttribute("aria-placeholder", "Any thoughts?");
-    expect(container.querySelector(".cm-placeholder")).toHaveTextContent("Any thoughts?");
+    expect(container.querySelector(".mbe-root")).toHaveAttribute("aria-placeholder", "Any thoughts?");
+    expect(container.querySelector(".mbe-root")).toHaveStyle({ "--mbe-placeholder": '"Any thoughts?"' });
 
     rerender(<Editor {...props} placeholder="有什么想法？" />);
 
-    expect(container.querySelector(".cm-content")).toHaveAttribute("aria-placeholder", "有什么想法？");
-    expect(container.querySelector(".cm-placeholder")).toHaveTextContent("有什么想法？");
+    expect(container.querySelector(".mbe-root")).toHaveAttribute("aria-placeholder", "有什么想法？");
+    expect(container.querySelector(".mbe-root")).toHaveStyle({ "--mbe-placeholder": '"有什么想法？"' });
   });
 });

@@ -25,6 +25,16 @@ if (typeof document !== "undefined") {
   }
 }
 
+// Make contenteditable roots focusable in jsdom, matching browser behavior.
+if (typeof HTMLElement !== "undefined") {
+  const focus = HTMLElement.prototype.focus;
+  HTMLElement.prototype.focus = function (this: HTMLElement, options?: FocusOptions) {
+    if ((this.contentEditable === "true" || this.getAttribute("contenteditable") === "true") && !this.hasAttribute("tabindex"))
+      this.setAttribute("tabindex", "-1");
+    focus.call(this, options);
+  };
+}
+
 // jsdom runs with an opaque origin (no URL set), so its built-in localStorage
 // implementation throws SecurityError on every access. Install a Map-backed shim
 // so any test that touches localStorage directly can call getItem/setItem/removeItem/clear

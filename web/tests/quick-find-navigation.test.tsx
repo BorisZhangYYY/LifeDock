@@ -9,7 +9,7 @@ import { getSelectedSpaceStorageKey, SpaceProvider, useSpaceContext } from "@/co
 const state = vi.hoisted(() => ({
   currentUser: { name: "users/alice" } as { name: string } | undefined,
   spaces: [{ name: "spaces/product", title: "Product", description: "" }],
-  filters: [] as Array<{ factor: "contentSearch" | "celSearch" | "tagSearch"; value: string }>,
+  filters: [] as Array<{ factor: "contentSearch" | "celSearch" | "tagSearch" | "hasAttachments" | "hasImage"; value: string }>,
   setFilters: vi.fn(),
   setMemoView: vi.fn(),
   removeFilter: vi.fn(),
@@ -93,6 +93,34 @@ describe("Quick Find navigation", () => {
     return router;
   };
   const openQuickFind = () => fireEvent.click(screen.getByRole("button", { name: "Open Quick Find" }));
+
+  it("submits attachment/image facets without text and keeps them in cross-page navigation", async () => {
+    renderSearch("/attachments");
+    openQuickFind();
+    fireEvent.click(await screen.findByRole("button", { name: "memo.filters.has-attachments" }));
+    fireEvent.click(screen.getByRole("button", { name: "memo.filters.has-image" }));
+    expect(state.setFilters).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Enter" });
+    expect(state.setFilters).toHaveBeenCalledWith([
+      { factor: "hasAttachments", value: "true" },
+      { factor: "hasImage", value: "true" },
+    ]);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("path")).toHaveTextContent("hasAttachments");
+    expect(screen.getByTestId("path")).toHaveTextContent("hasImage");
+  });
+
+  it("does not commit cancelled facet changes", async () => {
+    state.filters = [{ factor: "hasImage", value: "true" }];
+    renderSearch();
+    openQuickFind();
+    const facet = await screen.findByRole("button", { name: "memo.filters.has-image" });
+    expect(facet).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(facet);
+    fireEvent.keyDown(screen.getByRole("textbox"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(state.setFilters).not.toHaveBeenCalled();
+  });
 
   it("preserves the draft when changing modes and submits CEL with Enter", async () => {
     renderSearch();

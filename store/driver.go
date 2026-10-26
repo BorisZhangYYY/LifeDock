@@ -65,6 +65,7 @@ type Driver interface {
 	CreateMemo(ctx context.Context, create *Memo) (*Memo, error)
 	ListMemos(ctx context.Context, find *FindMemo) ([]*Memo, error)
 	UpdateMemo(ctx context.Context, update *UpdateMemo) error
+	RefreshMemoDerivedPayload(ctx context.Context, refresh *RefreshMemoDerivedPayload) error
 	DeleteMemo(ctx context.Context, delete *DeleteMemo) error
 	DeleteMemoWithPolicy(ctx context.Context, delete *DeleteMemoWithPolicy) (*DeleteMemoWithPolicyResult, error)
 	ListDeletedMemoMoodHistory(ctx context.Context, creatorID int32) ([]*MemoMoodHistory, error)

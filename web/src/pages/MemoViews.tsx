@@ -44,6 +44,8 @@ import { MemoView, MemoView_IconSchema, MemoViewSchema } from "@/types/proto/api
 import { useTranslate } from "@/utils/i18n";
 
 const memoViewExamples = [
+  { title: "With attachments", filter: "has_attachments", description: "Memos with attached files.", icon: FilterIcon },
+  { title: "With images", filter: "has_image", description: "Memos with Markdown images or image attachments.", icon: FilterIcon },
   {
     title: "Pinned",
     filter: "pinned",
@@ -181,6 +183,8 @@ const filterFields = [
   "has_link",
   "has_code",
   "has_location",
+  "has_attachments",
+  "has_image",
   'created_ts >= now - duration("24h")',
   "created_ts.getFullYear() == ...",
   "created_ts.getMonth() == ... (0 = Jan)",
