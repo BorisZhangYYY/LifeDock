@@ -269,6 +269,9 @@ name. An inline image can be added to the memo content with
 `![description](/file/{attachment.name}/{filename})`. The upload tool was
 already in the allowlist; its description now makes this sequence discoverable.
 
+For direct REST uploads, use JSON with base64 content rather than multipart form
+data. See [attachment API examples and authentication troubleshooting](../../../docs/attachment-api.md).
+
 The personal profile is available to MCP clients through
 `user_get_user_setting` with `setting: "PERSONA"`. This does not require any
 agent-facing text in the Memos interface.
