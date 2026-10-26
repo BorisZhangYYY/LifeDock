@@ -35,7 +35,7 @@ URL.revokeObjectURL = () => {};
 const paste = (target: Element, files: File[]) => {
   const event = new Event("paste", { bubbles: true, cancelable: true });
   Object.defineProperty(event, "clipboardData", {
-    value: { items: files.map((file) => ({ kind: "file", getAsFile: () => file })) },
+    value: { files, types: ["Files"], getData: () => "", items: files.map((file) => ({ kind: "file", getAsFile: () => file })) },
   });
   target.dispatchEvent(event);
   return event;
@@ -50,7 +50,7 @@ describe("MemoEditor paste", () => {
         <MemoEditor cacheKey="paste-test" />
       </QueryClientProvider>,
     );
-    const content = container.querySelector<HTMLElement>(".cm-content");
+    const content = container.querySelector<HTMLElement>(".mbe-root");
     expect(content).not.toBeNull();
     const pdf = new File(["%PDF"], "notes.pdf", { type: "application/pdf" });
     const image = new File(["png"], "image.png", { type: "image/png" });

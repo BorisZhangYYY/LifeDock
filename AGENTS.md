@@ -8,7 +8,7 @@ repo. If a fact here conflicts with source files or CI config, trust the source 
 Memos is a self-hosted note-taking app.
 
 - Backend: Go 1.27.0, Echo v5, Connect RPC, gRPC-Gateway, Protocol Buffers.
-- Frontend: React 19, TypeScript 6, Vite 8, Tailwind CSS v4, React Query v5.
+- Frontend: React 19, TypeScript 7, Vite 8, Tailwind CSS v4, React Query v5.
 - Storage: SQLite, MySQL, PostgreSQL.
 - Generated API outputs: `proto/gen/` for Go/OpenAPI, `web/src/types/proto/` for TypeScript.
 

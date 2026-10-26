@@ -1,4 +1,4 @@
-import { CornerDownLeftIcon, SearchIcon } from "lucide-react";
+import { CornerDownLeftIcon, ImageIcon, PaperclipIcon, SearchIcon } from "lucide-react";
 import { type ChangeEvent, type FormEvent, type KeyboardEvent, useEffect, useId, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -91,6 +91,7 @@ const QuickFindDialog = () => {
   const { quickFindOpen, setQuickFindOpen } = useAppSidebar();
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<QuickFindMode>("text");
+  const [attachmentFilters, setAttachmentFilters] = useState<MemoFilter[]>([]);
   const hintId = useId();
   const viewApplies = isMemoScopeRoute(location.pathname);
   const selectedMemoView = viewApplies ? memoViews.find((item) => getMemoViewId(item.name) === memoView) : undefined;
@@ -116,10 +117,19 @@ const QuickFindDialog = () => {
     const active = readQuickFindQuery(filters);
     setMode(active.mode);
     setQuery(active.query);
+    setAttachmentFilters(filters.filter((filter) => filter.factor === "hasAttachments" || filter.factor === "hasImage"));
   }, [filters, quickFindOpen]);
 
   const submitQuery = () => {
     const submission = resolveQuickFindSubmission(location.pathname, query, filters, mode);
+    submission.filters = [
+      ...submission.filters.filter((filter) => filter.factor !== "hasAttachments" && filter.factor !== "hasImage"),
+      ...attachmentFilters,
+    ];
+    if (submission.destination) {
+      const path = submission.destination.split("?")[0];
+      submission.destination = `${path}${getFilterSearch(submission.filters)}`;
+    }
 
     if (submission.switchToAll) {
       // This is an explicit cross-Space action, so switch the collection state
@@ -241,6 +251,33 @@ const QuickFindDialog = () => {
               </Button>
             </div>
           )}
+          <div className="flex flex-wrap gap-2 border-t border-border/50 px-4 py-2">
+            {(
+              [
+                { factor: "hasAttachments", label: t("memo.filters.has-attachments"), icon: PaperclipIcon },
+                { factor: "hasImage", label: t("memo.filters.has-image"), icon: ImageIcon },
+              ] as const
+            ).map(({ factor, label, icon: Icon }) => {
+              const active = attachmentFilters.some((filter) => filter.factor === factor);
+              return (
+                <Button
+                  key={factor}
+                  type="button"
+                  size="sm"
+                  variant={active ? "secondary" : "ghost"}
+                  aria-pressed={active}
+                  onClick={() =>
+                    setAttachmentFilters((current) =>
+                      active ? current.filter((filter) => filter.factor !== factor) : [...current, { factor, value: "true" }],
+                    )
+                  }
+                >
+                  <Icon className="size-3.5" />
+                  {label}
+                </Button>
+              );
+            })}
+          </div>
         </form>
       </DialogContent>
     </Dialog>

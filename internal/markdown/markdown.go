@@ -250,6 +250,9 @@ func (s *service) ExtractProperties(content []byte) (*storepb.MemoPayload_Proper
 		case gast.KindCodeBlock, gast.KindFencedCodeBlock, gast.KindCodeSpan:
 			prop.HasCode = true
 
+		case gast.KindImage:
+			prop.HasInlineImage = true
+
 		case east.KindTaskCheckBox:
 			prop.HasTaskList = true
 			if checkBox, ok := n.(*east.TaskCheckBox); ok {
@@ -447,6 +450,9 @@ func (s *service) ExtractAll(content []byte) (*ExtractedData, error) {
 
 		case gast.KindCodeBlock, gast.KindFencedCodeBlock, gast.KindCodeSpan:
 			data.Property.HasCode = true
+
+		case gast.KindImage:
+			data.Property.HasInlineImage = true
 
 		case east.KindTaskCheckBox:
 			data.Property.HasTaskList = true

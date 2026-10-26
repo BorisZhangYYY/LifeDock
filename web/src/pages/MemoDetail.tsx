@@ -10,6 +10,7 @@ import ReminderDetailDialog from "@/components/Reminder/ReminderDetailDialog";
 import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInstance } from "@/contexts/InstanceContext";
+import { usePrivacySession } from "@/contexts/PrivacySessionContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import useMemoDetailError from "@/hooks/useMemoDetailError";
 import { useInfiniteMemoComments, useMemo } from "@/hooks/useMemoQueries";
@@ -17,10 +18,12 @@ import { useSharedMemo, withShareAttachmentLinks } from "@/hooks/useMemoShareQue
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useReminderLists, useReminders } from "@/hooks/useReminderQueries";
 import { memoNamePrefix } from "@/lib/resource-names";
+import { isMemoBlurred } from "@/lib/tag";
 import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
 import { State } from "@/types/proto/api/v1/common_pb";
 import type { Memo } from "@/types/proto/api/v1/memo_service_pb";
 import { ListRemindersRequest_View } from "@/types/proto/api/v1/reminder_service_pb";
+import { useTranslate } from "@/utils/i18n";
 import { findMemoAnchorTarget } from "@/utils/markdown-manipulation";
 
 const MemoSidebarRegistration = ({
@@ -28,19 +31,21 @@ const MemoSidebarRegistration = ({
   from,
   fromScope,
   readonly,
+  contentHidden,
   onShareImageOpen,
 }: {
   memo: Memo;
   from: string;
   fromScope: MemoOriginScope;
   readonly: boolean;
+  contentHidden: boolean;
   onShareImageOpen: () => void;
 }) => {
   const { setMemoDetail } = useAppSidebar();
 
   useEffect(() => {
-    setMemoDetail({ memo, from, fromScope, readonly, onShareImageOpen });
-  }, [from, fromScope, memo, onShareImageOpen, readonly, setMemoDetail]);
+    setMemoDetail({ memo, from, fromScope, readonly, contentHidden, onShareImageOpen });
+  }, [contentHidden, from, fromScope, memo, onShareImageOpen, readonly, setMemoDetail]);
 
   useEffect(() => () => setMemoDetail(undefined), [setMemoDetail]);
 
@@ -48,10 +53,12 @@ const MemoSidebarRegistration = ({
 };
 
 const MemoDetail = () => {
-  const { isInitialized: authInitialized } = useAuth();
+  const t = useTranslate();
+  const { isInitialized: authInitialized, userTagsSetting } = useAuth();
   const { isInitialized: instanceInitialized } = useInstance();
   const currentUser = useCurrentUser();
-  const { remindersEnabled } = usePersonalFeatures();
+  const { remindersEnabled, requirePasswordForPrivateContent } = usePersonalFeatures();
+  const privacySession = usePrivacySession();
   const [shareImageDialogOpen, setShareImageDialogOpen] = useState(false);
   const [selectedReminderName, setSelectedReminderName] = useState<string>();
   const params = useParams();
@@ -77,6 +84,10 @@ const MemoDetail = () => {
   const isLoading = isShareMode ? shareLoading : directLoading;
   const { parentPage, parentScope } = resolveMemoDetailOrigin(locationState, { memoArchived: memo?.state === State.ARCHIVED });
   const memoName = memo?.name ?? memoNameFromParams;
+  const [blurRevealedMemoName, setBlurRevealedMemoName] = useState<string>();
+  const showBlurredContent = requirePasswordForPrivateContent ? privacySession.isMemoUnlocked(memoName) : blurRevealedMemoName === memoName;
+  const handleShowBlurredContentChange = useCallback((show: boolean) => setBlurRevealedMemoName(show ? memoName : undefined), [memoName]);
+  useEffect(() => setBlurRevealedMemoName(undefined), [memoName]);
   const reminderQueriesEnabled = remindersEnabled && !isShareMode && !!currentUser;
   const { data: pendingReminders = [] } = useReminders(currentUser?.name, {
     view: ListRemindersRequest_View.ALL,
@@ -148,6 +159,8 @@ const MemoDetail = () => {
     return null;
   }
   const mentionResolutionContents = [displayMemo.content, ...comments.map((comment) => comment.content)];
+  const contentHidden = isMemoBlurred(displayMemo, userTagsSetting) && !showBlurredContent;
+  const parentBlurred = !!parentMemo && isMemoBlurred(parentMemo, userTagsSetting);
   const userResolutionNames = Array.from(
     new Set([displayMemo, ...comments].flatMap((item) => [item.creator, ...(item.reactions ?? []).map((reaction) => reaction.creator)])),
   );
@@ -159,6 +172,7 @@ const MemoDetail = () => {
           from={parentPage}
           fromScope={parentScope}
           readonly={isShareMode}
+          contentHidden={contentHidden}
           onShareImageOpen={handleShareImageOpen}
         />
         <div className="w-full max-w-2xl px-4 sm:px-6">
@@ -172,7 +186,7 @@ const MemoDetail = () => {
                   viewTransition
                 >
                   <ArrowUpLeftFromCircleIcon className="w-4 h-auto shrink-0 opacity-60 mr-2" />
-                  <span className="truncate">{parentMemo.content}</span>
+                  <span className="truncate">{parentBlurred ? t("common.memo") : parentMemo.content}</span>
                 </Link>
               </div>
             )}
@@ -183,6 +197,8 @@ const MemoDetail = () => {
               parentPage={parentPage}
               parentScope={parentScope}
               shareImageDialogOpen={shareImageDialogOpen}
+              showBlurredContent={showBlurredContent}
+              onShowBlurredContentChange={handleShowBlurredContentChange}
               showCreator
               showVisibility
               showPinned

@@ -52,7 +52,11 @@ func (c *instanceSettingCaller) currentUser(ctx context.Context, service *APIV1S
 
 // GetInstanceProfile returns the instance profile.
 func (s *APIV1Service) GetInstanceProfile(ctx context.Context, _ *v1pb.GetInstanceProfileRequest) (*v1pb.InstanceProfile, error) {
-	admin, err := s.GetInstanceAdmin(ctx)
+	currentUser, err := s.fetchCurrentUser(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get current user: %v", err)
+	}
+	admin, err := s.getInstanceAdmin(ctx, currentUser)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get instance admin: %v", err)
 	}
@@ -75,7 +79,7 @@ func (s *APIV1Service) GetInstanceProfile(ctx context.Context, _ *v1pb.GetInstan
 		Version:     s.Profile.Version,
 		Demo:        s.Profile.Demo,
 		InstanceUrl: s.Profile.GetInstanceURL(),
-		Admin:       admin, // for display only; may be nil even on a populated instance
+		Admin:       admin, // signed-in callers only; may be nil even on a populated instance
 		Commit:      s.Profile.Commit,
 		NeedsSetup:  len(users) == 0,
 		AccessMode:  convertInstanceAccessModeFromStore(accessSetting.AccessMode),
@@ -494,7 +498,12 @@ func sameSMTPConnectionIdentity(setting, existing *storepb.InstanceNotificationS
 		setting.UseSsl == existing.UseSsl
 }
 
-func (s *APIV1Service) GetInstanceAdmin(ctx context.Context) (*v1pb.User, error) {
+// getInstanceAdmin returns the first admin for a signed-in viewer. Anonymous
+// profile requests must not disclose the administrator's login identifier.
+func (s *APIV1Service) getInstanceAdmin(ctx context.Context, viewer *store.User) (*v1pb.User, error) {
+	if viewer == nil {
+		return nil, nil
+	}
 	adminUserType := store.RoleAdmin
 	user, err := s.Store.GetUser(ctx, &store.FindUser{
 		Role: &adminUserType,
@@ -506,6 +515,5 @@ func (s *APIV1Service) GetInstanceAdmin(ctx context.Context) (*v1pb.User, error)
 		return nil, nil
 	}
 
-	currentUser, _ := s.fetchCurrentUser(ctx)
-	return convertUserFromStore(user, currentUser), nil
+	return convertUserFromStore(user, viewer), nil
 }

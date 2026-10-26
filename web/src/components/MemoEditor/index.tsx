@@ -1,3 +1,4 @@
+import type { EditorMode } from "@usememos/editor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
 import { MAX_REMINDERS_PER_MEMO } from "@/components/Reminder/constants";
@@ -34,7 +35,7 @@ import { EditorProvider, useEditorContext, useEditorSelector } from "./state";
 import { EditorToolbar, FormattingToolbar } from "./Toolbar";
 import type { EditorViewToggles, MemoEditorProps } from "./types";
 import type { LocalFile } from "./types/attachment";
-import type { EditorController } from "./types/editorController";
+import type { EditorController, EditorPosition } from "./types/editorController";
 
 // A host that presents the editor full-screen supplies `onFocusModeExit`; its
 // presence is what makes an instance hosted, so focus mode starts on and stays on.
@@ -89,6 +90,7 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
   // Persisted preference: also show the formatting toolbar in normal mode. Focus
   // mode always shows it regardless; this only governs the non-focus layout.
   const [isFormattingToolbarVisible, setFormattingToolbarVisible] = useLocalStorage(FORMATTING_TOOLBAR_STORAGE_KEY, false);
+  const [editorMode, setEditorMode] = useLocalStorage<EditorMode>("memos-editor-mode", "rich");
 
   const memoName = memo?.name;
   const reminderEditorKey = memoName ?? `new:${cacheKey ?? "default"}:${[...(initialReminderNames ?? [])].sort().join(",")}`;
@@ -300,7 +302,7 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
   };
 
   const handleFiles = useCallback(
-    (files: File[], placement: { inline: false } | { inline: true; position?: number }) => {
+    (files: File[], placement: { inline: false } | { inline: true; position?: EditorPosition | null }) => {
       if (getState().ui.isLoading.saving) return;
       const localFiles = toLocalFiles(files, { createBlobUrl, saveMediaMetadata });
       const { inline, attachments } = placement.inline ? splitInlineLocalFiles(localFiles) : { inline: [], attachments: localFiles };
@@ -428,7 +430,13 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
         )}
 
         {/* Editor content grows to fill available space in focus mode */}
-        <EditorContent ref={editorRef} placeholder={placeholder} onSubmit={handleSave} onFiles={handleEditorFiles} />
+        <EditorContent
+          ref={editorRef}
+          placeholder={placeholder}
+          onSubmit={handleSave}
+          onFiles={handleEditorFiles}
+          mode={editorMode === "source" ? "source" : "rich"}
+        />
 
         {isAudioRecorderOpen && (audioRecorder.isBusy || isTranscribingAudio) && (
           <AudioRecorderPanel
@@ -457,6 +465,10 @@ const MemoEditorImpl: React.FC<MemoEditorProps> = ({
             <EditorSuggestions suggestions={suggestions} controllerRef={editorRef} space={editorSpace} />
           )}
           <EditorToolbar
+            sourceMode={{
+              isSourceMode: editorMode === "source",
+              onToggle: () => setEditorMode((current) => (current === "source" ? "rich" : "source")),
+            }}
             onSave={handleSave}
             onCancel={onCancel ? handleCancel : undefined}
             memoName={memoName}

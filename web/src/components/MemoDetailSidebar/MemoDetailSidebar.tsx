@@ -29,6 +29,7 @@ interface Props {
   className?: string;
   onShareImageOpen?: () => void;
   forceReadonly?: boolean;
+  contentHidden?: boolean;
 }
 
 const BacklinkRow = ({
@@ -64,7 +65,15 @@ const BacklinkRow = ({
   );
 };
 
-const MemoDetailSidebar = ({ memo, parentPage, parentScope, className, onShareImageOpen, forceReadonly = false }: Props) => {
+const MemoDetailSidebar = ({
+  memo,
+  parentPage,
+  parentScope,
+  className,
+  onShareImageOpen,
+  forceReadonly = false,
+  contentHidden = false,
+}: Props) => {
   const t = useTranslate();
   const currentUser = useCurrentUser();
   const { profile } = useInstance();
@@ -75,7 +84,7 @@ const MemoDetailSidebar = ({ memo, parentPage, parentScope, className, onShareIm
   const canPin = !readonly && !memo.parent && memo.state === State.NORMAL;
   const canManageShares = !forceReadonly && !memo.parent && (memo.creator === currentUser?.name || isSuperUser(currentUser));
 
-  const headings = useMemo(() => extractHeadings(memo.content), [memo.content]);
+  const headings = useMemo(() => (contentHidden ? [] : extractHeadings(memo.content)), [contentHidden, memo.content]);
   const { referenced } = useMemo(() => getRelationBuckets(memo.relations, memo.name), [memo.relations, memo.name]);
   const backlinkMemoNames = useMemo(
     () =>

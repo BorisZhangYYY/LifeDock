@@ -12,7 +12,7 @@ import { usePrivacySession } from "@/contexts/PrivacySessionContext";
 import useCurrentUser from "@/hooks/useCurrentUser";
 import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { getMoodColor } from "@/lib/mood";
-import { findTagMetadata } from "@/lib/tag";
+import { isMemoBlurred } from "@/lib/tag";
 import { cn } from "@/lib/utils";
 import { State } from "@/types/proto/api/v1/common_pb";
 import { useTranslate } from "@/utils/i18n";
@@ -75,20 +75,29 @@ const MemoView: React.FC<MemoViewProps> = (props: MemoViewProps) => {
 
   // Blur content when any tag has blur_content enabled in the current user's tag settings.
   const [locallyRevealed, setLocallyRevealed] = useState(false);
-  const tagBlurred = memoData.tags?.some((tag) => userTagsSetting && findTagMetadata(tag, userTagsSetting)?.blurContent) ?? false;
-  const blurred = tagBlurred;
+  const blurred = isMemoBlurred(memoData, userTagsSetting);
   const passwordProtected = blurred && requirePasswordForPrivateContent;
-  const showBlurredContent = passwordProtected ? privacySession.isMemoUnlocked(memoData.name) : locallyRevealed;
+  const showBlurredContent = passwordProtected
+    ? privacySession.isMemoUnlocked(memoData.name)
+    : (props.showBlurredContent ?? locallyRevealed);
+  const onShowBlurredContentChange = props.onShowBlurredContentChange;
+  const setRevealed = useCallback(
+    (show: boolean) => {
+      setLocallyRevealed(show);
+      onShowBlurredContentChange?.(show);
+    },
+    [onShowBlurredContentChange],
+  );
   const toggleBlurVisibility = useCallback(() => {
     if (showBlurredContent) {
       if (passwordProtected) privacySession.lockMemo(memoData.name);
-      else setLocallyRevealed(false);
+      else setRevealed(false);
     } else if (passwordProtected) {
       setPrivacyUnlockOpen(true);
     } else {
-      setLocallyRevealed(true);
+      setRevealed(true);
     }
-  }, [memoData.name, passwordProtected, privacySession, showBlurredContent]);
+  }, [memoData.name, passwordProtected, privacySession, setRevealed, showBlurredContent]);
 
   const requestPrivateAction = useCallback(
     (action: () => void) => {

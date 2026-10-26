@@ -439,6 +439,7 @@ const MemoDetailSidebarContent = () => {
       parentPage={memoDetail.from}
       parentScope={memoDetail.fromScope}
       forceReadonly={memoDetail.readonly}
+      contentHidden={memoDetail.contentHidden}
       onShareImageOpen={memoDetail.onShareImageOpen}
       className="pb-2"
     />

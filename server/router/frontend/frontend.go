@@ -105,7 +105,12 @@ func setFrontendCacheHeaders(c *echo.Context, requestPath string) {
 }
 
 func shouldServeFrontendHTML(requestPath string) bool {
-	return requestPath == "/" || requestPath == "/index.html" || path.Ext(requestPath) == ""
+	if requestPath == "/" || requestPath == "/index.html" {
+		return true
+	}
+	// Hidden segments are never app routes. In particular, unsupported OAuth
+	// discovery under /.well-known/ must return 404 rather than the SPA HTML.
+	return path.Ext(requestPath) == "" && !strings.Contains(requestPath, "/.")
 }
 
 func hasPathPrefix(requestPath, prefix string) bool {

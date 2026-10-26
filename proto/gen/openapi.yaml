@@ -777,7 +777,9 @@ paths:
                        space (string resource name or null when the memo has no space),
                        tags (list<string>; match with `"work" in tags`, not `tag == "work"`),
                        has_task_list / has_link / has_code / has_incomplete_tasks (bool),
-                       has_location (bool; true when the memo has a location attached).
+                       has_location (bool; true when the memo has a location attached),
+                       has_attachments (bool; true when a file is attached),
+                       has_image (bool; true for Markdown images or attached image files).
                      Note: the time fields here are created_ts / updated_ts, which differ from
                      the create_time / update_time names used by order_by.
                      Examples:
@@ -4958,6 +4960,7 @@ components:
                         - $ref: '#/components/schemas/User'
                     description: |-
                         The first administrator who set up this instance, for display purposes.
+                         Only set for signed-in callers; anonymous requests never receive it.
                          May be null on an instance that has lost all admins; use needs_setup to
                          determine whether initial setup is actually required.
                 commit:
@@ -5934,6 +5937,9 @@ components:
                 title:
                     type: string
                     description: The title extracted from the first H1 heading, if present.
+                hasInlineImage:
+                    type: boolean
+                    description: Whether the content contains a Markdown image.
             description: Computed properties of a memo.
         MotionMedia:
             type: object

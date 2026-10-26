@@ -21,6 +21,7 @@ import (
 	"github.com/usememos/memos/server/router/fileserver"
 	"github.com/usememos/memos/server/router/frontend"
 	"github.com/usememos/memos/server/router/mcp"
+	"github.com/usememos/memos/server/runner/memopayload"
 	reminderrunner "github.com/usememos/memos/server/runner/reminder"
 	"github.com/usememos/memos/store"
 )
@@ -171,6 +172,17 @@ func (s *Server) startBackgroundRunners(ctx context.Context) {
 		defer s.backgroundRunnerWG.Done()
 		reminderRunner.Run(reminderContext)
 		slog.Info("reminder runner stopped")
+	}()
+
+	payloadContext, payloadCancel := context.WithCancel(ctx)
+	s.backgroundRunnerCancels = append(s.backgroundRunnerCancels, payloadCancel)
+	payloadRunner := memopayload.NewRunner(s.Store, s.apiV1Service.MarkdownService)
+	s.backgroundRunnerWG.Add(1)
+	go func() {
+		defer s.backgroundRunnerWG.Done()
+		if err := payloadRunner.Backfill(payloadContext); err != nil && payloadContext.Err() == nil {
+			slog.Error("failed to rebuild memo payloads; retrying on next start", slog.String("error", err.Error()))
+		}
 	}()
 
 	slog.Info("background runners started")

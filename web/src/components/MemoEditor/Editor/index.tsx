@@ -1,13 +1,22 @@
-import { EditorState } from "@codemirror/state";
-import { placeholder as cmPlaceholder, EditorView } from "@codemirror/view";
+import { type EditorMode, Editor as MarkdownEditor } from "@usememos/editor";
+import "@usememos/editor/style.css";
 import { forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
 import { useTagCounts } from "@/hooks/useUserQueries";
+import {
+  MEMO_EDITOR_THEME,
+  MEMO_FOCUS_EDITOR_THEME,
+  MEMO_MARKDOWN,
+  memoEditorLabels,
+  memoExtensions,
+  memoResolveUrl,
+} from "@/lib/memo-markdown";
 import { cn } from "@/lib/utils";
+import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
+import { useTranslate } from "@/utils/i18n";
 import type { EditorController } from "../types/editorController";
 import { createController } from "./controller";
+import { buildEditorExtensions, type EditorFileOrigin } from "./extensions";
 import "./editor.css";
-import { buildEditorExtensions, type EditorFileOrigin, placeholderCompartment } from "./extensions";
-import { createFormattingController } from "./formatting";
 
 interface EditorProps {
   className: string;
@@ -17,135 +26,109 @@ interface EditorProps {
   onContentChange: (content: string) => void;
   onExternalContentApplied?: (content: string) => void;
   onFiles: (files: File[], origin: EditorFileOrigin) => void;
-  /** Invoked by the in-editor save shortcut (Cmd/Ctrl+Enter). */
   onSubmit: () => void;
   isFocusMode?: boolean;
+  mode?: EditorMode;
+  attachments?: readonly Attachment[];
 }
 
+/** Upstream Markdown engine behind LifeDock's existing composer contract. */
 const Editor = forwardRef(function Editor(props: EditorProps, ref: React.ForwardedRef<EditorController>) {
-  const {
-    className,
-    initialContent,
-    contentIsExternal = true,
-    placeholder,
-    onContentChange,
-    onExternalContentApplied,
-    onFiles,
-    onSubmit,
-    isFocusMode,
-  } = props;
+  const { className, initialContent, contentIsExternal = true, placeholder, isFocusMode, mode = "rich", attachments } = props;
+  const t = useTranslate();
   const hostRef = useRef<HTMLDivElement>(null);
-  const viewRef = useRef<EditorView | null>(null);
-  const controllerRef = useRef<EditorController | null>(null);
-  const applyingExternalContentRef = useRef(false);
-  const pendingExternalContentRef = useRef<string | null>(null);
-  const onChangeRef = useRef(onContentChange);
-  onChangeRef.current = onContentChange;
-  const onExternalContentAppliedRef = useRef(onExternalContentApplied);
-  onExternalContentAppliedRef.current = onExternalContentApplied;
-  const onFilesRef = useRef(onFiles);
-  onFilesRef.current = onFiles;
-  const onSubmitRef = useRef(onSubmit);
-  onSubmitRef.current = onSubmit;
-  const placeholderRef = useRef(placeholder);
-  const listenersRef = useRef(new Set<() => void>());
-  // A user can only author their own memos. Reuse the current-user stats query
-  // instead of fetching and aggregating every user's tags for autocomplete.
+  const editorRef = useRef<MarkdownEditor | null>(null);
+  const propsRef = useRef(props);
+  const pendingExternalRef = useRef<string | null>(null);
   const { data: tagData } = useTagCounts(true);
-  const tags = useMemo(() => Object.keys(tagData ?? {}), [tagData]);
-  const tagsRef = useRef(tags);
-  tagsRef.current = tags;
+  const tagsRef = useRef<string[]>([]);
+  tagsRef.current = useMemo(() => Object.keys(tagData ?? {}), [tagData]);
+  useLayoutEffect(() => {
+    propsRef.current = props;
+  });
+  const controller = useMemo(
+    () =>
+      createController(
+        () => editorRef.current,
+        (markdown) => propsRef.current.onContentChange(markdown),
+      ),
+    [],
+  );
+  useImperativeHandle(ref, () => controller, [controller]);
 
-  const applyExternalContent = useCallback((content: string) => {
-    pendingExternalContentRef.current = null;
-    const controller = controllerRef.current;
-    if (!controller || controller.getMarkdown() === content) return;
-    applyingExternalContentRef.current = true;
-    try {
-      controller.setMarkdown(content);
-    } finally {
-      applyingExternalContentRef.current = false;
-    }
+  const applyExternal = useCallback((markdown: string) => {
+    pendingExternalRef.current = null;
+    const editor = editorRef.current;
+    if (editor && !editor.isDestroyed && editor.getMarkdown() !== markdown) editor.setMarkdown(markdown);
   }, []);
 
-  // useLayoutEffect (not useEffect) so the EditorView — and its placeholder —
-  // mount before the browser paints. With useEffect the first painted frame
-  // shows an empty host, then the placeholder pops in (a load flicker).
+  // Construct before paint so the Home composer has no second loading boundary.
   useLayoutEffect(() => {
     if (!hostRef.current) return;
-    const view = new EditorView({
-      state: EditorState.create({
-        doc: initialContent,
-        extensions: buildEditorExtensions({
-          placeholder,
-          onChange: (md) => {
-            if (!applyingExternalContentRef.current) onChangeRef.current(md);
-          },
-          onFiles: (files, origin) => onFilesRef.current(files, origin),
-          onUpdate: () => listenersRef.current.forEach((l) => l()),
-          onSubmit: () => onSubmitRef.current(),
+    const editor = new MarkdownEditor({
+      element: hostRef.current,
+      content: initialContent,
+      placeholder,
+      mode,
+      markdown: MEMO_MARKDOWN,
+      extensions: [
+        ...memoExtensions(),
+        ...buildEditorExtensions({
           getTags: () => tagsRef.current,
+          onFiles: (files, origin) => propsRef.current.onFiles(files, origin),
+          emojiLabel: t("editor.blocks.emoji"),
         }),
-      }),
-      parent: hostRef.current,
+      ],
+      theme: isFocusMode ? MEMO_FOCUS_EDITOR_THEME : MEMO_EDITOR_THEME,
+      labels: memoEditorLabels(t),
+      resolveUrl: memoResolveUrl(attachments),
+      referrerPolicy: "no-referrer",
+      attributes: { autocorrect: "on", autocapitalize: "on", spellcheck: "true" },
+      onChange: (markdown) => propsRef.current.onContentChange(markdown),
+      onSubmit: () => propsRef.current.onSubmit(),
     });
-    viewRef.current = view;
-    controllerRef.current = createController(view, createFormattingController(view, listenersRef.current));
-    const handleCompositionEnd = () => {
-      // CodeMirror may flush its final Firefox/Android DOM mutations in a
-      // microtask after compositionend. Queue behind that flush before
-      // replacing the document with a deferred external value.
-      queueMicrotask(() => {
-        if (viewRef.current !== view || view.compositionStarted) return;
-        const pendingContent = pendingExternalContentRef.current;
-        if (pendingContent === null) return;
-        applyExternalContent(pendingContent);
-        // The composition may have emitted a newer local value after this
-        // deferred external value entered the store. Reassert the applied
-        // external value there too.
-        onExternalContentAppliedRef.current?.(pendingContent);
-      });
+    editorRef.current = editor;
+    const onCompositionEnd = () => {
+      const pending = pendingExternalRef.current;
+      if (pending === null) return;
+      applyExternal(pending);
+      propsRef.current.onExternalContentApplied?.(pending);
     };
-    view.contentDOM.addEventListener("compositionend", handleCompositionEnd);
+    editor.root.addEventListener("compositionend", onCompositionEnd);
     return () => {
-      view.contentDOM.removeEventListener("compositionend", handleCompositionEnd);
-      view.destroy();
-      viewRef.current = null;
-      controllerRef.current = null;
+      editor.root.removeEventListener("compositionend", onCompositionEnd);
+      editor.destroy();
+      editorRef.current = null;
     };
-    // Mount once; external sync handled below.
+    // The instance lives for one composer mount; live props are applied below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useLayoutEffect(() => {
-    if (placeholderRef.current === placeholder) return;
-    placeholderRef.current = placeholder;
-    viewRef.current?.dispatch({ effects: placeholderCompartment.reconfigure(cmPlaceholder(placeholder)) });
-  }, [placeholder]);
-
+    editorRef.current?.setOptions({
+      placeholder,
+      mode,
+      resolveUrl: memoResolveUrl(attachments),
+      theme: isFocusMode ? MEMO_FOCUS_EDITOR_THEME : MEMO_EDITOR_THEME,
+    });
+  }, [attachments, isFocusMode, mode, placeholder]);
   useLayoutEffect(() => {
     if (!contentIsExternal) return;
-    const view = viewRef.current;
-    if (!view) return;
-    if (view.compositionStarted) {
-      pendingExternalContentRef.current = initialContent;
-      return;
-    }
-    applyExternalContent(initialContent);
-  }, [applyExternalContent, contentIsExternal, initialContent]);
-
-  // The controller is created in the mount layout effect above, which runs
-  // before this (also layout-phase) handle, so controllerRef.current is set.
-  useImperativeHandle(ref, () => controllerRef.current as EditorController, []);
+    const editor = editorRef.current;
+    if (editor?.isComposing) pendingExternalRef.current = initialContent;
+    else applyExternal(initialContent);
+  }, [applyExternal, contentIsExternal, initialContent]);
 
   return (
     <div
       className={cn("relative flex w-full flex-col items-start justify-start bg-inherit", isFocusMode && "min-h-0 flex-1", className)}
       data-focus-mode={isFocusMode || undefined}
+      data-source-mode={mode === "source" || undefined}
     >
-      <div ref={hostRef} className={cn("w-full text-base", isFocusMode && "min-h-0 flex-1")} />
+      <div className="memo-editor-scroller w-full text-base">
+        <div ref={hostRef} className="memo-editor-root" />
+      </div>
     </div>
   );
 });
-
 export default Editor;

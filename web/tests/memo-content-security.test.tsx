@@ -1,28 +1,19 @@
-import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
-import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 import { describe, expect, it } from "vitest";
 import { isTrustedIframeSrc, SANITIZE_SCHEMA } from "@/components/MemoContent/constants";
+import { buildRehypePlugins } from "@/components/MemoContent/pipeline";
+import { TrustedIframe } from "@/components/MemoContent/TrustedIframe";
 import { remarkCurrencySafeMath } from "@/utils/remark-plugins/remark-currency-safe-math";
-
-type IframeProps = React.ComponentProps<"iframe">;
-
-const TrustedIframe = (props: IframeProps) => {
-  if (typeof props.src !== "string" || !isTrustedIframeSrc(props.src)) {
-    return null;
-  }
-  return <iframe {...props} />;
-};
 
 const renderMemoContent = (content: string): string =>
   renderToStaticMarkup(
     <ReactMarkdown
       remarkPlugins={[remarkCurrencySafeMath]}
-      rehypePlugins={[rehypeRaw, [rehypeSanitize, SANITIZE_SCHEMA], [rehypeKatex, { throwOnError: false, strict: false }]]}
+      rehypePlugins={buildRehypePlugins([[rehypeKatex, { throwOnError: false, strict: false }]])}
       components={{ iframe: TrustedIframe }}
     >
       {content}
@@ -63,6 +54,37 @@ describe("memo content sanitization", () => {
 });
 
 describe("trusted iframe providers", () => {
+  it("renders Bilibili share snippets over HTTPS without autoplay by default", () => {
+    const html = renderMemoContent('<iframe src="//player.bilibili.com/player.html?bvid=BV1xx411c7mD&p=1" allowfullscreen></iframe>');
+    expect(html).toContain('src="https://player.bilibili.com/player.html?bvid=BV1xx411c7mD&amp;p=1&amp;autoplay=0"');
+    expect(html).toMatch(/class="[^"]*w-full[^"]*aspect-video/);
+    expect(
+      renderMemoContent('<iframe src="HTTPS://player.bilibili.com/player.html?autoplay=1" width="640" height="360"></iframe>'),
+    ).toContain('autoplay=1"');
+    expect(renderMemoContent('<iframe src="https://player.bilibili.com/player.html" width="640" height="360"></iframe>')).not.toContain(
+      "aspect-video",
+    );
+  });
+
+  it.each([
+    "http://player.bilibili.com/player.html",
+    "//player.bilibili.com.evil.example/player.html",
+    "https://player.bilibili.com@evil.example/player.html",
+    "https://player.bilibili.com/video/BV1xx411c7mD",
+  ])("rejects an untrusted Bilibili source: %s", (src) => {
+    expect(renderMemoContent(`<iframe src="${src}"></iframe>`)).not.toMatch(/<iframe/);
+  });
+
+  it("normalizes trusted iframe source schemes without allowing plain HTTP", () => {
+    expect(renderMemoContent('<iframe src="//www.youtube.com/embed/abc123"></iframe>')).toContain(
+      'src="https://www.youtube.com/embed/abc123"',
+    );
+    expect(renderMemoContent('<iframe src=" HTTPS://www.youtube.com/embed/abc123"></iframe>')).toContain(
+      'src="https://www.youtube.com/embed/abc123"',
+    );
+    expect(renderMemoContent('<iframe src="http://www.youtube.com/embed/abc123"></iframe>')).not.toMatch(/<iframe/);
+  });
+
   it("accepts trusted providers only", () => {
     expect(isTrustedIframeSrc("https://www.youtube.com/embed/abc123")).toBe(true);
     expect(isTrustedIframeSrc("https://www.youtube-nocookie.com/embed/abc123?si=test")).toBe(true);

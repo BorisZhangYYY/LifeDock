@@ -7,9 +7,11 @@ import {
   EyeIcon,
   HashIcon,
   HeartIcon,
+  ImageIcon,
   LinkIcon,
   LucideIcon,
   MapPinIcon,
+  PaperclipIcon,
   SearchIcon,
   XIcon,
 } from "lucide-react";
@@ -70,6 +72,8 @@ const FILTER_CONFIGS: Record<FilterFactor, FilterConfig> = {
     icon: CodeIcon,
     getLabel: (_, t) => t("memo.filters.has-code"),
   },
+  hasAttachments: { icon: PaperclipIcon, getLabel: (_, t) => t("memo.filters.has-attachments") },
+  hasImage: { icon: ImageIcon, getLabel: (_, t) => t("memo.filters.has-image") },
   moodLevel: {
     icon: HeartIcon,
     getLabel: getMoodLevelLabel,

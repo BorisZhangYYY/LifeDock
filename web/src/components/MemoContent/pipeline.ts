@@ -8,6 +8,7 @@ import remarkRehype from "remark-rehype";
 import { type PluggableList, unified } from "unified";
 import { visit } from "unist-util-visit";
 import { getHeadingText, isHeadingElement, rehypeHeadingId } from "@/utils/rehype-plugins/rehype-heading-id";
+import { rehypeNormalizeSources } from "@/utils/rehype-plugins/rehype-normalize-sources";
 import { remarkDisableSetext } from "@/utils/remark-plugins/remark-disable-setext";
 import { remarkPreserveType } from "@/utils/remark-plugins/remark-preserve-type";
 import { remarkSplitMixedTaskLists } from "@/utils/remark-plugins/remark-split-mixed-task-lists";
@@ -31,6 +32,7 @@ export const buildRemarkPlugins = (mathRemarkPlugins: PluggableList = []): Plugg
 
 export const buildRehypePlugins = (mathRehypePlugins: PluggableList = []): PluggableList => [
   rehypeRaw,
+  rehypeNormalizeSources,
   [rehypeSanitize, SANITIZE_SCHEMA],
   rehypeHeadingId,
   ...mathRehypePlugins,

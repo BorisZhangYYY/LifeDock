@@ -9,6 +9,6 @@ export const TrustedIframe = (props: React.ComponentProps<"iframe">) => {
 
   return createElement("iframe", {
     ...props,
-    className: cn("max-w-full rounded-lg border border-border", props.className),
+    className: cn("max-w-full rounded-lg border border-border", !props.width && !props.height && "w-full aspect-video", props.className),
   });
 };

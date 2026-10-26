@@ -2,11 +2,12 @@ import { fromJson, type JsonValue, toJson } from "@bufbuild/protobuf";
 import type { Attachment } from "@/types/proto/api/v1/attachment_service_pb";
 import { AttachmentSchema } from "@/types/proto/api/v1/attachment_service_pb";
 import { Visibility } from "@/types/proto/api/v1/memo_service_pb";
+import type { EditorCursor } from "../types/editorController";
 
 export const CACHE_DEBOUNCE_DELAY = 500;
 
 const pendingSaves = new Map<string, number>();
-const cursors = new Map<string, number>();
+const cursors = new Map<string, EditorCursor>();
 const STRUCTURED_CACHE_ENTRY_KIND = "memos.editor-cache";
 const STRUCTURED_CACHE_ENTRY_VERSION = 2;
 
@@ -155,11 +156,11 @@ export const cacheService = {
     return raw ? deserializeDraft(raw) : { content: "", attachments: [] };
   },
 
-  saveCursor(key: string, cursor: number): void {
+  saveCursor(key: string, cursor: EditorCursor): void {
     cursors.set(key, cursor);
   },
 
-  loadCursor(key: string): number | undefined {
+  loadCursor(key: string): EditorCursor | undefined {
     return cursors.get(key);
   },
 

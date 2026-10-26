@@ -31,6 +31,18 @@ stmt, _ := engine.CompileToStatement(ctx, `has_task_list && visibility == "PUBLI
 // stmt.Args -> ["PUBLIC"]
 ```
 
+## Attachment and image filters
+
+- `has_attachments` reads the current `attachment.memo_id` relation, so binding,
+  moving or deleting a file changes results immediately.
+- `has_image` matches either a Markdown image in the memo content or a bound
+  attachment whose MIME type begins with `image/` (case-insensitively).
+- Both support bare, negated and boolean comparison forms, for example
+  `has_attachments && !has_image` or `has_image == false`.
+- Content image detection uses Markdown AST image nodes, excluding code and
+  ordinary links. Existing content is refreshed by the versioned background
+  payload rebuild under `server/runner/memopayload`.
+
 ## Core Files
 
 | File          | Responsibility                                                                  |
