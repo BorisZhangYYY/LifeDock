@@ -1,109 +1,99 @@
-> ✨ Featured Sponsor: [CodeRabbit](https://coderabbit.link/usememos) — Cut code review time & bugs in half, instantly.
+# LIfeDock
 
-# Memos
+**Bring your notes, moods, finances, and reminders into one personal space.**
 
-<img align="right" height="96px" src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/logo-rounded.png" alt="Memos" />
+LIfeDock is an open-source, self-hosted personal life management app built on [Memos](https://github.com/usememos/memos).
+It keeps Memos' lightweight, Markdown-native approach to quick capture, while bringing mood tracking, personal finance, and reminders into your daily workflow.
 
-Memos is an open-source, self-hosted note-taking app built for quick capture. It is Markdown-native, lightweight, and keeps your data under your control.
+Capture an idea, reflect on how you feel, track everyday spending, or turn a plan in your notes into a reminder. Your data lives on your own server, under your control.
 
-[![Home](https://img.shields.io/badge/🏠-usememos.com-blue?style=flat-square)](https://usememos.com)
-[![Live Demo](https://img.shields.io/badge/✨-Try%20Demo-orange?style=flat-square)](https://demo.usememos.com/)
-[![Docs](https://img.shields.io/badge/📚-Documentation-green?style=flat-square)](https://usememos.com/docs)
-[![Discord](https://img.shields.io/badge/💬-Discord-5865f2?style=flat-square&logo=discord&logoColor=white)](https://discord.gg/tfPJa4UmAv)
-[![Docker Pulls](https://img.shields.io/docker/pulls/neosmemo/memos?style=flat-square&logo=docker)](https://hub.docker.com/r/neosmemo/memos)
+[Deployment guide](docs/fork-deploy.md) · [Releases](https://github.com/BorisZhangYYY/memos/releases) · [Report an issue](https://github.com/BorisZhangYYY/memos/issues)
 
-<img src="https://raw.githubusercontent.com/usememos/.github/refs/heads/main/assets/demo.png" alt="Memos Demo Screenshot" height="512" />
+English · [简体中文](docs/README.zh-CN.md)
+
+![LIfeDock timeline with notes, mood tracking and linked reminders in English](docs/images/lifedock-timeline.png)
 
 ## Features
 
-- **Capture quickly** — A timeline-first interface keeps note-taking simple: open, write, and move on.
-- **Own your data** — Self-host Memos on your infrastructure with no telemetry.
-- **Deploy anywhere** — Run a single Go binary or Docker container with SQLite, MySQL, or PostgreSQL.
-- **Integrate freely** — Build on the REST and gRPC APIs or adapt the MIT-licensed source to your needs.
+### Capture the moment, build a history
 
-## Fork Release（个人生活平台版）
+- **Timeline notes**: Open and write. Keep your thoughts, discoveries, and everyday moments together in a timeline.
+- **Markdown editing**: Switch between rich text and Markdown source, with tags, attachments, images, and voice recordings to organize your notes.
+- **Search and filters**: Find past entries by tags, mood, attachments, or images.
 
-This fork adds **mood tracking**, **personal finance**, and **structured
-reminders** with memo relationships, in-app notifications, and optional SMTP
-email delivery. It also includes a **visibility policy** for disabling
-Public/Protected publishing levels and a free HSV color picker for mood emoji
-customization. Docker images are published to
-`ghcr.io/boriszhangyyy/memos` only.
+### Make space for how you feel
 
-See [docs/fork-deploy.md](docs/fork-deploy.md) for installation, upgrade,
-MCP agent setup, and the full list of differences from upstream.
+- **Mood tracking**: Add a mood to a note, then explore your history and statistics on a dedicated mood page.
+- **Calendar insights**: See daily and monthly mood indicators to reflect on how you have been feeling over time.
+- **Personal touches**: Customize the emoji and color for each mood level.
 
-## Quick Start
+![LIfeDock mood history and statistics in English](docs/images/lifedock-mood.png)
 
-Want to explore Memos first? Open the [live demo](https://demo.usememos.com/).
+Review mood entries by date, with your average mood, days recorded, and total entries over the last 30 days. Select a mood entry to return to its linked note.
 
-### Docker (Recommended)
+### Keep everyday finances in view
+
+- **Wallets and categories**: Manage multiple wallets and income or expense categories. Record income, spending, transfers, and balance adjustments.
+- **Spending insights**: Review today's activity, transaction history, and summaries to understand where your money goes.
+
+![LIfeDock personal finance records in English](docs/images/lifedock-finances.png)
+
+See your total balance, daily income, expenses, and net amount in one place. The example shows everyday purchases, freelance income, and a transfer from an everyday wallet to savings.
+
+### Give your plans a reminder
+
+- **Reminder lists**: Organize reminders with lists, dates and times, advance notices, recurrence, priorities, and flags.
+- **Linked notes**: Connect reminders to related notes so the context stays with the plan.
+- **Notifications and history**: Receive in-app notifications and optional SMTP email reminders, with completion history and statistics for review.
+
+![LIfeDock grouped reminders and linked memos in English](docs/images/lifedock-reminders.png)
+
+Group reminders around daily habits, personal projects, and life admin. Dates, recurrence, priorities, flags, and linked notes help keep each plan in context.
+
+### Host it yourself, connect it your way
+
+- **Own your data**: Run LIfeDock on your own server, with user data export and import.
+- **Flexible deployment**: Run a single Go binary or Docker container with SQLite, MySQL, or PostgreSQL.
+- **Visibility controls**: Disable public access and configure additional interface access checks for personal dashboards and tagged notes.
+- **Open integrations**: Use the REST and gRPC APIs, or connect an AI agent through the built-in MCP service to help record, query, and manage your personal information.
+
+Access checks for personal dashboards and tagged notes protect what is displayed in the interface. They do not change note sharing permissions or encrypt your data. See [personal content privacy](docs/fork-deploy.md#个人内容隐私) for details.
+
+## Quick start
+
+### Docker (recommended)
 
 ```bash
 docker run -d \
   --name memos \
   -p 5230:5230 \
   -v ~/.memos:/var/opt/memos \
-  neosmemo/memos:stable
+  ghcr.io/boriszhangyyy/memos:stable
 ```
 
-Open `http://localhost:5230` and start writing.
+Open <http://localhost:5230> and create your first account to get started. The first account becomes the administrator and can disable public registration in settings.
 
-### Native Binary
+`~/.memos` stores persistent application data. The project retains the `memos` image repository name and container data path. LIfeDock images are published to `ghcr.io/boriszhangyyy/memos`.
 
-Native macOS binaries require macOS 13 Ventura or later.
+### Binaries and building from source
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/usememos/memos/main/scripts/install.sh | sh
-```
+Download a binary for your platform from [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases), or build from this repository's source.
 
-### Other Installation Methods
+For complete installation steps, upgrades, data directory details, and MCP client configuration, see the [deployment guide](docs/fork-deploy.md).
 
-- **Docker Compose** — Recommended for production deployments.
-- **Kubernetes** — Helm charts and manifests are available.
-- **Build from source** — Best for development and customization.
+## Backup and migration
 
-See the [deployment guide](https://usememos.com/docs/deploy) for detailed instructions.
+Go to **Settings → Export & Import** to back up your account's notes, comments, attachments, profile, and settings, along with mood, finance, reminder, and notification records.
 
-## Web Clipper
+Preview record counts before importing, then choose to keep existing data, replace it, or create copies. Account passwords, login tokens, and other authentication credentials are excluded from migration. See [user data export and import](docs/fork-deploy.md#用户数据导出与导入) for the full scope.
 
-Save pages, selected text, and images directly to your Memos instance with the official [Memos Web Clipper](https://github.com/usememos/web-clipper). The extension is available for [Chrome](https://chromewebstore.google.com/detail/memos-web-clipper/nebaoebnljalfegiidibihhkebeiklbl) and [Firefox](https://addons.mozilla.org/en-US/firefox/addon/memos-web-clipper/), and lets you review each clip, choose its visibility, and customize its Markdown format before saving.
+## Feedback and contributions
 
-## Contributing
+Bug reports and feature ideas are welcome in this repository's [Issues](https://github.com/BorisZhangYYY/memos/issues). You can also improve the code, documentation, or translations through a [pull request](https://github.com/BorisZhangYYY/memos/pulls).
 
-Contributions of all kinds are welcome, including bug reports, feature suggestions, pull requests, documentation, and translations.
+## Acknowledgments and license
 
-- [Report bugs](https://github.com/usememos/memos/issues/new?template=bug_report.md)
-- [Suggest features](https://github.com/usememos/memos/issues/new?template=feature_request.md)
-- [Submit pull requests](https://github.com/usememos/memos/pulls)
-- [Improve documentation](https://github.com/usememos/dotcom)
-- [Help with translations](https://github.com/usememos/memos/tree/main/web/src/locales)
+LIfeDock is built on the open-source project [Memos](https://github.com/usememos/memos). Thank you to the Memos team and community contributors for the foundation.
+Visit the [Memos website](https://usememos.com) and [official documentation](https://usememos.com/docs) to learn about the upstream project. For LIfeDock deployment and additional features, refer to this repository's documentation.
 
-## Sponsors
-
-- [**CodeRabbit** — Cut code review time and bugs in half](https://coderabbit.link/usememos)
-- [**SSD Nodes** — Affordable VPS hosting for self-hosters](https://ssdnodes.com/?utm_source=memos&utm_medium=sponsor)
-- [**TestMu AI** — The world’s first full-stack Agentic AI Quality Engineering platform](https://www.testmuai.com/?utm_medium=sponsor&utm_source=memos)
-
-Love Memos? [Sponsor us on GitHub](https://github.com/sponsors/usememos) to help keep the project growing!
-
-## License
-
-Memos is open-source software licensed under the [MIT License](LICENSE). See our [Privacy Policy](https://usememos.com/privacy) for details on data handling.
-
----
-
-[Website](https://usememos.com) • [Documentation](https://usememos.com/docs) • [Demo](https://demo.usememos.com/) • [Discord](https://discord.gg/tfPJa4UmAv) • [X/Twitter](https://x.com/usememos)
-
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=usememos/memos&type=rank&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=usememos/memos&type=rank" />
-    <img alt="Star History Rank" src="https://api.star-history.com/badge?repo=usememos/memos&type=rank" />
-  </picture>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/badge?repo=usememos/memos&type=trending&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/badge?repo=usememos/memos&type=trending" />
-    <img alt="GitHub Trending Repository of the Day" src="https://api.star-history.com/badge?repo=usememos/memos&type=trending" />
-  </picture>
-</p>
+This project is licensed under the [MIT License](LICENSE) and retains the upstream copyright notice.
