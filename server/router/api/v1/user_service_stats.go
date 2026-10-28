@@ -233,6 +233,15 @@ func (s *APIV1Service) GetUserStats(ctx context.Context, request *v1pb.GetUserSt
 		if err := s.validateMemoFilterForUser(ctx, request.Filter, currentUser); err != nil {
 			return nil, err
 		}
+		usesMood, err := filterUsesField(ctx, request.Filter, "mood_level")
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
+		}
+		// Even without returning mood values, counts and timestamps filtered by
+		// mood would reveal another user's private mood through public memos.
+		if usesMood && (currentUser == nil || currentUser.ID != userID) {
+			return nil, status.Errorf(codes.PermissionDenied, "mood filters are private")
+		}
 		memoFind.Filters = append(memoFind.Filters, request.Filter)
 	}
 

@@ -1224,7 +1224,7 @@
       "disallow-password-auth": "禁用密码登录",
       "disallow-user-registration-description": "阻止新用户从注册页面创建账号。",
       "disallow-user-registration": "禁用用户注册",
-      "instance-url-description": "用于匿名访问、邮件链接、可信浏览器来源、RSS 和站点地图的公开基础地址。留空会将实例保持为私有。",
+      "instance-url-description": "站点的访问地址，用于生成邮件等链接。访客访问由下方开关控制。",
       "instance-url-invalid": "请输入不含账号信息、查询参数或片段的完整 HTTP(S) 地址。",
       "instance-url": "实例 URL",
       "monday": "周一",

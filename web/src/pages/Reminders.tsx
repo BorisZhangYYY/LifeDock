@@ -1,6 +1,5 @@
 import {
   AlarmClockIcon,
-  ArchiveIcon,
   CalendarClockIcon,
   CalendarDaysIcon,
   CheckIcon,
@@ -601,18 +600,6 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
                   <CheckIcon className="size-3.5" />
                   {t("reminder.completed")}
                 </Button>
-                {archivedForSelection.some((item) => item.state === State.ARCHIVED) && (
-                  <Button
-                    size="sm"
-                    variant={activeView === "archived" ? "secondary" : "ghost"}
-                    onClick={() => selectView("archived")}
-                    aria-pressed={activeView === "archived"}
-                    className="h-7 py-1 text-ui"
-                  >
-                    <ArchiveIcon className="size-3.5" />
-                    {t("reminder.legacy-archived")}
-                  </Button>
-                )}
                 {activeView !== "completed" && activeView !== "archived" && (
                   <Button
                     size="sm"

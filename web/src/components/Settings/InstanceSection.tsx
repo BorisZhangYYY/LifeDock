@@ -210,7 +210,6 @@ const InstanceSection = () => {
               value={effectiveInstanceURL}
               onChange={(event) => updatePartialSetting({ instanceUrl: event.target.value })}
             />
-            {instanceURLInvalid && <span className="text-destructive">{t("setting.instance.instance-url-invalid")}</span>}
           </SettingListItem>
           <SettingListItem label={t("setting.instance.public-access")} description={t("setting.instance.public-access-description")}>
             <Switch

@@ -18,7 +18,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAppSidebar } from "@/contexts/AppSidebarContext";
 import { FilterFactor, getMemoFilterKey, MemoFilter, useMemoFilterContext } from "@/contexts/MemoFilterContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import { MOOD_LEVEL_KEYS, parseMoodLevelList } from "@/hooks/useMemoFilters";
+import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { cn } from "@/lib/utils";
 import { useTranslate } from "@/utils/i18n";
 
@@ -86,7 +88,11 @@ const FILTER_CONFIGS: Record<FilterFactor, FilterConfig> = {
 
 const MemoFilters = ({ className }: { className?: string }) => {
   const t = useTranslate();
-  const { filters, removeFilter } = useMemoFilterContext();
+  const { filters: contextFilters, removeFilter } = useMemoFilterContext();
+  const { moodEnabled } = usePersonalFeatures();
+  const browse = useBrowseScope();
+  const moodFilterEnabled = moodEnabled && (!browse.creatorName || browse.isOwn);
+  const filters = moodFilterEnabled ? contextFilters : contextFilters.filter((filter) => filter.factor !== "moodLevel");
   const { setQuickFindOpen } = useAppSidebar();
 
   const handleRemoveFilter = (filter: MemoFilter) => {

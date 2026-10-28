@@ -6,7 +6,7 @@
 
 | 产物 | 地址 |
 |------|------|
-| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.4` / `0.36` / `stable`） |
+| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.5` / `0.36` / `stable`） |
 | 二进制 | [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases)（linux/darwin/windows × amd64/arm64/armv7） |
 
 ## 方式一：Docker 部署（推荐）
@@ -28,7 +28,7 @@ docker run -d \
 从 [Releases](https://github.com/BorisZhangYYY/memos/releases) 下载对应平台压缩包：
 
 ```bash
-tar -xzf memos_0.36.4_linux_amd64.tar.gz
+tar -xzf memos_0.36.5_linux_amd64.tar.gz
 ./memos --data ~/memos-data --port 5230
 ```
 
@@ -107,4 +107,4 @@ Memo 的模糊规则和是否需要账户密码，在「设置 → 标签」中�
 - 提醒完成后进入“已完成”，可直接删除或一键清理；已有完成日期、名称、原列表及统计独立保留。没有任何完成历史的事项删除后不留统计；重复提醒保留已经发生的完成历史。
 - 钱包可停用、恢复；停用后才可删除。删除后不再参与当前管理余额，历史流水与收支统计保留，流水中的原钱包名用删除线标识。
 - 错误收支直接永久删除，并重新计算受影响的余额和统计；不会清空其他流水的数据。
-- 新版不再提供提醒归档操作。旧版归档数据仍可兼容查看和删除。
+- 新版不再提供提醒归档操作。移除“旧版归档”按钮；旧版已完成归档仍可在“已完成”中查看、删除或清空，完成统计保留。

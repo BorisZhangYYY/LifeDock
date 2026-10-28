@@ -114,6 +114,35 @@ func TestSetMemoMood(t *testing.T) {
 	assert.Equal(t, codes.PermissionDenied, status.Code(err))
 }
 
+func TestUserStatsMoodFilterRestrictedToOwner(t *testing.T) {
+	ctx := context.Background()
+	svc := newIntegrationService(t)
+	author := createSpaceTestUser(ctx, t, svc, "mood-author", store.RoleUser)
+	admin := createSpaceTestUser(ctx, t, svc, "mood-admin", store.RoleAdmin)
+	viewer := createSpaceTestUser(ctx, t, svc, "mood-viewer", store.RoleUser)
+	_, err := svc.CreateMemo(userCtx(ctx, author.ID), &v1pb.CreateMemoRequest{
+		Memo: &v1pb.Memo{Content: "public content, private mood", Visibility: v1pb.Visibility_PUBLIC, MoodLevel: 7},
+	})
+	require.NoError(t, err)
+
+	for _, filter := range []string{"mood_level == 7", "mood_level == 1", `mood_level == 7 || visibility == "PUBLIC"`, "!(mood_level != 7)"} {
+		t.Run(filter, func(t *testing.T) {
+			for _, caller := range []context.Context{ctx, userCtx(ctx, admin.ID), userCtx(ctx, viewer.ID)} {
+				stats, err := svc.GetUserStats(caller, &v1pb.GetUserStatsRequest{Name: "users/mood-author", Filter: filter})
+				require.Equal(t, codes.PermissionDenied, status.Code(err))
+				require.Nil(t, stats)
+			}
+		})
+	}
+	stats, err := svc.GetUserStats(userCtx(ctx, author.ID), &v1pb.GetUserStatsRequest{Name: "users/mood-author", Filter: "mood_level == 7"})
+	require.NoError(t, err)
+	require.Equal(t, int32(1), stats.TotalMemoCount)
+	require.Equal(t, []int32{7}, stats.MoodLevels)
+	// Mentioning a field in ordinary text search is still a public query.
+	_, err = svc.GetUserStats(ctx, &v1pb.GetUserStatsRequest{Name: "users/mood-author", Filter: `content.contains("mood_level")`})
+	require.NoError(t, err)
+}
+
 func TestMemoMoodLevelVisibleOnlyToCreator(t *testing.T) {
 	ctx := context.Background()
 	svc := newIntegrationService(t)
@@ -190,12 +219,23 @@ func TestMoodFilterRestrictedToCurrentUser(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	response, err := svc.ListMemos(userCtx(ctx, viewer.ID), &v1pb.ListMemosRequest{Filter: "mood_level == 7"})
-	require.NoError(t, err)
-	require.Len(t, response.Memos, 1)
-	assert.Equal(t, viewerMemo.Name, response.Memos[0].Name)
+	for _, filter := range []string{"mood_level == 7", `mood_level == 7 || visibility == "PUBLIC"`, "!(mood_level != 7)"} {
+		t.Run(filter, func(t *testing.T) {
+			response, err := svc.ListMemos(userCtx(ctx, viewer.ID), &v1pb.ListMemosRequest{Filter: filter})
+			require.NoError(t, err)
+			require.Len(t, response.Memos, 1)
+			assert.Equal(t, viewerMemo.Name, response.Memos[0].Name)
 
-	_, err = svc.ListMemos(ctx, &v1pb.ListMemosRequest{Filter: "mood_level == 7"})
-	require.Error(t, err)
-	assert.Equal(t, codes.PermissionDenied, status.Code(err))
+			stats, err := svc.ListAllUserStats(userCtx(ctx, viewer.ID), &v1pb.ListAllUserStatsRequest{Filter: filter})
+			require.NoError(t, err)
+			require.Len(t, stats.Stats, 1)
+			require.Equal(t, "users/viewer/stats", stats.Stats[0].Name)
+			require.Equal(t, int32(1), stats.Stats[0].TotalMemoCount)
+
+			_, err = svc.ListMemos(ctx, &v1pb.ListMemosRequest{Filter: filter})
+			require.Equal(t, codes.PermissionDenied, status.Code(err))
+			_, err = svc.ListAllUserStats(ctx, &v1pb.ListAllUserStatsRequest{Filter: filter})
+			require.Equal(t, codes.PermissionDenied, status.Code(err))
+		})
+	}
 }

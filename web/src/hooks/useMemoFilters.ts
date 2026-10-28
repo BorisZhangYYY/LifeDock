@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { type MemoFilter, useMemoFilterContext } from "@/contexts/MemoFilterContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
 import useCurrentUser from "@/hooks/useCurrentUser";
+import usePersonalFeatures from "@/hooks/usePersonalFeatures";
 import { useMemoViews } from "@/hooks/useUserQueries";
 import { combineCELFilters } from "@/lib/cel-filter";
 import { BUILTIN_TASKS_VIEW_FILTER, BUILTIN_TASKS_VIEW_ID, getMemoViewId } from "@/lib/memo-views";
@@ -146,6 +148,9 @@ export const useMemoFilters = (options: UseMemoFiltersOptions = {}): string | un
   const { creatorName, includeMemoViews = false, includePinned = false, visibilities } = options;
 
   const currentUser = useCurrentUser();
+  const { moodEnabled } = usePersonalFeatures();
+  const browse = useBrowseScope();
+  const moodFilterEnabled = moodEnabled && (!browse.creatorName || browse.isOwn);
   const { data: memoViews = [] } = useMemoViews(includeMemoViews ? currentUser?.name : undefined);
   const { filters, memoView: currentMemoView } = useMemoFilterContext();
 
@@ -160,11 +165,11 @@ export const useMemoFilters = (options: UseMemoFiltersOptions = {}): string | un
       buildMemoFilter({
         creatorName,
         currentMemoView: includeMemoViews ? currentMemoView : undefined,
-        filters,
+        filters: moodFilterEnabled ? filters : filters.filter((filter) => filter.factor !== "moodLevel"),
         includePinned,
         selectedMemoViewFilter,
         visibilities,
       }),
-    [creatorName, currentMemoView, filters, includePinned, includeMemoViews, selectedMemoViewFilter, visibilities],
+    [creatorName, currentMemoView, filters, includePinned, includeMemoViews, moodFilterEnabled, selectedMemoViewFilter, visibilities],
   );
 };
