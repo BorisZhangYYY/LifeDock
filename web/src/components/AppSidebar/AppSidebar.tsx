@@ -281,6 +281,7 @@ const CollectionSidebarContent = ({ context }: { context: MemoStatsContext }) =>
   });
 
   const showViews = !!currentUser && (context === "home" || context === "archived" || context === "explore");
+  const showMood = moodEnabled && (!browse.creatorName || browse.isOwn);
 
   // Off the collection routes (the library shown as fallback content), calendar and tag
   // clicks must land somewhere that renders the filtered feed.
@@ -296,14 +297,14 @@ const CollectionSidebarContent = ({ context }: { context: MemoStatsContext }) =>
       <SidebarSection ariaLabel={t("common.statistics")}>
         <StatisticsView
           statisticsData={statistics}
-          dailyMoodStats={moodEnabled ? dailyMoodStats : undefined}
+          dailyMoodStats={showMood ? dailyMoodStats : undefined}
           navigationTarget={filterTarget}
           onDateSelect={() => setMobileOpen(false)}
         />
       </SidebarSection>
+      {showMood && <MoodFilterSection navigationTarget={filterTarget} onSelect={() => setMobileOpen(false)} />}
       {showViews && <ViewsSection />}
       <TagsSection tagCount={tags} navigationTarget={filterTarget} scope={tagStateScope} onSelect={() => setMobileOpen(false)} />
-      {moodEnabled && <MoodFilterSection navigationTarget={filterTarget} onSelect={() => setMobileOpen(false)} />}
     </div>
   );
 };

@@ -125,7 +125,7 @@ describe("<InstanceSection> public access setting", () => {
       target: { value: "javascript:alert(1)" },
     });
 
-    expect(screen.getByText("setting.instance.instance-url-invalid")).toBeInTheDocument();
+    expect(screen.queryByText("setting.instance.instance-url-invalid")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "common.save" })).toBeDisabled();
     expect(saveInstanceSettingMock).not.toHaveBeenCalled();
   });

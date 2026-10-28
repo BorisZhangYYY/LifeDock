@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useInstance } from "@/contexts/InstanceContext";
 import { replaceFiltersByFactor, stringifyFilters, useMemoFilterContext } from "@/contexts/MemoFilterContext";
+import { useBrowseScope } from "@/hooks/useBrowseScope";
+import useCurrentUser from "@/hooks/useCurrentUser";
 import { formatMoodLevelList, MOOD_LEVEL_KEYS, parseMoodLevelList } from "@/hooks/useMemoFilters";
 import { getMoodPalette } from "@/lib/mood";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,8 @@ const MoodFilterSection = ({ navigationTarget, onSelect }: Props) => {
   const t = useTranslate();
   const navigate = useNavigate();
   const location = useLocation();
+  const currentUser = useCurrentUser();
+  const browse = useBrowseScope();
   const { filters, setFilters } = useMemoFilterContext();
   const { memoRelatedSetting } = useInstance();
   const emojis = memoRelatedSetting?.moodEmojis?.length === 7 ? memoRelatedSetting.moodEmojis : DEFAULT_MOOD_EMOJIS;
@@ -34,13 +38,17 @@ const MoodFilterSection = ({ navigationTarget, onSelect }: Props) => {
       levels.length > 0
         ? replaceFiltersByFactor(filters, "moodLevel", [{ factor: "moodLevel", value: formatMoodLevelList(levels) }])
         : replaceFiltersByFactor(filters, "moodLevel", []);
-    if (navigationTarget) {
-      setFilters(nextFilters);
-      const params = new URLSearchParams();
+    if (navigationTarget || (levels.length > 0 && !browse.isOwn && currentUser)) {
+      const params = new URLSearchParams(navigationTarget ? undefined : location.search);
       params.set("filter", stringifyFilters(nextFilters));
       const creator = new URLSearchParams(location.search).get("creator");
-      if (creator !== null) params.set("creator", creator);
-      navigate({ pathname: navigationTarget, search: `?${params}` });
+      if (levels.length > 0 && currentUser) {
+        // Mood filters always select the current user's records, even from All authors.
+        params.set("creator", currentUser.username || currentUser.name.slice("users/".length));
+      } else if (creator !== null) {
+        params.set("creator", creator);
+      }
+      navigate({ pathname: navigationTarget ?? location.pathname, search: `?${params}` });
       onSelect?.();
       return;
     }

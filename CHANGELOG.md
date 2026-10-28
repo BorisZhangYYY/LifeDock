@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.36.5](https://github.com/BorisZhangYYY/LifeDock/compare/v0.36.4...v0.36.5) (2026-10-28)
+
+### Fixes and improvements
+
+* Restrict mood-filtered user statistics to the owner, preventing visitors,
+  other users, and administrators from inferring private moods through counts
+  and timestamps. Cover combined and negated filters with regression tests.
+* Hide personal features for anonymous visitors and mood controls when browsing
+  another author or when mood is disabled. Ignore unavailable mood conditions
+  in saved URLs while retaining other filters; selecting a mood from All authors
+  switches to the signed-in user's records.
+* Place the mood filter immediately below the sidebar calendar.
+* Simplify the instance URL description and remove its inline validation hint
+  while continuing to disable saving invalid URLs.
+* Remove the redundant legacy reminder archive button. Existing reminder data
+  and completion statistics are preserved.
+* Verify personal-access-token attachment uploads and document the supported
+  HTTP upload format. Refresh bilingual LifeDock documentation and screenshots.
+
+### Upgrade notes
+
+* No new database migrations or dependencies are required.
+* Docker images remain at `ghcr.io/boriszhangyyy/memos`, with tags `0.36.5`,
+  `0.36`, and `stable`. GitHub releases now live in `BorisZhangYYY/LifeDock`.
+
 ## [0.36.4](https://github.com/BorisZhangYYY/memos/compare/v0.36.3...v0.36.4) (2026-10-26)
 
 ### Summary

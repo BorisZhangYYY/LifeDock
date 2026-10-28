@@ -9,6 +9,7 @@ const authState = vi.hoisted(() => ({
   currentUser: { name: "users/test" } as { name: string } | undefined,
   memoViews: [] as Array<{ name: string; title: string }>,
   notifications: [] as Array<{ status: number }>,
+  disableMood: false,
 }));
 const sidebarState = vi.hoisted(() => ({
   memoScope: "home" as "home" | "explore",
@@ -79,7 +80,12 @@ vi.mock("@/contexts/AppSidebarContext", () => ({
 }));
 
 vi.mock("@/contexts/AuthContext", () => ({
-  useAuth: () => ({ isInitialized: true, isUserSettingsInitialized: true }),
+  useAuth: () => ({
+    currentUser: authState.currentUser,
+    userGeneralSetting: { disableMood: authState.disableMood },
+    isInitialized: true,
+    isUserSettingsInitialized: true,
+  }),
 }));
 
 vi.mock("@/contexts/GlobalMemoEditorContext", () => ({
@@ -165,6 +171,7 @@ describe("App sidebar logo", () => {
     authState.currentUser = { name: "users/test" };
     authState.memoViews = [];
     authState.notifications = [];
+    authState.disableMood = false;
     sidebarState.memoScope = "home";
     sidebarState.mobileOpen = false;
     globalEditorState.canOpen = true;
@@ -178,6 +185,47 @@ describe("App sidebar logo", () => {
     spaceState.selectSpace.mockClear();
     filteredStatsHook.mockClear();
     tagsSectionHook.mockClear();
+  });
+
+  it("hides the mood filter from anonymous visitors", () => {
+    authState.currentUser = undefined;
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppSidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("group", { name: "mood.filter" })).not.toBeInTheDocument();
+    expect(screen.getByText("Calendar")).toBeInTheDocument();
+  });
+
+  it("keeps the mood filter available to signed-in users", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppSidebar />
+      </MemoryRouter>,
+    );
+    const moodSection = screen.getByRole("group", { name: "mood.filter" }).closest("section");
+    expect(screen.getByText("Calendar").closest("section")?.nextElementSibling).toBe(moodSection);
+    expect(moodSection?.nextElementSibling).toHaveTextContent("common.views");
+  });
+
+  it("hides the mood filter when the signed-in user disables mood", () => {
+    authState.disableMood = true;
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <AppSidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("group", { name: "mood.filter" })).not.toBeInTheDocument();
+  });
+
+  it.each(["/?creator=alice", "/u/alice", "/calendar?creator=alice"])("hides the personal mood filter for another author on %s", (path) => {
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <AppSidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("group", { name: "mood.filter" })).not.toBeInTheDocument();
   });
 
   it("shows the context switcher and opens the global memo editor", () => {

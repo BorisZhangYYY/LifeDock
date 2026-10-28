@@ -584,7 +584,7 @@
       "disallow-user-registration-description": "Prevent new users from creating accounts from the sign-up page.",
       "allow-public-access": "Allow public access",
       "instance-url-invalid": "Enter an absolute HTTP(S) URL without credentials, a query, or a fragment.",
-      "instance-url-description": "The public base URL used for anonymous access, email links, trusted browser origins, RSS, and sitemap. Leave empty to keep the instance private.",
+      "instance-url-description": "Your site's address, used to generate email and other links. The switch below controls visitor access.",
       "monday": "Monday",
       "public-access": "Allow public access",
       "saturday": "Saturday",
