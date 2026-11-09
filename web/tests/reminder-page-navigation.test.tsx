@@ -198,6 +198,21 @@ describe("reminder page navigation", () => {
     );
   });
 
+  it("commits the reminder on the Enter that follows IME composition, not the one that ends it", async () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "reminder.click-empty-to-create: common.reminders" }));
+    const input = screen.getByPlaceholderText("reminder.new-reminder");
+    fireEvent.change(input, { target: { value: "review" } });
+
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+    expect(state.create).not.toHaveBeenCalled();
+    expect(input).toHaveValue("review");
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
+  });
+
   it("returns from a selected list to all list groups", () => {
     mount("/reminders?view=all&list=users/test/reminderLists/work");
     fireEvent.click(screen.getByRole("button", { name: /common.all/ }));

@@ -477,6 +477,8 @@ const Reminders = ({ embedded = false, onOpenReminder }: Props) => {
             value={draftTitle}
             onChange={(event) => setDraftTitle(event.target.value)}
             onKeyDown={(event) => {
+              // The Enter that confirms an IME composition commits the text, not the reminder.
+              if (event.nativeEvent.isComposing || event.keyCode === 229) return;
               if (event.key === "Enter") void commitDraft();
               if (event.key === "Escape") {
                 event.stopPropagation();

@@ -66,20 +66,36 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
         ? `${t("common.last-updated-at")}: ${updateTime.toLocaleString(i18n.language)}`
         : undefined,
   };
+  const visibleReminders = linkedReminders.slice(0, 2);
+  const hiddenReminderCount = linkedReminders.length - visibleReminders.length;
   const reminderMetadata =
-    currentUser?.name === memo.creator
-      ? linkedReminders.map((reminder) => (
+    currentUser?.name === memo.creator && visibleReminders.length > 0 ? (
+      <span className="flex min-w-0 items-center gap-1">
+        {visibleReminders.map((reminder) => (
           <button
             key={reminder.name}
             type="button"
-            className="inline-flex items-start gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs text-primary whitespace-normal break-words"
+            className="inline-flex max-w-40 min-w-0 shrink items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs text-primary sm:max-w-56"
             onClick={() => onReminderSelect?.(reminder.name)}
+            title={reminder.title}
           >
-            <BellRingIcon className="mt-0.5 size-3 shrink-0" />
-            {reminder.title}
+            <BellRingIcon className="size-3 shrink-0" />
+            <span className="truncate">{reminder.title}</span>
           </button>
-        ))
-      : null;
+        ))}
+        {hiddenReminderCount > 0 && (
+          <span
+            className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-1.5 py-1 text-xs text-primary"
+            title={linkedReminders
+              .slice(visibleReminders.length)
+              .map((reminder) => reminder.title)
+              .join("\n")}
+          >
+            +{hiddenReminderCount}
+          </span>
+        )}
+      </span>
+    ) : null;
   const spaceMetadata = showSpace && memo.space ? <MemoSpaceBadge spaceName={memo.space} /> : null;
 
   return (
