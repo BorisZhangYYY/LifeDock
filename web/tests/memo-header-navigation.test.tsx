@@ -85,6 +85,7 @@ const LocationProbe = () => {
 describe("MemoHeader navigation", () => {
   beforeEach(() => {
     state.creator = undefined;
+    state.currentUser = undefined;
   });
 
   it.each([false, true])("uses a keyboard-operable timestamp and preserves origin when showCreator=%s", (showCreator) => {
@@ -128,12 +129,33 @@ describe("MemoHeader navigation", () => {
     expect(space.closest("a, button")).toBeNull();
   });
 
-  it("truncates linked reminder titles to one line instead of expanding the header", () => {
+  it.each([false, true])("keeps the metadata bounded and the timestamp on one line when showCreator=%s", (showCreator) => {
     state.currentUser = { name: "users/demo" };
-    const longTitle = "整理本周的阅读摘录并同步到个人知识库的第二部分";
+    state.creator = { username: "demo", displayName: "Demo", avatarUrl: "" };
     render(
       <MemoryRouter>
         <MemoHeader
+          showCreator={showCreator}
+          linkedReminders={["First long reminder", "Second long reminder"].map((title, index) =>
+            create(ReminderSchema, { name: `users/demo/reminders/${index}`, title }),
+          )}
+        />
+      </MemoryRouter>,
+    );
+
+    const timestamp = screen.getByRole("button", { name: "time" });
+    expect(timestamp).toHaveClass("shrink-0", "whitespace-nowrap");
+    expect(timestamp.closest('[data-slot="memo-header-meta"]')).toHaveClass("max-w-full");
+  });
+
+  it("uses a compact title preview while preserving the full reminder and its action", () => {
+    state.currentUser = { name: "users/demo" };
+    const longTitle = "整理本周的阅读摘录并同步到个人知识库的第二部分";
+    const onReminderSelect = vi.fn();
+    render(
+      <MemoryRouter>
+        <MemoHeader
+          onReminderSelect={onReminderSelect}
           linkedReminders={[
             create(ReminderSchema, { name: "users/demo/reminders/one", title: longTitle }),
             create(ReminderSchema, { name: "users/demo/reminders/two", title: "Second reminder" }),
@@ -143,17 +165,21 @@ describe("MemoHeader navigation", () => {
     );
 
     const chip = screen.getByRole("button", { name: longTitle });
-    expect(chip).toHaveClass("max-w-40", "min-w-0", "shrink", "sm:max-w-56");
+    expect(chip).toHaveClass("max-w-28", "min-w-0", "shrink", "sm:max-w-32");
     expect(within(chip).getByText(longTitle)).toHaveClass("truncate");
     expect(chip).toHaveAttribute("title", longTitle);
+    fireEvent.click(chip);
+    expect(onReminderSelect).toHaveBeenCalledExactlyOnceWith("users/demo/reminders/one");
   });
 
-  it("shows at most two linked reminders and summarizes the rest", () => {
+  it("keeps collapsed reminders clickable from the overflow menu", async () => {
     state.currentUser = { name: "users/demo" };
+    const onReminderSelect = vi.fn();
     render(
       <MemoryRouter>
         <MemoHeader
-          linkedReminders={["First", "Second", "Third", "Fourth"].map((title, index) =>
+          onReminderSelect={onReminderSelect}
+          linkedReminders={["First", "Second", "Third"].map((title, index) =>
             create(ReminderSchema, { name: `users/demo/reminders/${index}`, title }),
           )}
         />
@@ -163,6 +189,10 @@ describe("MemoHeader navigation", () => {
     expect(screen.getByRole("button", { name: "First" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Second" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Third" })).not.toBeInTheDocument();
-    expect(screen.getByTitle("Third Fourth")).toHaveTextContent("+2");
+    const more = screen.getByRole("button", { name: "common.more: common.reminders (+1)" });
+    expect(more).toHaveTextContent("+1");
+    fireEvent.click(more);
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Third" }));
+    expect(onReminderSelect).toHaveBeenCalledExactlyOnceWith("users/demo/reminders/2");
   });
 });

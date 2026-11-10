@@ -6,7 +6,7 @@
 
 | 产物 | 地址 |
 |------|------|
-| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.5` / `0.36` / `stable`） |
+| Docker 镜像 | `ghcr.io/boriszhangyyy/memos`（tag：`0.36.6` / `0.36` / `stable`） |
 | 二进制 | [GitHub Releases](https://github.com/BorisZhangYYY/memos/releases)（linux/darwin/windows × amd64/arm64/armv7） |
 
 ## 方式一：Docker 部署（推荐）
@@ -28,7 +28,7 @@ docker run -d \
 从 [Releases](https://github.com/BorisZhangYYY/memos/releases) 下载对应平台压缩包：
 
 ```bash
-tar -xzf memos_0.36.5_linux_amd64.tar.gz
+tar -xzf memos_0.36.6_linux_amd64.tar.gz
 ./memos --data ~/memos-data --port 5230
 ```
 

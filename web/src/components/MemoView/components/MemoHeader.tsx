@@ -2,6 +2,7 @@ import { BellRingIcon, BookmarkIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 import RelativeTime from "@/components/RelativeTime";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useNewMemo } from "@/contexts/NewMemoContext";
 import useNavigateTo from "@/hooks/useNavigateTo";
@@ -75,7 +76,7 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
           <button
             key={reminder.name}
             type="button"
-            className="inline-flex max-w-40 min-w-0 shrink items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs text-primary sm:max-w-56"
+            className="inline-flex max-w-28 min-w-0 shrink items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs text-primary sm:max-w-32"
             onClick={() => onReminderSelect?.(reminder.name)}
             title={reminder.title}
           >
@@ -84,15 +85,22 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
           </button>
         ))}
         {hiddenReminderCount > 0 && (
-          <span
-            className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-1.5 py-1 text-xs text-primary"
-            title={linkedReminders
-              .slice(visibleReminders.length)
-              .map((reminder) => reminder.title)
-              .join("\n")}
-          >
-            +{hiddenReminderCount}
-          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-1.5 py-1 text-xs text-primary"
+              aria-label={`${t("common.more")}: ${t("common.reminders")} (+${hiddenReminderCount})`}
+            >
+              +{hiddenReminderCount}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-w-72">
+              {linkedReminders.slice(visibleReminders.length).map((reminder) => (
+                <DropdownMenuItem key={reminder.name} onClick={() => onReminderSelect?.(reminder.name)}>
+                  <BellRingIcon className="size-3 shrink-0" />
+                  <span className="min-w-0 whitespace-normal break-words">{reminder.title}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </span>
     ) : null;
@@ -115,7 +123,7 @@ const MemoHeader: React.FC<MemoHeaderProps> = ({
             onGotoDetail={handleGotoMemoDetailPage}
           />
         ) : (
-          <div data-slot="memo-header-meta" className="flex min-w-0 items-center gap-1.5">
+          <div data-slot="memo-header-meta" className="flex max-w-full min-w-0 items-center gap-1.5">
             <TimeDisplay displayTime={displayTime} timeTooltip={timeTooltip} onGotoDetail={handleGotoMemoDetailPage} />
             {spaceMetadata}
             {reminderMetadata}
@@ -188,11 +196,11 @@ const CreatorDisplay: React.FC<CreatorDisplayProps> = ({ creator, displayTime, t
       >
         {creator.displayName || creator.username}
       </Link>
-      <div data-slot="memo-header-meta" className="flex min-w-0 items-center gap-1.5">
+      <div data-slot="memo-header-meta" className="flex max-w-full min-w-0 items-center gap-1.5">
         <TimeTooltip content={timeTooltip}>
           <button
             type="button"
-            className="w-auto -mt-0.5 border-0 bg-transparent p-0 text-xs leading-tight text-muted-foreground select-none cursor-pointer hover:opacity-80 transition-colors text-left"
+            className="w-auto shrink-0 whitespace-nowrap -mt-0.5 border-0 bg-transparent p-0 text-xs leading-tight text-muted-foreground select-none cursor-pointer hover:opacity-80 transition-colors text-left"
             onClick={onGotoDetail}
           >
             {displayTime}
@@ -229,7 +237,7 @@ const TimeDisplay: React.FC<TimeDisplayProps> = ({ displayTime, timeTooltip, onG
   <TimeTooltip content={timeTooltip}>
     <button
       type="button"
-      className="w-auto border-0 bg-transparent p-0 text-sm leading-tight text-muted-foreground select-none cursor-pointer hover:text-foreground transition-colors text-left"
+      className="w-auto shrink-0 whitespace-nowrap border-0 bg-transparent p-0 text-sm leading-tight text-muted-foreground select-none cursor-pointer hover:text-foreground transition-colors text-left"
       onClick={onGotoDetail}
     >
       {displayTime}
