@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.36.6](https://github.com/BorisZhangYYY/LifeDock/compare/v0.36.5...v0.36.6) (2026-11-10)
+
+### Fixes and improvements
+
+* Keep reminder drafts open when Enter confirms an IME composition. The next
+  Enter saves the reminder, preserving both Chinese text and English entered
+  through a Chinese input method.
+* Show compact, single-line previews of Memo-linked reminders while preserving
+  their full titles and detail actions. Keep timestamps on one line and constrain
+  metadata to the card width in both timeline and author/detail layouts.
+* Show additional linked reminders in an accessible overflow menu so the third
+  reminder remains available to pointer and keyboard users.
+
+### Upgrade notes
+
+* No database migrations, dependency changes, or authentication changes are required.
+* Docker images remain at `ghcr.io/boriszhangyyy/memos`, with tags `0.36.6`,
+  `0.36`, and `stable`.
+
 ## [0.36.5](https://github.com/BorisZhangYYY/LifeDock/compare/v0.36.4...v0.36.5) (2026-10-28)
 
 ### Fixes and improvements

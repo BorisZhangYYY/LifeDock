@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Reminders from "@/pages/Reminders";
@@ -196,6 +196,42 @@ describe("reminder page navigation", () => {
         }),
       ),
     );
+  });
+
+  it.each([
+    { value: "review", key: { key: "Enter", isComposing: true } },
+    { value: "中文提醒", key: { key: "Enter", keyCode: 229 } },
+  ])("waits for the Enter after IME composition to save $value", async ({ value, key }) => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "reminder.click-empty-to-create: common.reminders" }));
+    const input = screen.getByPlaceholderText("reminder.new-reminder");
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value } });
+
+    const composingEnter = createEvent.keyDown(input, key);
+    fireEvent(input, composingEnter);
+    fireEvent.compositionEnd(input, { data: value });
+    expect(state.create).not.toHaveBeenCalled();
+    expect(composingEnter.defaultPrevented).toBe(false);
+    expect(input).toHaveValue(value);
+
+    fireEvent.keyDown(input, { key: "Enter" });
+    await waitFor(() => expect(state.create).toHaveBeenCalledTimes(1));
+    expect(state.create).toHaveBeenCalledWith(expect.objectContaining({ reminder: expect.objectContaining({ title: value }) }));
+  });
+
+  it("lets the IME consume Escape before a subsequent Escape cancels the draft", () => {
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: "reminder.click-empty-to-create: common.reminders" }));
+    const input = screen.getByPlaceholderText("reminder.new-reminder");
+    fireEvent.compositionStart(input);
+    fireEvent.change(input, { target: { value: "review" } });
+    fireEvent.keyDown(input, { key: "Escape", isComposing: true });
+    expect(input).toHaveValue("review");
+    fireEvent.compositionEnd(input);
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByPlaceholderText("reminder.new-reminder")).not.toBeInTheDocument();
+    expect(state.create).not.toHaveBeenCalled();
   });
 
   it("returns from a selected list to all list groups", () => {
